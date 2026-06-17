@@ -14,11 +14,11 @@ import {
 } from "recharts"
 
 const sourceData = [
-  { name: "Airbnb", value: 35, color: "#FF5A5F" },
-  { name: "Booking.com", value: 25, color: "#003580" },
-  { name: "Direct", value: 20, color: "#C9A227" },
-  { name: "Expedia", value: 12, color: "#191E3B" },
-  { name: "VRBO", value: 8, color: "#1A5CFF" },
+  { name: "Airbnb", value: 30, color: "#FF5A5F" },
+  { name: "Makemytrip", value: 25, color: "#00A651" },
+  { name: "Direct", value: 22, color: "#C9A227" },
+  { name: "Booking.com", value: 13, color: "#003580" },
+  { name: "Goibibo", value: 10, color: "#FF6B6B" },
 ]
 
 const demoData = [

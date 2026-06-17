@@ -4,55 +4,55 @@ import type {
 } from "./types"
 
 const cities = [
-  "New York", "Los Angeles", "Miami", "San Francisco", "Chicago",
-  "Boston", "Austin", "Seattle", "Denver", "Nashville",
-  "Portland", "Atlanta", "San Diego", "Las Vegas", "Houston",
-  "Phoenix", "Philadelphia", "Dallas", "Orlando", "Minneapolis",
-  "Tampa", "Charlotte", "Salt Lake City", "Santa Fe", "Savannah"
+  "Sector 15, Noida", "Sector 44, Noida", "Sector 62, Noida", "Sector 18, Noida", "Sector 29, Noida",
+  "Sector 26, Noida", "Sector 32, Noida", "Sector 33, Noida", "Sector 44, Noida", "Sector 49, Noida",
+  "Sector 50, Noida", "Sector 51, Noida", "Sector 52, Noida", "Sector 53, Noida", "Sector 55, Noida",
+  "Sector 56, Noida", "Sector 57, Noida", "Sector 58, Noida", "Sector 59, Noida", "Sector 60, Noida",
+  "Sector 61, Noida", "Sector 63, Noida", "Sector 64, Noida", "Sector 65, Noida", "Sector 66, Noida"
 ]
 
 const propertyNames = [
-  "The Penthouse at NoMad", "Soho Loft Residence", "Tribeca Sky Suite",
-  "Central Park View", "Brooklyn Heights Estate", "Williamsburg Industrial Loft",
-  "Upper East Side Manor", "Chelsea Art House", "Greenwich Village Townhouse",
-  "DUMBO Waterfront Suite", "Pacific Heights Villa", "Marina Del Rey Penthouse",
-  "Beverly Hills Estate", "Santa Monica Beach House", "Silver Lake Retreat",
-  "Venice Canals Residence", "South Beach Penthouse", "Brickell Waterfront Tower",
-  "Coral Gables Manor", "Key Biscayne Villa", "Presidio Heights Estate",
-  "Russian Hill Penthouse", "SoMa Innovation Suite", "Mission District Loft",
-  "Nob Hill Classic"
+  "The Penthouses at Sector 15", "Sector 44 Sky Residence", "Sector 62 Luxe Towers",
+  "Sector 18 Grand Suites", "Sector 29 Iconic Estate", "Sector 26 The Address",
+  "Sector 32 Emerald Residency", "Sector 33 The Aster", "Sector 44 The Capitol",
+  "Sector 49 Waterfront Residences", "Sector 50 The Aman", "Sector 51 Golden Crest",
+  "Sector 52 The Oberoi Residences", "Sector 53 The Leela", "Sector 55 ITC Residency",
+  "Sector 56 The Taj Suites", "Sector 57 JW Marriott Homes", "Sector 58 The Ritz-Carlton",
+  "Sector 59 The St. Regis", "Sector 60 Four Seasons", "Sector 61 The Park Collection",
+  "Sector 63 Hyatt Residences", "Sector 64 The Lalit", "Sector 65 Roseate House",
+  "Sector 66 The Umrao"
 ]
 
 const hotelNames = [
-  "NoMad Tower", "Soho Grand", "Tribeca Heights",
-  "Central Park Residence", "Brooklyn Manor", "Williamsburg Club",
-  "East Side Collection", "Chelsea Townhouses", "Greenwich Suites",
-  "DUMBO Waterfront", "Pacific Residence", "Marina Tower",
-  "Beverly Collection", "Santa Monica Resort", "Silver Lake Boutique",
-  "Venice Suites", "South Beach Club", "Brickell Residences",
-  "Coral Gables Hotel", "Key Biscayne Resort", "Presidio Collection",
-  "Russian Hill Suites", "SoMa Tech Residences", "Mission Hotel",
-  "Nob Hill Grand"
+  "Sector 15 Tower", "Sector 44 Grand", "Sector 62 Heights",
+  "Sector 18 Collection", "Sector 29 Manor", "Sector 26 Club",
+  "Sector 32 Residence", "Sector 33 Townhouse", "Sector 44 Suites",
+  "Sector 49 Waterfront", "Sector 50 Tower", "Sector 51 Crest",
+  "Sector 52 Collection", "Sector 53 Resort", "Sector 55 Boutique",
+  "Sector 56 Club", "Sector 57 Residences", "Sector 58 Hotel",
+  "Sector 59 Resort", "Sector 60 Hotel", "Sector 61 Collection",
+  "Sector 63 Suites", "Sector 64 Hotel", "Sector 65 Resort",
+  "Sector 66 Grand"
 ]
 
 const guestFirstNames = [
-  "James", "Emma", "Lucas", "Sophia", "Oliver", "Isabella", "William",
-  "Mia", "Henry", "Charlotte", "Alexander", "Amelia", "Daniel", "Harper",
-  "Michael", "Evelyn", "Sebastian", "Abigail", "Joseph", "Emily",
-  "David", "Ella", "Andrew", "Avery", "Matthew", "Scarlett", "Jack",
-  "Grace", "Samuel", "Chloe", "Ryan", "Victoria", "Nathan", "Riley",
-  "Christian", "Aria", "Jonathan", "Lily", "Christopher", "Aurora",
-  "Dylan", "Zoey", "Aaron", "Nora", "Cameron", "Camila", "Adrian", "Penelope"
+  "Arjun", "Priya", "Rahul", "Ananya", "Vikram", "Neha", "Rohan",
+  "Ishita", "Aryan", "Sanya", "Karan", "Deepika", "Aditya", "Kavya",
+  "Ravi", "Nandini", "Siddharth", "Aishwarya", "Manish", "Pooja",
+  "Amit", "Shreya", "Nikhil", "Tanya", "Vivek", "Anjali", "Raj",
+  "Meera", "Harsh", "Divya", "Sahil", "Ritu", "Gaurav", "Preeti",
+  "Yash", "Shweta", "Akash", "Maya", "Tarun", "Sonam",
+  "Dhruv", "Naina", "Kunal", "Isha", "Pranav", "Lavanya", "Chirag", "Surabhi"
 ]
 
 const guestLastNames = [
-  "Anderson", "Chen", "Williams", "Patel", "Johnson", "Kim", "Brown",
-  "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Wilson", "Taylor",
-  "Thomas", "Jackson", "White", "Harris", "Clark", "Lewis", "Robinson",
-  "Walker", "Young", "Allen", "King", "Wright", "Scott", "Hill",
-  "Adams", "Baker", "Nelson", "Carter", "Mitchell", "Turner", "Phillips",
-  "Campbell", "Parker", "Evans", "Edwards", "Collins", "Stewart", "Morris",
-  "Murphy", "Cook", "Rogers", "Morgan", "Peterson", "Cooper"
+  "Sharma", "Patel", "Singh", "Verma", "Gupta", "Kumar", "Agarwal",
+  "Joshi", "Reddy", "Nair", "Deshmukh", "Menon", "Choudhary", "Saxena",
+  "Mehta", "Kapoor", "Malhotra", "Bhatt", "Srinivasan", "Iyer",
+  "Pillai", "Rao", "Mishra", "Pandey", "Dubey", "Tiwari", "Thakur",
+  "Yadav", "Mohan", "Rawat", "Biswas", "Sethi", "Chopra", "Kohli",
+  "Bajaj", "Gill", "Sood", "Arora", "Sachdev", "Bhalla", "Sareen",
+  "Grover", "Walia", "Bhargava", "Vohra", "Luthra", "Chawla"
 ]
 
 const roomTypes = ["Penthouse Suite", "Executive Suite", "Deluxe Room", "Premium Room", "Studio Suite", "Loft Suite", "Garden Suite", "Corner Suite", "Presidential Suite", "Junior Suite"]
@@ -86,7 +86,7 @@ export const properties: Property[] = Array.from({ length: 25 }, (_, i) => ({
   id: `prop-${i + 1}`,
   name: propertyNames[i],
   city: cities[i],
-  country: "United States",
+  country: "India",
   image: `https://images.unsplash.com/photo-${[
     "1600596542815-ffad4c1539a9",
     "1600607687939-ce8a6c25118c",
@@ -121,7 +121,7 @@ export const properties: Property[] = Array.from({ length: 25 }, (_, i) => ({
   activeBookings: randomNumber(2, 18),
   rating: +(4.0 + Math.random()).toFixed(1),
   amenities: randomItems(amenities, randomNumber(4, 8)),
-  description: `A stunning ${propertyNames[i].toLowerCase()} featuring world-class amenities and breathtaking views of ${cities[i]}.`
+    description: `A stunning ${propertyNames[i].toLowerCase()} featuring world-class amenities and modern interiors in ${cities[i]}.`
 }))
 
 export const rooms: Room[] = properties.flatMap((prop) => {
@@ -164,16 +164,16 @@ export const guests: Guest[] = Array.from({ length: 48 }, (_, i) => {
     firstName,
     lastName,
     email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.com`,
-    phone: `+1 (${randomNumber(200, 999)}) ${randomNumber(200, 999)}-${randomNumber(1000, 9999)}`,
+    phone: `+91 ${randomNumber(70000, 99999)} ${randomNumber(10000, 99999)}`,
     avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}${lastName}`,
     tier: tiers[Math.floor(i / 12)],
     totalSpent: randomNumber(2000, 85000),
     totalBookings: randomNumber(2, 25),
     memberSince: new Date(Date.now() - randomNumber(90, 1095) * 86400000).toISOString(),
-    preferences: randomItems(["Late checkout", "Extra pillows", "Welcome amenities", "Corner room", "High floor", "Quiet floor", "Ocean view", "City view", "Pet friendly", "Non-smoking", "Eco-friendly"], randomNumber(2, 5)),
+    preferences: randomItems(["Late checkout", "Extra pillows", "Welcome amenities", "Corner room", "High floor", "Quiet floor", "City view", "Garden view", "Non-smoking", "Extra towels", "Morning newspaper", "Chai kit"], randomNumber(2, 5)),
     notes: "",
     idVerified: Math.random() > 0.15,
-    nationality: randomItem(["American", "British", "Canadian", "Australian", "German", "French", "Japanese", "Brazilian", "Swiss", "Italian"]),
+    nationality: randomItem(["Indian", "Indian", "Indian", "Indian", "Indian", "Indian", "Indian", "Indian", "Indian", "Indian"]),
     dateOfBirth: new Date(randomNumber(1960, 2000), randomNumber(0, 11), randomNumber(1, 28)).toISOString(),
   }
 })
@@ -204,16 +204,16 @@ export const bookings: Booking[] = Array.from({ length: 65 }, (_, i) => {
     status,
     totalAmount: amount,
     paidAmount: status === "cancelled" ? amount * 0.3 : amount,
-    source: randomItem(["Airbnb", "Booking.com", "Direct", "Expedia", "VRBO", "Corporate"]),
+    source: randomItem(["Airbnb", "Makemytrip", "Direct", "Booking.com", "OYO", "Corporate", "Goibibo", "EaseMyTrip"]),
     adults: randomNumber(1, 4),
     children: randomNumber(0, 3),
-    specialRequests: Math.random() > 0.7 ? randomItem(["Late check-in around 10pm", "Anniversary celebration setup", "Extra crib for toddler", "Airport transfer needed", "Allergy-friendly room"]) : "",
+    specialRequests: Math.random() > 0.7 ? randomItem(["Late check-in around 10pm", "Anniversary celebration setup", "Extra mattress for guest", "Airport transfer from Delhi", "Vegetarian meal preference", "Early check-in requested"]) : "",
     createdAt: new Date(Date.now() - randomNumber(1, 90) * 86400000).toISOString(),
   }
 })
 
 export const housekeepingTasks: HousekeepingTask[] = rooms.filter(r => r.status === "dirty" || r.status === "cleaning" || Math.random() > 0.7).slice(0, 30).map((room, i) => {
-  const cleaners = ["Maria Santos", "James Wilson", "Priya Sharma", "Carlos Mendez", "Sarah Chen", "David Kim", "Ana Rodriguez", "Michael Brown"]
+  const cleaners = ["Sunita Devi", "Rajesh Kumar", "Priya Sharma", "Amit Singh", "Meera Joshi", "Vijay Nair", "Anita Desai", "Deepak Verma"]
   const statuses: HousekeepingTask["status"][] = ["pending", "in-progress", "completed", "inspected"]
   return {
     id: `hk-${i + 1}`,
@@ -227,19 +227,19 @@ export const housekeepingTasks: HousekeepingTask[] = rooms.filter(r => r.status 
     priority: randomItem(["low", "medium", "high"] as const),
     eta: `${randomNumber(8, 17)}:${randomNumber(0, 5) * 10}`.padStart(5, "0"),
     progress: statuses[i % 4] === "completed" ? 100 : statuses[i % 4] === "in-progress" ? randomNumber(30, 70) : 0,
-    notes: randomItem(["Deep clean requested", "Restock mini bar", "Replace linens", "Standard turn-over", "Extra amenities needed", ""]),
+    notes: randomItem(["Deep clean requested", "Restock minibar", "Replace linens", "Standard turn-over", "Extra towels needed", "Restock chai & coffee", ""]),
     scheduledDate: new Date(Date.now() + randomNumber(-1, 3) * 86400000).toISOString(),
   }
 })
 
 export const maintenanceTickets: MaintenanceTicket[] = [
-  { id: "MT-1001", title: "AC not cooling properly", description: "Guest reported AC unit making noise and not cooling below 75°F", propertyId: "prop-1", propertyName: "The Penthouse at NoMad", roomId: "room-prop-1-1", roomNumber: "001", status: "in-progress", priority: "high", assignedTo: "Robert HVAC", assignedAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=RobertHVAC", estimatedCompletion: "2026-06-18T15:00:00Z", createdAt: "2026-06-16T10:30:00Z", resolvedAt: null, images: [], category: "HVAC", cost: 0 },
-  { id: "MT-1002", title: "Leaking faucet in bathroom", description: "Persistent drip from master bathroom sink", propertyId: "prop-3", propertyName: "Tribeca Sky Suite", roomId: "room-prop-3-2", roomNumber: "002", status: "open", priority: "medium", assignedTo: "Maria Plumber", assignedAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=MariaPlumber", estimatedCompletion: "2026-06-19T12:00:00Z", createdAt: "2026-06-15T14:00:00Z", resolvedAt: null, images: [], category: "Plumbing", cost: 0 },
-  { id: "MT-1003", title: "TV not working", description: "Smart TV won't turn on, power outlet seems fine", propertyId: "prop-5", propertyName: "Brooklyn Heights Estate", roomId: "room-prop-5-1", roomNumber: "001", status: "resolved", priority: "low", assignedTo: "Alex Tech", assignedAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=AlexTech", estimatedCompletion: "2026-06-17T11:00:00Z", createdAt: "2026-06-14T09:00:00Z", resolvedAt: "2026-06-17T10:30:00Z", images: [], category: "Electronics", cost: 150 },
-  { id: "MT-1004", title: "Door lock malfunction", description: "Electronic keypad not responding, guest locked out", propertyId: "prop-2", propertyName: "Soho Loft Residence", roomId: "room-prop-2-3", roomNumber: "003", status: "closed", priority: "critical", assignedTo: "Sam Locksmith", assignedAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=SamLocksmith", estimatedCompletion: "2026-06-16T09:00:00Z", createdAt: "2026-06-16T08:00:00Z", resolvedAt: "2026-06-16T08:45:00Z", images: [], category: "Security", cost: 200 },
-  { id: "MT-1005", title: "Water pressure low", description: "Shower water pressure below acceptable levels", propertyId: "prop-7", propertyName: "Upper East Side Manor", roomId: "room-prop-7-4", roomNumber: "004", status: "open", priority: "high", assignedTo: "Maria Plumber", assignedAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=MariaPlumber", estimatedCompletion: "2026-06-20T14:00:00Z", createdAt: "2026-06-17T11:00:00Z", resolvedAt: null, images: [], category: "Plumbing", cost: 0 },
-  { id: "MT-1006", title: "Broken window blinds", description: "Motorized blinds stuck in open position", propertyId: "prop-4", propertyName: "Central Park View", roomId: "room-prop-4-2", roomNumber: "002", status: "open", priority: "low", assignedTo: "Unassigned", assignedAvatar: "", estimatedCompletion: "", createdAt: "2026-06-17T16:30:00Z", resolvedAt: null, images: [], category: "Maintenance", cost: 0 },
-  { id: "MT-1007", title: "Pool heater repair", description: "Pool temperature dropped below 78°F, heater not igniting", propertyId: "prop-10", propertyName: "DUMBO Waterfront Suite", roomId: "room-prop-10-1", roomNumber: "001", status: "in-progress", priority: "critical", assignedTo: "Robert HVAC", assignedAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=RobertHVAC", estimatedCompletion: "2026-06-18T18:00:00Z", createdAt: "2026-06-15T07:00:00Z", resolvedAt: null, images: [], category: "HVAC", cost: 0 },
+  { id: "MT-1001", title: "AC not cooling properly", description: "Guest reported AC unit making noise and not cooling below 24°C", propertyId: "prop-1", propertyName: "The Penthouses at Sector 15", roomId: "room-prop-1-1", roomNumber: "001", status: "in-progress", priority: "high", assignedTo: "Vijay AC", assignedAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=VijayAC", estimatedCompletion: "2026-06-18T15:00:00Z", createdAt: "2026-06-16T10:30:00Z", resolvedAt: null, images: [], category: "HVAC", cost: 0 },
+  { id: "MT-1002", title: "Leaking faucet in bathroom", description: "Persistent drip from master bathroom sink", propertyId: "prop-3", propertyName: "Sector 62 Luxe Towers", roomId: "room-prop-3-2", roomNumber: "002", status: "open", priority: "medium", assignedTo: "Rajesh Plumber", assignedAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=RajeshPlumber", estimatedCompletion: "2026-06-19T12:00:00Z", createdAt: "2026-06-15T14:00:00Z", resolvedAt: null, images: [], category: "Plumbing", cost: 0 },
+  { id: "MT-1003", title: "TV not working", description: "Smart TV won't turn on, power outlet seems fine", propertyId: "prop-5", propertyName: "Sector 29 Iconic Estate", roomId: "room-prop-5-1", roomNumber: "001", status: "resolved", priority: "low", assignedTo: "Akash Tech", assignedAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=AkashTech", estimatedCompletion: "2026-06-17T11:00:00Z", createdAt: "2026-06-14T09:00:00Z", resolvedAt: "2026-06-17T10:30:00Z", images: [], category: "Electronics", cost: 150 },
+  { id: "MT-1004", title: "Door lock malfunction", description: "Electronic keypad not responding, guest locked out", propertyId: "prop-2", propertyName: "Sector 44 Sky Residence", roomId: "room-prop-2-3", roomNumber: "003", status: "closed", priority: "critical", assignedTo: "Sanjay Lock", assignedAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=SanjayLock", estimatedCompletion: "2026-06-16T09:00:00Z", createdAt: "2026-06-16T08:00:00Z", resolvedAt: "2026-06-16T08:45:00Z", images: [], category: "Security", cost: 200 },
+  { id: "MT-1005", title: "Water pressure low", description: "Shower water pressure below acceptable levels", propertyId: "prop-7", propertyName: "Sector 32 Emerald Residency", roomId: "room-prop-7-4", roomNumber: "004", status: "open", priority: "high", assignedTo: "Rajesh Plumber", assignedAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=RajeshPlumber", estimatedCompletion: "2026-06-20T14:00:00Z", createdAt: "2026-06-17T11:00:00Z", resolvedAt: null, images: [], category: "Plumbing", cost: 0 },
+  { id: "MT-1006", title: "Broken window blinds", description: "Motorized blinds stuck in open position", propertyId: "prop-4", propertyName: "Sector 18 Grand Suites", roomId: "room-prop-4-2", roomNumber: "002", status: "open", priority: "low", assignedTo: "Unassigned", assignedAvatar: "", estimatedCompletion: "", createdAt: "2026-06-17T16:30:00Z", resolvedAt: null, images: [], category: "Maintenance", cost: 0 },
+  { id: "MT-1007", title: "Water heater not working", description: "Geyser not heating water, guest needs hot water urgently", propertyId: "prop-10", propertyName: "Sector 49 Waterfront Residences", roomId: "room-prop-10-1", roomNumber: "001", status: "in-progress", priority: "critical", assignedTo: "Vijay AC", assignedAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=VijayAC", estimatedCompletion: "2026-06-18T18:00:00Z", createdAt: "2026-06-15T07:00:00Z", resolvedAt: null, images: [], category: "Plumbing", cost: 0 },
 ]
 
 export const invoices: Invoice[] = bookings.slice(0, 20).map((booking, i) => {
@@ -281,14 +281,14 @@ export const analyticsData: AnalyticsData[] = [
 ]
 
 export const notifications: Notification[] = [
-  { id: "n1", type: "check-in", message: "James Anderson checked in at The Penthouse at NoMad", timestamp: new Date(Date.now() - 1800000).toISOString(), read: false, priority: "medium" },
-  { id: "n2", type: "check-out", message: "Sophia Chen checked out from Soho Loft Residence", timestamp: new Date(Date.now() - 3600000).toISOString(), read: false, priority: "medium" },
-  { id: "n3", type: "cleaning", message: "Room 304 at Tribeca Sky Suite is ready for inspection", timestamp: new Date(Date.now() - 7200000).toISOString(), read: false, priority: "low" },
-  { id: "n4", type: "maintenance", message: "Critical: AC repair needed at The Penthouse at NoMad", timestamp: new Date(Date.now() - 10800000).toISOString(), read: true, priority: "high" },
-  { id: "n5", type: "booking", message: "New booking: Central Park View - 5 nights starting Jun 20", timestamp: new Date(Date.now() - 14400000).toISOString(), read: true, priority: "low" },
-  { id: "n6", type: "payment", message: "Payment received: $4,230 from Oliver Williams", timestamp: new Date(Date.now() - 18000000).toISOString(), read: true, priority: "medium" },
-  { id: "n7", type: "check-in", message: "Emma Davis arrived early at Beverly Hills Estate", timestamp: new Date(Date.now() - 21600000).toISOString(), read: false, priority: "high" },
-  { id: "n8", type: "booking", message: "Booking cancelled: Marina Del Rey Penthouse - refund processed", timestamp: new Date(Date.now() - 25200000).toISOString(), read: false, priority: "medium" },
+  { id: "n1", type: "check-in", message: "Arjun Sharma checked in at The Penthouses at Sector 15", timestamp: new Date(Date.now() - 1800000).toISOString(), read: false, priority: "medium" },
+  { id: "n2", type: "check-out", message: "Priya Patel checked out from Sector 44 Sky Residence", timestamp: new Date(Date.now() - 3600000).toISOString(), read: false, priority: "medium" },
+  { id: "n3", type: "cleaning", message: "Room 304 at Sector 62 Luxe Towers is ready for inspection", timestamp: new Date(Date.now() - 7200000).toISOString(), read: false, priority: "low" },
+  { id: "n4", type: "maintenance", message: "Critical: AC repair needed at The Penthouses at Sector 15", timestamp: new Date(Date.now() - 10800000).toISOString(), read: true, priority: "high" },
+  { id: "n5", type: "booking", message: "New booking: Sector 18 Grand Suites - 5 nights starting Jun 20", timestamp: new Date(Date.now() - 14400000).toISOString(), read: true, priority: "low" },
+  { id: "n6", type: "payment", message: "Payment received: ₹4,230 from Rahul Singh", timestamp: new Date(Date.now() - 18000000).toISOString(), read: true, priority: "medium" },
+  { id: "n7", type: "check-in", message: "Ananya Verma arrived early at Sector 29 Iconic Estate", timestamp: new Date(Date.now() - 21600000).toISOString(), read: false, priority: "high" },
+  { id: "n8", type: "booking", message: "Booking cancelled: Sector 51 Golden Crest - refund processed", timestamp: new Date(Date.now() - 25200000).toISOString(), read: false, priority: "medium" },
 ]
 
 export const calendarEvents: CalendarEvent[] = bookings.slice(0, 40).map((booking, i) => ({
