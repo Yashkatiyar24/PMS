@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { TopBar } from "@/components/layout/TopBar"
@@ -18,7 +19,11 @@ import { BookingView } from "@/components/booking/BookingView"
 import { MobileView } from "@/components/mobile/MobileView"
 
 export default function Home() {
-  const [activeView, setActiveView] = useState("dashboard")
+  const params = useParams()
+  const slug = Array.isArray(params?.slug) ? params.slug[0] : (params?.slug as string | undefined)
+  const validViews = ["dashboard", "properties", "reservations", "calendar", "rooms", "guests", "housekeeping", "maintenance", "finance", "analytics"]
+  const initialView = slug && validViews.includes(slug) ? slug : "dashboard"
+  const [activeView, setActiveView] = useState(initialView)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showMobile, setShowMobile] = useState(false)
 

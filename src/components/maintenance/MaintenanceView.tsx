@@ -8,7 +8,7 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, Badge, Avatar, StatusBadge } from "@/components/ui/base"
 import { maintenanceTickets, properties } from "@/lib/data"
-import { cn, formatDate } from "@/lib/utils"
+import { cn, formatDate, formatCurrency } from "@/lib/utils"
 
 export function MaintenanceView() {
   const [filter, setFilter] = useState<string>("all")
@@ -107,7 +107,7 @@ export function MaintenanceView() {
                           <span className="text-muted">ETA: {formatDate(ticket.estimatedCompletion)}</span>
                         )}
                         {ticket.cost > 0 && (
-                          <span className="font-medium text-primary">${ticket.cost}</span>
+                          <span className="font-medium text-primary">{formatCurrency(ticket.cost)}</span>
                         )}
                         <button className="p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-sand-50">
                           <MoreHorizontal size={14} className="text-muted" />

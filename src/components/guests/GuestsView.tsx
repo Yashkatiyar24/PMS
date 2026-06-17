@@ -152,7 +152,7 @@ export function GuestsView() {
                   <p className="text-[10px] text-muted">Total Spent</p>
                 </div>
                 <div className="p-3 rounded-xl bg-sand-50 text-center">
-                  <p className="text-lg font-bold text-primary">${Math.round(guest.totalSpent / guest.totalBookings)}</p>
+                  <p className="text-lg font-bold text-primary">{formatCurrency(Math.round(guest.totalSpent / guest.totalBookings))}</p>
                   <p className="text-[10px] text-muted">Avg. per Stay</p>
                 </div>
               </div>
