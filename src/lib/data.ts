@@ -52,7 +52,7 @@ const guestLastNames = [
   "Pillai", "Rao", "Mishra", "Pandey", "Dubey", "Tiwari", "Thakur",
   "Yadav", "Mohan", "Rawat", "Biswas", "Sethi", "Chopra", "Kohli",
   "Bajaj", "Gill", "Sood", "Arora", "Sachdev", "Bhalla", "Sareen",
-  "Grover", "Walia", "Bhargava", "Vohra", "Luthra", "Chawla"
+  "Grover", "Walia", "Bhargava", "Vohra", "Luthra", "Chawla", "Batra"
 ]
 
 const roomTypes = ["Penthouse Suite", "Executive Suite", "Deluxe Room", "Premium Room", "Studio Suite", "Loft Suite", "Garden Suite", "Corner Suite", "Presidential Suite", "Junior Suite"]
