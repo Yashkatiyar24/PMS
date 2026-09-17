@@ -6,6 +6,8 @@ import in.pms.common.ConflictException;
 import in.pms.common.NotFoundException;
 import in.pms.folio.FolioService;
 import in.pms.guests.GuestService;
+import in.pms.messaging.MessageTemplates;
+import in.pms.messaging.Outbox;
 import in.pms.money.Money;
 import in.pms.settings.Settings;
 import in.pms.settings.SettingsService;
@@ -36,9 +38,11 @@ public class BookingService {
     private final SettingsService settings;
     private final FolioService folios;
     private final GuestService guests;
+    private final Outbox outbox;
 
-    public BookingService(@Qualifier("jdbc") JdbcClient jdbc, AuditService audit, SettingsService settings, FolioService folios, GuestService guests) {
-        this.jdbc = jdbc; this.audit = audit; this.settings = settings; this.folios = folios; this.guests = guests;
+    public BookingService(@Qualifier("jdbc") JdbcClient jdbc, AuditService audit, SettingsService settings,
+                          FolioService folios, GuestService guests, Outbox outbox) {
+        this.jdbc = jdbc; this.audit = audit; this.settings = settings; this.folios = folios; this.guests = guests; this.outbox = outbox;
     }
 
     // ---------- Inputs ----------
@@ -183,6 +187,7 @@ public class BookingService {
             folios.recordPayment(folioId, new FolioService.PaymentInput(in.advanceMode() == null ? "upi" : in.advanceMode(), in.advancePaise(), "", null, null, null), userId);
 
         Booking created = load(bookingId);
+        notifyBookingConfirmed(created, s);
         audit.record("bookings", bookingId.toString(), "reserve", null, summary(created), userId);
         return created;
     }
@@ -327,6 +332,23 @@ public class BookingService {
     }
 
     // ---------- Internals ----------
+
+    /**
+     * Queue the guest's confirmation. Only with an opt-in (Meta policy and PRD G5), only when the property has
+     * WhatsApp on, and only as an outbox row: a messaging outage must never fail a booking.
+     */
+    private void notifyBookingConfirmed(Booking b, Settings s) {
+        if (!s.whatsappEnabled() || !b.whatsappOptIn() || b.guestPhone() == null || b.guestPhone().isBlank()) return;
+        var property = jdbc.sql("select name, phone from properties where id = ?").param(TenantContext.require()).query().listOfRows().get(0);
+        var folio = folios.get(b.folioId());
+        outbox.enqueue(TenantContext.require(), "whatsapp", MessageTemplates.bookingConfirmed(
+                b.guestName(), String.valueOf(property.get("name")),
+                b.arriveAt().atZoneSameInstant(zone()).toLocalDate().toString(),
+                b.departAt().atZoneSameInstant(zone()).toLocalDate().toString(),
+                b.units().stream().map(Booking.Unit::label).reduce((x, y) -> x + ", " + y).orElse(""),
+                folio.paidPaise(), String.valueOf(property.get("phone")), b.guestPhone(), s.guestLanguage()),
+                "booking_confirmed:" + b.id());
+    }
 
     private void regenerateCharges(UUID bookingId, UUID folioId, ZoneId zone, UUID userId) {
         boolean hasGstin = jdbc.sql("select gstin is not null and gstin <> '' from properties where id = ?").param(TenantContext.require()).query(Boolean.class).single();

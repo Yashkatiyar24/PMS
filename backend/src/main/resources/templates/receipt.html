@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${language}">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="${labels.get(r.kind)} + ' ' + ${r.number}">Receipt</title>
+  <style th:inline="text">
+    /* One stylesheet, three paper sizes. The profile only changes the page box and base font. */
+    @page { size: [(${page.size})]; margin: [(${page.margin})]; }
+    body { font-family: "Noto Sans", "DejaVu Sans", sans-serif; font-size: [(${page.font})]; color: #111; margin: 0; }
+    .doc { width: 100%; }
+    h1 { font-size: 1.25em; margin: 0 0 2px 0; text-align: center; }
+    .muted { color: #555; }
+    .center { text-align: center; }
+    .right { text-align: right; }
+    .row { display: flex; justify-content: space-between; gap: 8px; }
+    .head { text-align: center; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 6px; }
+    .kind { font-weight: bold; text-transform: uppercase; letter-spacing: 0.04em; margin: 6px 0; text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+    th, td { padding: 3px 2px; text-align: left; vertical-align: top; }
+    thead th { border-bottom: 1px solid #000; font-weight: bold; }
+    tfoot td { border-top: 1px solid #000; }
+    .num { text-align: right; white-space: nowrap; }
+    .totals td { padding: 2px; }
+    .totals .grand { font-weight: bold; border-top: 1px solid #000; }
+    .note { margin-top: 6px; font-size: 0.9em; }
+    .qr { text-align: center; margin-top: 8px; }
+    .qr img { width: 110px; height: 110px; }
+    .foot { margin-top: 8px; border-top: 1px dashed #666; padding-top: 4px; font-size: 0.85em; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="doc">
+
+  <div class="head">
+    <h1 th:text="${property.name}">Property</h1>
+    <div class="muted" th:text="${property.address} + ', ' + ${property.city} + ' ' + ${property.state}">Address</div>
+    <div class="muted">
+      <span th:if="${property.phone}" th:text="${property.phone}">Phone</span>
+      <span th:if="${property.gstin}" th:text="' · ' + ${labels.gstin} + ': ' + ${property.gstin}">GSTIN</span>
+    </div>
+    <div class="muted" th:if="${template.header}" th:text="${template.header}">Header</div>
+  </div>
+
+  <div class="kind" th:text="${labels.get(r.kind)}">Tax Invoice</div>
+
+  <div class="row">
+    <div><span th:text="${labels.number}">No.</span>: <b th:text="${r.number}">N</b></div>
+    <div><span th:text="${labels.date}">Date</span>: <b th:text="${r.date}">D</b></div>
+  </div>
+
+  <div th:if="${r.kind == 'credit_note'}" class="note">
+    <span th:text="${labels.against}">Against</span>: <b th:text="${r.againstNumber}">INV</b><br/>
+    <span th:text="${labels.reason}">Reason</span>: <span th:text="${r.reason}">R</span>
+  </div>
+
+  <table>
+    <tr><td th:text="${labels.guest}">Guest</td><td><b th:text="${guest.name}">Name</b></td></tr>
+    <tr th:if="${guest.phone}"><td th:text="${labels.phone}">Phone</td><td th:text="${guest.phone}">Phone</td></tr>
+    <tr th:if="${guest.id_type}"><td th:text="${labels.idProof}">ID</td>
+        <td th:text="${guest.id_type} + (${guest.id_last4} ? ' ****' + ${guest.id_last4} : '')">ID</td></tr>
+    <tr th:if="${guest.units}"><td th:text="${labels.room}">Room</td><td th:text="${guest.units}">101</td></tr>
+    <tr><td th:text="${labels.stay}">Stay</td><td th:text="${stayFrom} + ' → ' + ${stayTo}">dates</td></tr>
+    <tr><td th:text="${labels.guests}">Guests</td>
+        <td th:text="${guest.adults} + ' ' + ${labels.adults} + (${guest.children} > 0 ? ', ' + ${guest.children} + ' ' + ${labels.children} : '')">2</td></tr>
+  </table>
+
+  <table th:if="${!lines.isEmpty()}">
+    <thead>
+      <tr>
+        <th th:text="${labels.description}">Description</th>
+        <th class="num" th:text="${labels.qty}">Qty</th>
+        <th class="num" th:text="${labels.rate}">Rate</th>
+        <th class="num" th:text="${labels.amount}">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="l : ${lines}">
+        <td th:text="${l.description}">Room</td>
+        <td class="num" th:text="${l.qty}">1</td>
+        <td class="num" th:text="${l.rate}">1000</td>
+        <td class="num" th:text="${l.amount}">1000</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table class="totals" th:if="${!taxBreakup.isEmpty()}">
+    <tr th:each="t : ${taxBreakup}">
+      <td th:text="${labels.taxable} + ' @ ' + ${t.rate}">Taxable @ 5%</td>
+      <td class="num" th:text="${t.taxable}">2000</td>
+      <td th:text="${labels.cgst}">CGST</td><td class="num" th:text="${t.cgst}">50</td>
+      <td th:text="${labels.sgst}">SGST</td><td class="num" th:text="${t.sgst}">50</td>
+    </tr>
+  </table>
+
+  <table class="totals">
+    <tr class="grand"><td th:text="${labels.total}">Total</td><td class="num" th:text="${totals.total}">2100</td></tr>
+    <tr th:if="${totals.showDeposit}"><td th:text="${labels.deposit}">Deposit</td><td class="num" th:text="${totals.deposit}">200</td></tr>
+    <tr><td th:text="${labels.paid}">Paid</td><td class="num" th:text="${totals.paid}">2100</td></tr>
+    <tr><td th:text="${labels.balance}">Balance</td><td class="num" th:text="${totals.balance}">0</td></tr>
+  </table>
+
+  <table th:if="${!payments.isEmpty()}">
+    <thead><tr><th th:text="${labels.payments}">Payments</th><th th:text="${labels.mode}">Mode</th><th class="num" th:text="${labels.amount}">Amount</th></tr></thead>
+    <tbody>
+      <tr th:each="p : ${payments}">
+        <td th:text="${p.at}">date</td><td th:text="${p.mode} + (${p.reference} ? ' ' + ${p.reference} : '')">cash</td>
+        <td class="num" th:text="${p.amount}">500</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note" th:if="${r.kind == 'donation'}">
+    <div th:text="${labels.noGoodsOrServices}">No goods or services.</div>
+    <div th:if="${property.reg_80g}" th:text="${labels.reg80g} + ': ' + ${property.reg_80g}">80G</div>
+  </div>
+  <div class="note" th:if="${r.kind == 'provisional'}" th:text="${labels.provisionalNote}">Provisional.</div>
+  <div class="note" th:if="${property.gstin}" th:text="${labels.hsn} + ': ' + ${hsn}">HSN 9963</div>
+
+  <div class="qr" th:if="${qr}">
+    <img th:src="${qr}" alt="UPI"/>
+    <div class="muted" th:text="${labels.scanToPay} + ' · ' + ${template.upiVpa}">Scan to pay</div>
+  </div>
+
+  <div class="foot">
+    <div th:if="${template.terms}" th:text="${template.terms}">Terms</div>
+    <div th:if="${template.footer}" th:text="${template.footer}">Footer</div>
+  </div>
+</div>
+</body>
+</html>
