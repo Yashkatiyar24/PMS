@@ -1,0 +1,4 @@
+pms:
+  seed.enabled: true
+  auth.dev-otp: "123456"
+logging.level.in.pms: debug

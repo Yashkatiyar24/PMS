@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "pms")
 public record PmsProperties(
         String appUrl,
+        String sessionSecret,
         boolean cookieSecure,
         String defaultTimezone,
         Db db,

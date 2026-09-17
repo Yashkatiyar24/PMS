@@ -30,6 +30,7 @@ management:
 
 pms:
   app-url: ${PMS_APP_URL:http://localhost:3000}
+  session-secret: ${PMS_SESSION_SECRET:dev-only-change-me-32-bytes-minimum!!}
   cookie-secure: ${PMS_COOKIE_SECURE:false}   # true behind HTTPS
   default-timezone: ${PMS_DEFAULT_TIMEZONE:Asia/Kolkata}
   db:
