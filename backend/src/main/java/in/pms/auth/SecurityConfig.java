@@ -1,5 +1,6 @@
 package in.pms.auth;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,11 @@ public class SecurityConfig {
                 .headers(h -> h.frameOptions(f -> f.deny()))
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(a -> a
+                        // A 403 makes the container forward to /error. That forward re-enters this chain with
+                        // no authentication, and without this line anyRequest().denyAll() would answer 401,
+                        // overwriting the 403. The app reads 401 as "your session ended", so a staff member
+                        // tapping something they may not do would be signed out instead of simply refused.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC, DispatcherType.FORWARD).permitAll()
                         .requestMatchers("/api/auth/otp/**", "/api/auth/login", "/api/health", "/api/files/**", "/actuator/health/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/**").authenticated()

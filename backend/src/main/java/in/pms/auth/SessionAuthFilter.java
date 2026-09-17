@@ -37,22 +37,27 @@ public class SessionAuthFilter extends OncePerRequestFilter {
         if (user.isEmpty()) { chain.doFilter(req, res); return; }
 
         CurrentUser current = user.get();
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(current, null, authorities(current)));
-        try {
-            // Checked after authenticating, so a refused write answers "forbidden" and is never mistaken
-            // for "signed out", which would send the desk back to the login screen for no reason.
-            if (!SAFE.contains(req.getMethod()) && !"pms".equals(req.getHeader("X-Requested-With"))) {
-                res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                res.setContentType("application/json;charset=UTF-8");
-                res.getWriter().write("{\"error\":\"Missing X-Requested-With header\"}");
-                return;
-            }
-            if (current.propertyId() != null) TenantContext.runAs(current.propertyId(), () -> doChain(chain, req, res));
-            else doChain(chain, req, res);
-        } finally {
-            SecurityContextHolder.clearContext();
+        // A fresh context rather than mutating the one already in the holder: in Spring Security 6 that one
+        // is lazily resolved and shared, and writing into it does not reliably reach the filters above us.
+        var context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(new UsernamePasswordAuthenticationToken(current, null, authorities(current)));
+        SecurityContextHolder.setContext(context);
+
+        // Checked after authenticating, so a refused write answers "forbidden" and is never mistaken for
+        // "signed out", which would send the desk back to the login screen for no reason.
+        if (!SAFE.contains(req.getMethod()) && !"pms".equals(req.getHeader("X-Requested-With"))) {
+            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            res.setContentType("application/json;charset=UTF-8");
+            res.getWriter().write("{\"error\":\"Missing X-Requested-With header\"}");
+            return;
         }
+
+        // The context is deliberately not cleared here. An authorization failure is thrown further down the
+        // chain and is translated to a status by a filter above this one; if the context were already empty
+        // by the time it got there, every 403 for a signed-in user would be reported as 401 "signed out".
+        // Spring's own SecurityContextHolderFilter, which sits above us, clears it when the request ends.
+        if (current.propertyId() != null) TenantContext.runAs(current.propertyId(), () -> doChain(chain, req, res));
+        else doChain(chain, req, res);
     }
 
     private static void doChain(FilterChain chain, HttpServletRequest req, HttpServletResponse res) {

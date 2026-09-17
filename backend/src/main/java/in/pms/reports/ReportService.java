@@ -64,14 +64,19 @@ public class ReportService {
         int departures = count("select count(*) from bookings where property_id = ? and checked_out_at >= ? and checked_out_at < ?", p, w);
         int noShows = count("select count(*) from bookings where property_id = ? and state = 'no_show' and updated_at >= ? and updated_at < ?", p, w);
 
+        // Occupancy counts the units that were used at any point in the business day, each once even if two
+        // stays passed through it. Sampling a single instant instead would depend on when the report is
+        // asked for: the start misses everyone who arrived during the day, and the end misses the one-night
+        // guests who have already left, who are most of them.
         var occupancy = jdbc.sql("""
                 select
                   (select count(*) from rooms r
                      left join beds b on b.room_id = r.id and b.active
                    where r.property_id = ? and r.active and r.status <> 'blocked') as sellable,
-                  (select count(*) from booking_units bu where bu.property_id = ? and bu.cancelled_at is null
-                     and tstzrange(bu.arrive_at, bu.depart_at, '[)') @> ?::timestamptz) as occupied""")
-                .params(p, p, w.to().minusHours(1)).query().listOfRows().get(0);
+                  (select count(distinct coalesce(bu.bed_id, bu.room_id)) from booking_units bu
+                     where bu.property_id = ? and bu.cancelled_at is null
+                       and tstzrange(bu.arrive_at, bu.depart_at, '[)') && tstzrange(?, ?, '[)')) as occupied""")
+                .params(p, p, w.from(), w.to()).query().listOfRows().get(0);
         long sellable = ((Number) occupancy.get("sellable")).longValue();
         long occupied = ((Number) occupancy.get("occupied")).longValue();
 

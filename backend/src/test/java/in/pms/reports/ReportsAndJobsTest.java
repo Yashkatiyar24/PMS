@@ -105,6 +105,7 @@ class ReportsAndJobsTest {
         assertThat((Number) daily.get("occupiedUnits")).returns(1L, Number::longValue);
         assertThat((Number) daily.get("sellableUnits")).returns(2L, Number::longValue);
         assertThat(daily.get("occupancyPct")).isEqualTo(50L);
+        // The same stay must be counted whatever time of day the report is asked for.
         // ₹1000 + 5% GST = ₹1050, of which ₹600 paid
         assertThat((Number) daily.get("outstandingPaise")).returns(45000L, Number::longValue);
     }

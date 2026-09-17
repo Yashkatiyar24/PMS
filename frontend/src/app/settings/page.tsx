@@ -7,6 +7,8 @@
  * the role allowed to change it, without anyone editing this file. Sending null resets a key to its default.
  */
 import { useCallback, useMemo, useState } from "react"
+import Link from "next/link"
+import { Building2, ChevronRight, DoorOpen, Percent, ShieldCheck, Users } from "lucide-react"
 import { api, ApiError } from "@/lib/api"
 import type { SettingDef } from "@/lib/types"
 import { useResource } from "@/lib/use-resource"
@@ -70,6 +72,44 @@ export default function SettingsPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold">{t("settings.title")}</h1>
       {error && <Banner tone="danger">{error}</Banner>}
+
+      <nav>
+        <ul className="space-y-2">
+          {[
+            { href: "/settings/property", label: t("setup.property"), icon: Building2, need: "MANAGER" as const },
+            { href: "/settings/rooms", label: t("setup.roomTypes"), icon: DoorOpen, need: "MANAGER" as const },
+            { href: "/settings/tax", label: t("setup.tax"), icon: Percent, need: "MANAGER" as const },
+            { href: "/settings/staff", label: t("setup.staff"), icon: Users, need: "MANAGER" as const },
+          ]
+            .filter((item) => can(item.need))
+            .map(({ href, label, icon: Icon }) => (
+              <li key={href}>
+                <Link href={href}>
+                  <Card className="flex items-center justify-between gap-2 py-3">
+                    <span className="flex items-center gap-2 font-medium">
+                      <Icon size={18} aria-hidden /> {label}
+                    </span>
+                    <ChevronRight size={18} aria-hidden className="text-[var(--color-ink-soft)]" />
+                  </Card>
+                </Link>
+              </li>
+            ))}
+          {user?.superAdmin && (
+            <li>
+              <Link href="/admin">
+                <Card className="flex items-center justify-between gap-2 py-3">
+                  <span className="flex items-center gap-2 font-medium">
+                    <ShieldCheck size={18} aria-hidden /> {t("admin.title")}
+                  </span>
+                  <ChevronRight size={18} aria-hidden className="text-[var(--color-ink-soft)]" />
+                </Card>
+              </Link>
+            </li>
+          )}
+        </ul>
+      </nav>
+
+      <h2 className="pt-2 text-lg font-bold">{t("settings.rules")}</h2>
 
       {grouped.map(([group, defs]) => (
         <Card key={group} className="space-y-4">

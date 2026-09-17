@@ -8,7 +8,7 @@
 import { use, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { IndianRupee, LogOut, Printer, Receipt as ReceiptIcon } from "lucide-react"
+import { IndianRupee, LogOut, Printer, Receipt as ReceiptIcon, UserX, XCircle } from "lucide-react"
 import { api, API_BASE, ApiError, newClientUuid, QueuedOffline } from "@/lib/api"
 import { useResource } from "@/lib/use-resource"
 import { formatDate, formatDateTime, rupees, toPaise } from "@/lib/format"
@@ -49,6 +49,8 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
   const [extraAmount, setExtraAmount] = useState("")
   const [approvalPin, setApprovalPin] = useState("")
   const [overrideReason, setOverrideReason] = useState("")
+  const [cancelReason, setCancelReason] = useState("")
+  const [confirming, setConfirming] = useState<"cancel" | "noShow" | null>(null)
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
@@ -107,6 +109,26 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
     })
 
   const arrive = () => run(async () => { await api(`/api/bookings/${id}/arrive`, { method: "POST" }) })
+
+  // Both release the rooms and need a manager: cancelling loses a sale, and a no-show decides what
+  // happens to the advance according to the property's policy.
+  const cancel = () =>
+    run(async () => {
+      await api(`/api/bookings/${id}/cancel`, {
+        method: "POST",
+        body: { reason: cancelReason, approverId: user?.id, pin: approvalPin },
+      })
+      setConfirming(null)
+      setCancelReason("")
+      setApprovalPin("")
+    })
+
+  const markNoShow = () =>
+    run(async () => {
+      await api(`/api/bookings/${id}/no-show`, { method: "POST", body: { approverId: user?.id, pin: approvalPin } })
+      setConfirming(null)
+      setApprovalPin("")
+    })
 
   const issueInvoice = () =>
     run(async () => {
@@ -183,9 +205,53 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
       )}
 
       {booking.state === "reserved" && (
-        <Button className="w-full" disabled={busy} onClick={arrive}>
-          {t("action.arrive")}
-        </Button>
+        <>
+          <Button className="w-full py-4" disabled={busy} onClick={arrive}>
+            {t("action.arrive")}
+          </Button>
+
+          {confirming === null && (
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1" onClick={() => setConfirming("noShow")}>
+                <UserX size={16} aria-hidden /> {t("action.markNoShow")}
+              </Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setConfirming("cancel")}>
+                <XCircle size={16} aria-hidden /> {t("booking.cancel")}
+              </Button>
+            </div>
+          )}
+
+          {confirming !== null && (
+            <Card className="space-y-2">
+              <h2 className="font-semibold">
+                {confirming === "cancel" ? t("booking.cancel") : t("booking.noShowConfirm")}
+              </h2>
+              {confirming === "cancel" && (
+                <Field label={t("booking.cancelReason")}>
+                  <input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
+                </Field>
+              )}
+              {!can("MANAGER") && (
+                <Field label={t("approval.pin")}>
+                  <input inputMode="numeric" type="password" value={approvalPin} onChange={(e) => setApprovalPin(e.target.value)} />
+                </Field>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  variant="danger"
+                  className="flex-1"
+                  disabled={busy || (confirming === "cancel" && !cancelReason.trim())}
+                  onClick={confirming === "cancel" ? cancel : markNoShow}
+                >
+                  {t("action.done")}
+                </Button>
+                <Button variant="secondary" className="flex-1" onClick={() => setConfirming(null)}>
+                  {t("action.cancel")}
+                </Button>
+              </div>
+            </Card>
+          )}
+        </>
       )}
 
       {booking.state === "checked_in" && folio && (

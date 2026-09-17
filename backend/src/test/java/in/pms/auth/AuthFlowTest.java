@@ -119,6 +119,25 @@ class AuthFlowTest {
                 .andExpect(status().isOk()).andExpect(header().string("Set-Cookie", containsString("pms_session=")));
     }
 
+    /**
+     * Being refused must never look like being signed out. The app sends anyone who gets a 401 back to the
+     * login screen, so a staff member tapping a manager-only action would be logged out instead of simply
+     * told no. This caught a real defect: the container's forward to /error was re-secured as anonymous and
+     * turned a correct 403 into a 401.
+     */
+    @Test
+    void aRefusedRequestIsForbiddenAndLeavesTheSessionIntact() throws Exception {
+        Cookie cookie = loginByPassword();
+        mvc.perform(post("/api/auth/switch-property").cookie(cookie).header("X-Requested-With", "pms")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"propertyId\":\"" + propB + "\"}"))
+                .andExpect(status().isNoContent()); // staff in property B
+
+        mvc.perform(get("/api/reports/daily").cookie(cookie)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/properties").cookie(cookie)).andExpect(status().isForbidden());
+        // ...and the session is still usable afterwards.
+        mvc.perform(get("/api/auth/me").cookie(cookie)).andExpect(status().isOk());
+    }
+
     @Test
     void logoutRevokesTheSession() throws Exception {
         Cookie c = loginByPassword();

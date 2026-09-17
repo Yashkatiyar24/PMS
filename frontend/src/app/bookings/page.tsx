@@ -5,11 +5,13 @@
  * A free cell starts an advance booking for that unit and date; an occupied one opens the stay.
  */
 import { useCallback, useMemo, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { CalendarPlus } from "lucide-react"
 import { api } from "@/lib/api"
 import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
-import { Banner, Card, Chip, Loading } from "@/components/ui"
+import { Banner, Button, Card, Chip, Loading } from "@/components/ui"
 
 type Unit = { room_id: string; number: string; floor: number; status: string; type_name: string; is_dormitory: boolean; bed_id: string | null; label: string | null }
 type Occupancy = { room_id: string; bed_id: string | null; arrive_at: string; depart_at: string; booking_id: string; state: string; guest_name: string }
@@ -55,6 +57,13 @@ export default function BookingsPage() {
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-bold">{t("nav.bookings")}</h1>
+
+      <Link href="/bookings/new" className="block">
+        <Button className="w-full py-4 text-lg">
+          <CalendarPlus size={20} aria-hidden /> {t("booking.new")}
+        </Button>
+      </Link>
+
       <input type="date" value={start || chart.start} onChange={(e) => setStart(e.target.value)} className="max-w-48" />
 
       <div className="flex flex-wrap gap-2 text-xs">

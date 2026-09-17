@@ -107,7 +107,26 @@ One behaviour worth knowing: an open folio is re-priced from the current rules w
 registering for GST mid-stay taxes the nights that have not been invoiced yet. Once the invoice is issued its
 snapshot is frozen and never recomputed.
 
+## Screens
+
+| Route | What it is for |
+| --- | --- |
+| `/` | today: arrivals, in-house, departures, what is free, and the check-in button |
+| `/check-in` | the 60-second walk-in flow |
+| `/stays/[id]` | one stay: bill, payments, checkout, receipts, cancel and no-show |
+| `/bookings` | tape chart, rooms down and days across |
+| `/bookings/new` | advance booking taken over the phone |
+| `/rooms` | housekeeping: clean, dirty, blocked |
+| `/reports` | collections, cash in hand, unpaid bills, register and month exports |
+| `/settings` | every rule from the registry, plus the setup screens below |
+| `/settings/property` | name, address, GSTIN, trust registration |
+| `/settings/rooms` | room types with rates, and rooms added as a range |
+| `/settings/tax` | GST slabs, effective-dated |
+| `/settings/staff` | invite, change role, set approval PIN, remove access |
+| `/admin` | our back office: onboard a property, see health, set billing |
+| `/needs-attention` | offline entries the server refused |
+
 ## Not built yet
 
-Advance-booking screens beyond the tape chart, the room and rate setup screens, the super-admin area, and
-PDF export of the police register. The APIs for all of them exist; the screens do not.
+PDF export of the police register (the CSV export exists), guest self-booking, and payment links. These are
+v2 in the PRD.
