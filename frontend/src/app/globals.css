@@ -1,30 +1,109 @@
 @import "tailwindcss";
 
 /*
- * Designed for a ₹6,000 Android phone held in one hand at a reception desk, often in daylight.
- * High contrast by default, 44px minimum tap targets, no colour-only status.
+ * Designed for a ₹6,000 Android phone held in one hand at a reception desk, often in daylight, and for the
+ * owner's laptop in the evening. High contrast, 44px tap targets, no colour-only status, light and dark.
+ *
+ * Every colour is a token on :root. Dark mode re-steps the tokens only; no component is styled twice.
  */
 @theme {
-  --font-sans: "Noto Sans", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Inter", "Noto Sans", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  --color-bg: #f6f7f9;
+  --color-bg: #f2f4f8;
   --color-surface: #ffffff;
-  --color-ink: #12151a;
-  --color-ink-soft: #4a5260;
-  --color-line: #d8dde5;
-  --color-brand: #0b5c4a;
-  --color-brand-soft: #e6f2ef;
-  --color-danger: #b42318;
-  --color-danger-soft: #fdeceb;
-  --color-warn: #a35c00;
-  --color-warn-soft: #fdf3e4;
-  --color-ok: #0a6b3d;
-  --color-ok-soft: #e7f4ec;
-  --color-info: #1c4f9c;
-  --color-info-soft: #e8effa;
+  --color-surface-2: #f7f9fc;
+  --color-ink: #171c26;
+  --color-ink-soft: #596273;
+  --color-ink-faint: #8a93a5;
+  --color-line: #e3e8ef;
+  --color-line-strong: #c9d2de;
+
+  --color-brand: #0f6cbd;
+  --color-brand-strong: #0b58a0;
+  --color-brand-soft: #e6f0fb;
+  --color-brand-ink: #0b58a0;
+
+  --color-teal: #0e8a7d;
+  --color-teal-soft: #e0f4f1;
+  --color-violet: #6b4fd8;
+  --color-violet-soft: #eeeafc;
+  --color-ok: #107c41;
+  --color-ok-soft: #e2f3e9;
+  --color-warn: #b25e00;
+  --color-warn-soft: #fdf0dd;
+  --color-danger: #c4314b;
+  --color-danger-soft: #fbe8ec;
+  --color-info: #0f6cbd;
+  --color-info-soft: #e6f0fb;
+
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
+  --shadow-pop: 0 12px 32px rgb(16 24 40 / 0.16), 0 2px 6px rgb(16 24 40 / 0.08);
+  --radius-card: 16px;
 }
 
 :root { color-scheme: light; }
+
+/* Dark: re-stepped against a #0e1117 surface, not inverted. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg: #0e1117;
+    --color-surface: #161b24;
+    --color-surface-2: #1c2230;
+    --color-ink: #e9edf4;
+    --color-ink-soft: #a3adbf;
+    --color-ink-faint: #6e7889;
+    --color-line: #262d3a;
+    --color-line-strong: #384253;
+    --color-brand: #5aa7f0;
+    --color-brand-strong: #7fbcf5;
+    --color-brand-soft: #14273f;
+    --color-brand-ink: #8cc4f7;
+    --color-teal: #43c2b3;
+    --color-teal-soft: #0f2b28;
+    --color-violet: #ab8ff7;
+    --color-violet-soft: #251d40;
+    --color-ok: #52c47e;
+    --color-ok-soft: #112b1b;
+    --color-warn: #f1a54d;
+    --color-warn-soft: #33230f;
+    --color-danger: #f2758d;
+    --color-danger-soft: #35161e;
+    --color-info: #5aa7f0;
+    --color-info-soft: #14273f;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-pop: 0 16px 40px rgb(0 0 0 / 0.6);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0e1117;
+  --color-surface: #161b24;
+  --color-surface-2: #1c2230;
+  --color-ink: #e9edf4;
+  --color-ink-soft: #a3adbf;
+  --color-ink-faint: #6e7889;
+  --color-line: #262d3a;
+  --color-line-strong: #384253;
+  --color-brand: #5aa7f0;
+  --color-brand-strong: #7fbcf5;
+  --color-brand-soft: #14273f;
+  --color-brand-ink: #8cc4f7;
+  --color-teal: #43c2b3;
+  --color-teal-soft: #0f2b28;
+  --color-violet: #ab8ff7;
+  --color-violet-soft: #251d40;
+  --color-ok: #52c47e;
+  --color-ok-soft: #112b1b;
+  --color-warn: #f1a54d;
+  --color-warn-soft: #33230f;
+  --color-danger: #f2758d;
+  --color-danger-soft: #35161e;
+  --color-info: #5aa7f0;
+  --color-info-soft: #14273f;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-pop: 0 16px 40px rgb(0 0 0 / 0.6);
+}
 
 html { -webkit-text-size-adjust: 100%; }
 
@@ -32,8 +111,11 @@ body {
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.45;
   margin: 0;
   overscroll-behavior-y: contain;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Font size toggle (PRD accessibility): the desk can switch to large text for older staff. */
@@ -43,13 +125,11 @@ html[data-text="normal"] { font-size: 16px; }
 /* Every interactive element clears the 44px tap target without each screen remembering to. */
 button, a[role="button"], select { min-height: 44px; }
 
-/* A tick box is not a text field. This rule is unlayered and so beats any utility class, which is why the
-   exclusion has to live here rather than on each checkbox: without it they inherit width:100% and swallow
-   their own label. The row that holds one carries the tap target instead, so the box stays box-sized. */
+/* A tick box is not a text field. This rule is unlayered and so beats any utility class. */
 input[type="checkbox"], input[type="radio"] {
-  width: 24px;
-  height: 24px;
-  min-height: 24px;
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
   flex: none;
   accent-color: var(--color-brand);
 }
@@ -59,22 +139,57 @@ label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) {
   align-items: center;
 }
 
-input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea {
   font: inherit;
   min-height: 44px;
   width: 100%;
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--color-line-strong);
   border-radius: 10px;
   padding: 10px 12px;
   background: var(--color-surface);
   color: var(--color-ink);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
-input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible {
-  outline: 3px solid var(--color-brand);
-  outline-offset: 1px;
+input::placeholder, textarea::placeholder { color: var(--color-ink-faint); }
+input:disabled, select:disabled, textarea:disabled { background: var(--color-surface-2); color: var(--color-ink-soft); }
+input:not([type="checkbox"]):not([type="radio"]):focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px var(--color-brand-soft);
+}
+button:focus-visible, a:focus-visible, [role="menuitem"]:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23596273' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
 }
 /* iOS zooms the page when a font under 16px gets focus. */
 @supports (-webkit-touch-callout: none) { input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; } }
+
+/* Native disclosure without the default marker. */
+details > summary { list-style: none; cursor: pointer; }
+details > summary::-webkit-details-marker { display: none; }
+details[open] .disclosure-chevron { transform: rotate(180deg); }
+
+/* Overlay motion: a sheet slides up on a phone, a dialog fades in on a laptop. */
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes sheet-up { from { transform: translateY(24px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes pop-in { from { transform: translateY(6px) scale(.98); opacity: 0 } to { transform: none; opacity: 1 } }
+.anim-fade { animation: fade-in 160ms ease-out both; }
+.anim-sheet { animation: sheet-up 220ms cubic-bezier(.16,1,.3,1) both; }
+.anim-pop { animation: pop-in 160ms cubic-bezier(.16,1,.3,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade, .anim-sheet, .anim-pop { animation: none; }
+  * { transition-duration: 0ms !important; }
+}
+
+/* Thin scrollbars on the tape chart and menus. */
+.scroll-thin { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }
 
 @media print {
   .no-print { display: none !important; }

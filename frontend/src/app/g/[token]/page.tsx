@@ -13,7 +13,7 @@
 import { use, useCallback, useEffect, useState } from "react"
 import { Camera, Check, Plus, X } from "lucide-react"
 import { getForm, PublicApiError, submitForm, uploadPhoto } from "@/lib/public-api"
-import { Banner, Button, Card, Field, Loading } from "@/components/ui"
+import { Banner, Button, Card, Field, Loading, Stepper } from "@/components/ui"
 
 type Form = {
   propertyName: string
@@ -157,22 +157,22 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
 
   if (gone) {
     return (
-      <main className="mx-auto max-w-lg p-4 pt-10">
+      <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center p-4">
         <Banner tone="warn">{TEXT.hi.expired}</Banner>
-        <p className="mt-3 text-sm text-[var(--color-ink-soft)]">{TEXT.en.expired}</p>
+        <p className="mt-3 text-sm text-ink-soft">{TEXT.en.expired}</p>
       </main>
     )
   }
-  if (!form) return <Loading />
+  if (!form) return <main className="mx-auto max-w-lg p-4"><Loading /></main>
 
   if (done) {
     return (
-      <main className="mx-auto max-w-lg p-4 pt-16 text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-ok-bg)]">
-          <Check size={32} className="text-[var(--color-ok)]" aria-hidden />
+      <main className="mx-auto flex min-h-dvh max-w-lg flex-col items-center justify-center p-4 text-center">
+        <div className="anim-pop mb-4 grid h-20 w-20 place-items-center rounded-full bg-ok-soft">
+          <Check size={40} className="text-ok" aria-hidden />
         </div>
         <h1 className="mb-2 text-2xl font-bold">{t.doneTitle}</h1>
-        <p className="text-[var(--color-ink-soft)]">{t.doneBody}</p>
+        <p className="text-ink-soft">{t.doneBody}</p>
       </main>
     )
   }
@@ -180,11 +180,11 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
   const canSend = name.trim().length > 0 && (!form.askConsent || consent) && !busy
 
   return (
-    <main className="mx-auto max-w-lg space-y-3 p-4 pb-10">
+    <main className="mx-auto max-w-lg space-y-3 p-4 pb-28">
       <header className="pt-4">
-        <p className="text-sm font-semibold text-[var(--color-brand)]">{form.propertyName}</p>
-        <h1 className="text-2xl font-bold">{t.title}</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{t.lead}</p>
+        <p className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-ink">{form.propertyName}</p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">{t.title}</h1>
+        <p className="mt-1 text-sm text-ink-soft">{t.lead}</p>
       </header>
 
       {error && <Banner tone="danger">{error}</Banner>}
@@ -234,11 +234,11 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
 
         {form.askPhoto &&
           (photoSent ? (
-            <p className="flex items-center gap-2 text-sm font-semibold text-[var(--color-ok)]">
+            <p className="flex items-center gap-2 text-sm font-semibold text-ok">
               <Check size={18} aria-hidden /> {t.photoDone}
             </p>
           ) : (
-            <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-[var(--color-line)] py-3 font-semibold">
+            <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-line-strong bg-surface-2 py-3 font-semibold">
               <Camera size={20} aria-hidden /> {t.takePhoto}
               <input
                 type="file"
@@ -252,29 +252,13 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
       </Card>
 
       <Card className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t.adults}>
-            <input
-              type="number"
-              min={1}
-              value={adults}
-              onChange={(e) => setAdults(Math.max(1, Number(e.target.value) || 1))}
-              inputMode="numeric"
-            />
-          </Field>
-          <Field label={t.children}>
-            <input
-              type="number"
-              min={0}
-              value={children}
-              onChange={(e) => setChildren(Math.max(0, Number(e.target.value) || 0))}
-              inputMode="numeric"
-            />
-          </Field>
+        <div className="grid grid-cols-2 gap-2">
+          <Stepper label={t.adults} value={adults} min={1} onChange={setAdults} />
+          <Stepper label={t.children} value={children} onChange={setChildren} />
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm font-semibold">{t.members}</p>
+          <p className="text-[13px] font-semibold text-ink-soft">{t.members}</p>
           {members.map((m, i) => (
             <div key={i} className="flex gap-2">
               <input
@@ -287,7 +271,7 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
               <button
                 type="button"
                 aria-label={t.remove}
-                className="rounded-xl border border-[var(--color-line)] px-3"
+                className="rounded-xl border border-line-strong px-3 text-ink-soft"
                 onClick={() => setMembers(members.filter((_, j) => j !== i))}
               >
                 <X size={18} aria-hidden />
@@ -297,7 +281,7 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
           {members.length < 20 && (
             <button
               type="button"
-              className="flex items-center gap-2 rounded-xl border border-[var(--color-line)] px-4 py-2 text-sm font-semibold"
+              className="flex items-center gap-2 rounded-full bg-brand-soft px-4 py-2 text-sm font-semibold text-brand-ink"
               onClick={() => setMembers([...members, { name: "", adult: true }])}
             >
               <Plus size={18} aria-hidden /> {t.addMember}
@@ -319,9 +303,11 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
         </label>
       </Card>
 
-      <Button className="w-full py-4 text-lg" disabled={!canSend} onClick={send}>
-        <Check size={20} aria-hidden /> {busy ? t.sending : t.submit}
-      </Button>
+      <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 p-4 backdrop-blur" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
+        <Button size="lg" className="mx-auto w-full max-w-lg" disabled={!canSend} onClick={send}>
+          <Check size={20} aria-hidden /> {busy ? t.sending : t.submit}
+        </Button>
+      </div>
     </main>
   )
 }

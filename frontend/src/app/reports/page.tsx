@@ -2,15 +2,15 @@
 
 /**
  * What the owner and manager check: today's collection, the month for the accountant, who owes money,
- * who is holding cash, and the guest register the police ask for.
+ * who is holding cash, and the guest register the police ask for. Numbers first; lists fold away.
  */
 import { useState } from "react"
-import { Download, Send } from "lucide-react"
+import { ArrowDownToLine, BedDouble, Download, IndianRupee, LogIn, LogOut, Send, Wallet } from "lucide-react"
 import { api, API_BASE, ApiError } from "@/lib/api"
 import { useResource } from "@/lib/use-resource"
 import { formatDate, rupees } from "@/lib/format"
 import { useI18n } from "@/i18n"
-import { Banner, Button, Card, Chip, Empty, Loading } from "@/components/ui"
+import { Avatar, Banner, Button, Card, Chip, Disclosure, Empty, ListCard, ListRow, Loading, Menu, PageHeader, SectionLabel, StatTile } from "@/components/ui"
 
 type Daily = {
   businessDate: string
@@ -35,11 +35,7 @@ export default function ReportsPage() {
   const { t } = useI18n()
   const { data, error: loadError, reload } = useResource(
     async () => {
-      const [daily, outstanding, cash] = await Promise.all([
-        api<Daily>("/api/reports/daily"),
-        api<Outstanding[]>("/api/reports/outstanding"),
-        api<Cash[]>("/api/reports/cash-in-hand"),
-      ])
+      const [daily, outstanding, cash] = await Promise.all([api<Daily>("/api/reports/daily"), api<Outstanding[]>("/api/reports/outstanding"), api<Cash[]>("/api/reports/cash-in-hand")])
       return { daily, outstanding, cash }
     },
     [],
@@ -81,105 +77,100 @@ export default function ReportsPage() {
   const from = new Date(`${to}T00:00:00Z`)
   from.setUTCDate(from.getUTCDate() - 7)
   const fromDate = from.toISOString().slice(0, 10)
+  const cashTotal = cash.reduce((s, r) => s + r.cash_paise, 0)
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">{t("nav.reports")}</h1>
-      {error && <Banner tone="danger">{error}</Banner>}
-      {sent && <Banner tone="info">{t("action.sendNow")} ✓</Banner>}
+      <PageHeader
+        title={t("nav.reports")}
+        subtitle={`${t("reports.period")} · ${formatDate(daily.businessDate)}`}
+        actions={
+          <Menu
+            items={[
+              { label: t("action.sendNow"), icon: Send, onSelect: () => void sendNow(), disabled: busy },
+              { label: `${t("reports.register")} (CSV)`, icon: Download, href: `${API_BASE}/api/reports/police-register.csv?from=${fromDate}&to=${to}`, separator: true },
+              { label: `${t("reports.month")} (CSV)`, icon: Download, href: `${API_BASE}/api/reports/month.csv` },
+            ]}
+          />
+        }
+      />
+      {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
+      {sent && <Banner tone="ok" onClose={() => setSent(false)}>{t("action.sendNow")} ✓</Banner>}
 
-      <Card>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-semibold">{t("reports.daily")}</h2>
-          <Chip>{formatDate(daily.businessDate)}</Chip>
-        </div>
-        <p className="text-3xl font-bold tabular-nums">{rupees(daily.collectedPaise)}</p>
-        <ul className="mt-2 flex flex-wrap gap-2">
+      {/* Headline: today's money. */}
+      <Card className="bg-gradient-to-br from-brand to-brand-strong text-white [&_*]:!text-white border-0">
+        <p className="text-xs font-semibold uppercase tracking-wide opacity-80">{t("reports.daily")}</p>
+        <p className="mt-1 text-[36px] font-bold leading-none tabular-nums tracking-tight">{rupees(daily.collectedPaise)}</p>
+        <ul className="mt-3 flex flex-wrap gap-1.5">
           {daily.collections.map((row) => (
-            <li key={row.mode}>
-              <Chip>
-                {row.mode}: {rupees(row.amount)}
-              </Chip>
+            <li key={row.mode} className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold">
+              {row.mode.toUpperCase()} {rupees(row.amount)} <span className="opacity-70">· {row.count}</span>
             </li>
           ))}
+          {daily.collections.length === 0 && <li className="text-xs opacity-80">{t("common.none")}</li>}
         </ul>
-        <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <Stat label={t("reports.arrivals")} value={String(daily.arrivals)} />
-          <Stat label={t("reports.departures")} value={String(daily.departures)} />
-          <Stat label={t("reports.occupancy")} value={`${daily.occupancyPct}% (${daily.occupiedUnits}/${daily.sellableUnits})`} />
-          <Stat label={t("reports.outstanding")} value={rupees(daily.outstandingPaise)} />
-        </dl>
-        <Button className="mt-3 w-full" variant="secondary" disabled={busy} onClick={sendNow}>
-          <Send size={16} aria-hidden /> {t("action.sendNow")}
-        </Button>
       </Card>
 
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("reports.cash")}</h2>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <StatTile label={t("reports.occupancy")} value={`${daily.occupancyPct}%`} tone="brand" icon={BedDouble} hint={`${daily.occupiedUnits} / ${daily.sellableUnits}`} />
+        <StatTile label={t("reports.arrivals")} value={daily.arrivals} tone="teal" icon={LogIn} hint={daily.noShows > 0 ? `${t("today.noShowFlagged")} ${daily.noShows}` : undefined} />
+        <StatTile label={t("reports.departures")} value={daily.departures} tone="violet" icon={LogOut} />
+        <StatTile label={t("reports.outstanding")} value={rupees(daily.outstandingPaise)} tone={daily.outstandingPaise > 0 ? "danger" : "ok"} icon={IndianRupee} hint={`${daily.outstandingCount}`} />
+      </div>
+
+      <SectionLabel>{t("common.details")}</SectionLabel>
+
+      <Disclosure title={t("reports.cash")} summary={rupees(cashTotal)} defaultOpen={cashTotal > 0}>
         {cash.length === 0 ? (
-          <Empty />
+          <Empty icon={Wallet} />
         ) : (
-          <ul className="space-y-2 text-sm">
+          <ListCard className="border-0 shadow-none">
             {cash.map((row) => (
-              <li key={row.user_id} className="flex items-center justify-between gap-2">
-                <span>{row.name}</span>
-                <span className="flex items-center gap-2">
-                  <b className="tabular-nums">{rupees(row.cash_paise)}</b>
-                  {row.cash_paise > 0 && (
-                    <Button variant="secondary" className="px-2 py-1 text-xs" disabled={busy} onClick={() => handOver(row.user_id)}>
-                      {t("action.handOver")}
-                    </Button>
-                  )}
-                </span>
-              </li>
+              <ListRow
+                key={row.user_id}
+                className="px-0"
+                leading={<Avatar name={row.name} tone="teal" size={36} />}
+                title={row.name}
+                subtitle={row.last_handover_at ? formatDate(row.last_handover_at) : undefined}
+                right={
+                  <span className="flex items-center gap-2">
+                    <b className="tabular-nums">{rupees(row.cash_paise)}</b>
+                    {row.cash_paise > 0 && (
+                      <Button variant="soft" size="sm" disabled={busy} onClick={() => handOver(row.user_id)}>
+                        <ArrowDownToLine size={14} aria-hidden /> {t("action.handOver")}
+                      </Button>
+                    )}
+                  </span>
+                }
+              />
             ))}
-          </ul>
+          </ListCard>
         )}
-      </Card>
+      </Disclosure>
 
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("reports.outstanding")}</h2>
+      <Disclosure title={t("reports.outstanding")} summary={`${outstanding.length} · ${rupees(daily.outstandingPaise)}`} defaultOpen={outstanding.length > 0}>
         {outstanding.length === 0 ? (
           <Empty />
         ) : (
-          <ul className="space-y-2 text-sm">
+          <ListCard className="border-0 shadow-none">
             {outstanding.map((row) => (
-              <li key={row.folio_id}>
-                <a href={`/stays/${row.booking_id}`} className="flex items-center justify-between gap-2">
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium">{row.guest_name}</span>
-                    <span className="block text-xs text-[var(--color-ink-soft)]">{formatDate(row.arrive_at)}</span>
-                  </span>
-                  <Chip tone="danger">{rupees(row.due_paise)}</Chip>
-                </a>
-              </li>
+              <ListRow
+                key={row.folio_id}
+                className="px-0"
+                href={`/stays/${row.booking_id}`}
+                leading={<Avatar name={row.guest_name} tone="danger" size={36} />}
+                title={row.guest_name}
+                subtitle={formatDate(row.arrive_at)}
+                right={<Chip tone="danger">{rupees(row.due_paise)}</Chip>}
+              />
             ))}
-          </ul>
+          </ListCard>
         )}
-      </Card>
+      </Disclosure>
 
-      <Card className="space-y-2">
-        <h2 className="font-semibold">{t("reports.register")}</h2>
-        <a href={`${API_BASE}/api/reports/police-register.csv?from=${fromDate}&to=${to}`} target="_blank" rel="noreferrer">
-          <Button variant="secondary" className="w-full">
-            <Download size={16} aria-hidden /> {t("reports.register")} (CSV)
-          </Button>
-        </a>
-        <a href={`${API_BASE}/api/reports/month.csv`} target="_blank" rel="noreferrer">
-          <Button variant="secondary" className="w-full">
-            <Download size={16} aria-hidden /> {t("reports.month")} (CSV)
-          </Button>
-        </a>
-      </Card>
-    </div>
-  )
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-[var(--color-ink-soft)]">{label}</dt>
-      <dd className="font-semibold tabular-nums">{value}</dd>
+      {daily.depositsHeldPaise > 0 && (
+        <p className="px-1 text-xs text-ink-soft">{t("stay.deposit")}: {rupees(daily.depositsHeldPaise)}</p>
+      )}
     </div>
   )
 }

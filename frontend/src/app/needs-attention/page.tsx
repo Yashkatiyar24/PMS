@@ -4,12 +4,12 @@
  * Offline entries the server refused, usually because the unit was taken while the phone was offline.
  * They are never dropped silently: the desk sees what happened and redoes it, then clears the entry.
  */
-import Link from "next/link"
+import { AlertTriangle } from "lucide-react"
 import { clearFailed, failed, type QueuedRequest } from "@/lib/offline-queue"
 import { useResource } from "@/lib/use-resource"
 import { formatDateTime } from "@/lib/format"
 import { useI18n } from "@/i18n"
-import { Button, Card, Empty } from "@/components/ui"
+import { Avatar, Button, Empty, ListCard, ListRow, PageHeader } from "@/components/ui"
 
 export default function NeedsAttentionPage() {
   const { t } = useI18n()
@@ -18,35 +18,26 @@ export default function NeedsAttentionPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">{t("offline.needsAttention")}</h1>
+      <PageHeader title={t("offline.needsAttention")} back="/" />
       {entries.length === 0 ? (
         <Empty />
       ) : (
-        <ul className="space-y-2">
+        <ListCard>
           {entries.map((entry) => (
-            <li key={entry.clientUuid}>
-              <Card className="space-y-2">
-                <p className="text-sm font-semibold">{entry.error ?? t("offline.conflict")}</p>
-                <p className="text-xs text-[var(--color-ink-soft)]">
-                  {entry.method} {entry.path} · {formatDateTime(entry.queuedAt)}
-                </p>
-                <Button
-                  variant="secondary"
-                  className="w-full"
-                  onClick={async () => { await clearFailed(entry.clientUuid); reload() }}
-                >
+            <ListRow
+              key={entry.clientUuid}
+              leading={<Avatar tone="danger" icon={AlertTriangle} size={38} />}
+              title={entry.error ?? t("offline.conflict")}
+              subtitle={`${entry.method} ${entry.path} · ${formatDateTime(entry.queuedAt)}`}
+              right={
+                <Button variant="secondary" size="sm" onClick={async () => { await clearFailed(entry.clientUuid); reload() }}>
                   {t("action.done")}
                 </Button>
-              </Card>
-            </li>
+              }
+            />
           ))}
-        </ul>
+        </ListCard>
       )}
-      <Link href="/">
-        <Button variant="ghost" className="w-full">
-          {t("action.back")}
-        </Button>
-      </Link>
     </div>
   )
 }

@@ -1,21 +1,25 @@
 "use client"
 
 /**
- * One stay: who is in which room, what they owe, and the two buttons the desk needs most, take payment and
- * check out. Charges the engine generated are shown but not editable here; the way to change them is to
- * change the dates, which keeps the bill and the stay in step.
+ * One stay: who is in which room, what they owe, and the two buttons the desk needs most — take payment and
+ * check out. Everything else (extras, invoice, cancel, no-show) waits behind the menu. Charges the engine
+ * generated are shown but not editable; the way to change them is to change the dates.
  */
 import { use, useState } from "react"
-import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { IndianRupee, LogOut, Printer, Receipt as ReceiptIcon, UserX, XCircle } from "lucide-react"
+import { IndianRupee, LogIn, LogOut, Phone, Plus, Printer, Receipt as ReceiptIcon, UserX, XCircle } from "lucide-react"
 import { api, API_BASE, ApiError, newClientUuid, QueuedOffline } from "@/lib/api"
 import { useResource } from "@/lib/use-resource"
 import { formatDate, formatDateTime, rupees, toPaise } from "@/lib/format"
-import type { Booking, Folio, Receipt } from "@/lib/types"
+import type { Booking, BookingState, Folio, Receipt } from "@/lib/types"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
-import { Banner, Button, Card, Chip, Empty, Field, Loading } from "@/components/ui"
+import { Avatar, Banner, Button, Card, Chip, ChoiceChips, Disclosure, Empty, Field, KV, ListCard, ListRow, Loading, Menu, PageHeader, Sheet, type MenuItem, type Tone } from "@/components/ui"
+
+const STATE_TONE: Record<BookingState, Tone> = { reserved: "warn", checked_in: "brand", checked_out: "neutral", no_show: "danger", cancelled: "neutral" }
+const MODES = ["cash", "upi", "card", "bank"]
+
+type Panel = "pay" | "extra" | "checkout" | "cancel" | "noShow" | null
 
 export default function StayPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -42,6 +46,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
   const receipts = data?.receipts ?? []
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
+  const [panel, setPanel] = useState<Panel>(null)
 
   const [payAmount, setPayAmount] = useState("")
   const [payMode, setPayMode] = useState("cash")
@@ -50,18 +55,19 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
   const [approvalPin, setApprovalPin] = useState("")
   const [overrideReason, setOverrideReason] = useState("")
   const [cancelReason, setCancelReason] = useState("")
-  const [confirming, setConfirming] = useState<"cancel" | "noShow" | null>(null)
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
     setError("")
     try {
       await action()
+      setPanel(null)
       reload()
     } catch (e) {
       if (e instanceof QueuedOffline) {
         window.dispatchEvent(new CustomEvent("pms:queued"))
         setError(t("error.offlineSaved"))
+        setPanel(null)
       } else {
         setError(e instanceof ApiError ? e.message : t("error.generic"))
       }
@@ -85,9 +91,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
     run(async () => {
       await api(`/api/folios/${booking!.folioId}/lines`, {
         method: "POST",
-        body: {
-          line: { kind: "extra", description: extraText, qty: 1, unitPaise: toPaise(extraAmount), lineDate: null, reason: null },
-        },
+        body: { line: { kind: "extra", description: extraText, qty: 1, unitPaise: toPaise(extraAmount), lineDate: null, reason: null } },
       })
       setExtraText("")
       setExtraAmount("")
@@ -114,11 +118,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
   // happens to the advance according to the property's policy.
   const cancel = () =>
     run(async () => {
-      await api(`/api/bookings/${id}/cancel`, {
-        method: "POST",
-        body: { reason: cancelReason, approverId: user?.id, pin: approvalPin },
-      })
-      setConfirming(null)
+      await api(`/api/bookings/${id}/cancel`, { method: "POST", body: { reason: cancelReason, approverId: user?.id, pin: approvalPin } })
       setCancelReason("")
       setApprovalPin("")
     })
@@ -126,7 +126,6 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
   const markNoShow = () =>
     run(async () => {
       await api(`/api/bookings/${id}/no-show`, { method: "POST", body: { approverId: user?.id, pin: approvalPin } })
-      setConfirming(null)
       setApprovalPin("")
     })
 
@@ -140,53 +139,83 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
   if (!booking) return <Loading />
 
   const due = folio ? folio.totalPaise + folio.depositHeldPaise - folio.paidPaise : booking.balanceDuePaise
+  const units = booking.units.map((u) => (u.bedLabel ? `${u.roomNumber}/${u.bedLabel}` : u.roomNumber)).join(", ") || "—"
+  const state = booking.state as BookingState
+
+  const menu: MenuItem[] = [
+    ...(state === "checked_in" && folio ? [{ label: t("stay.addExtra"), icon: Plus, onSelect: () => setPanel("extra") }] : []),
+    ...(state === "checked_out" && folio ? [{ label: t("stay.invoice"), icon: ReceiptIcon, onSelect: () => void issueInvoice() }] : []),
+    ...(state === "reserved"
+      ? [
+          { label: t("action.markNoShow"), icon: UserX, onSelect: () => setPanel("noShow"), separator: true },
+          { label: t("booking.cancel"), icon: XCircle, onSelect: () => setPanel("cancel"), danger: true },
+        ]
+      : []),
+  ]
+
+  const needsPin = !can("MANAGER")
 
   return (
     <div className="space-y-4">
-      {justCheckedIn && <Banner tone="info">{t("checkin.elapsed", { seconds: justCheckedIn })}</Banner>}
-      {error && <Banner tone="danger">{error}</Banner>}
+      <PageHeader title={booking.guestName} back="/" actions={menu.length > 0 ? <Menu items={menu} /> : undefined}
+        subtitle={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <Chip tone={STATE_TONE[state]} dot>{t(`state.${state}` as "state.reserved")}</Chip>
+            {booking.guestPhone && <a href={`tel:${booking.guestPhone}`} className="inline-flex items-center gap-1 text-brand-ink"><Phone size={13} aria-hidden /> {booking.guestPhone}</a>}
+          </span>
+        }
+      />
 
-      <Card>
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h1 className="truncate text-xl font-bold">{booking.guestName}</h1>
-            <p className="text-sm text-[var(--color-ink-soft)]">{booking.guestPhone}</p>
+      {justCheckedIn && <Banner tone="ok">{t("checkin.elapsed", { seconds: justCheckedIn })}</Banner>}
+      {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
+
+      {/* Hero: the balance, coloured by whether it is owed. */}
+      <Card className={due > 0 ? "border-danger/30" : "border-ok/30"}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t("stay.balance")}</p>
+            <p className={`mt-1 text-[34px] font-bold leading-none tabular-nums tracking-tight ${due > 0 ? "text-danger" : "text-ok"}`}>{rupees(Math.max(0, due))}</p>
+            {folio && <p className="mt-1.5 text-xs text-ink-soft">{t("stay.total")} {rupees(folio.totalPaise)} · {t("stay.paid")} {rupees(folio.paidPaise)}</p>}
           </div>
-          <Chip tone={booking.state === "checked_in" ? "info" : booking.state === "checked_out" ? "neutral" : "warn"}>
-            {booking.state.replace("_", " ")}
-          </Chip>
+          <Avatar name={booking.guestName} tone={STATE_TONE[state]} size={48} />
         </div>
-        <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <div>
-            <dt className="text-[var(--color-ink-soft)]">{t("checkin.pickRoom")}</dt>
-            <dd className="font-semibold">
-              {booking.units.map((u) => (u.bedLabel ? `${u.roomNumber}/${u.bedLabel}` : u.roomNumber)).join(", ") || "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[var(--color-ink-soft)]">{t("checkin.adults")}</dt>
-            <dd className="font-semibold">
-              {booking.adults} + {booking.children}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[var(--color-ink-soft)]">{t("stay.title")}</dt>
-            <dd className="font-semibold">
-              {formatDate(booking.arriveAt)} → {formatDate(booking.departAt)}
-            </dd>
-          </div>
+        <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3 text-sm">
+          <div><dt className="text-xs text-ink-soft">{t("checkin.pickRoom")}</dt><dd className="font-semibold">{units}</dd></div>
+          <div><dt className="text-xs text-ink-soft">{t("checkin.adults")}</dt><dd className="font-semibold">{booking.adults} + {booking.children}</dd></div>
+          <div><dt className="text-xs text-ink-soft">{t("stay.title")}</dt><dd className="font-semibold">{formatDate(booking.arriveAt)} → {formatDate(booking.departAt)}</dd></div>
         </dl>
       </Card>
 
+      {/* The two buttons the desk needs. */}
+      {state === "reserved" && (
+        <Button size="lg" className="w-full" disabled={busy} onClick={arrive}>
+          <LogIn size={20} aria-hidden /> {t("action.arrive")}
+        </Button>
+      )}
+      {state === "checked_in" && folio && (
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="lg" onClick={() => { setPayAmount(due > 0 ? String(due / 100) : ""); setPanel("pay") }}>
+            <IndianRupee size={20} aria-hidden /> {t("action.takePayment")}
+          </Button>
+          <Button size="lg" variant={due > 0 ? "secondary" : "primary"} disabled={busy} onClick={() => (due > 0 ? setPanel("checkout") : void checkOut())}>
+            <LogOut size={20} aria-hidden /> {t("action.checkOut")}
+          </Button>
+        </div>
+      )}
+      {state === "checked_out" && folio && (
+        <Button size="lg" className="w-full" disabled={busy} onClick={issueInvoice}>
+          <ReceiptIcon size={20} aria-hidden /> {t("stay.invoice")}
+        </Button>
+      )}
+
       {folio && (
-        <Card>
-          <h2 className="mb-2 font-semibold">{t("stay.folio")}</h2>
-          <ul className="divide-y divide-[var(--color-line)] text-sm">
+        <Disclosure title={t("stay.billDetails")} summary={t("stay.lines", { n: folio.lines.length })}>
+          <ul className="divide-y divide-line text-sm">
             {folio.lines.map((line) => (
               <li key={line.id} className="flex items-start justify-between gap-2 py-2">
                 <div className="min-w-0">
                   <p className="truncate">{line.description}</p>
-                  <p className="text-xs text-[var(--color-ink-soft)]">
+                  <p className="text-xs text-ink-soft">
                     {formatDate(line.lineDate)}
                     {line.taxRateBp > 0 && ` · GST ${line.taxRateBp / 100}%`}
                   </p>
@@ -195,156 +224,87 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
               </li>
             ))}
           </ul>
-          <dl className="mt-3 space-y-1 border-t border-[var(--color-line)] pt-3 text-sm">
-            <Row label={t("stay.total")} value={rupees(folio.totalPaise)} />
-            {folio.depositHeldPaise !== 0 && <Row label={t("stay.deposit")} value={rupees(folio.depositHeldPaise)} />}
-            <Row label={t("stay.paid")} value={rupees(folio.paidPaise)} />
-            <Row label={t("stay.balance")} value={rupees(due)} strong tone={due > 0 ? "danger" : "ok"} />
+          <dl className="mt-2 border-t border-line pt-2">
+            <KV label={t("stay.total")} value={rupees(folio.totalPaise)} />
+            {folio.depositHeldPaise !== 0 && <KV label={t("stay.deposit")} value={rupees(folio.depositHeldPaise)} />}
+            <KV label={t("stay.paid")} value={rupees(folio.paidPaise)} />
+            <KV label={t("stay.balance")} value={rupees(due)} strong tone={due > 0 ? "danger" : "ok"} />
           </dl>
-        </Card>
-      )}
-
-      {booking.state === "reserved" && (
-        <>
-          <Button className="w-full py-4" disabled={busy} onClick={arrive}>
-            {t("action.arrive")}
-          </Button>
-
-          {confirming === null && (
-            <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setConfirming("noShow")}>
-                <UserX size={16} aria-hidden /> {t("action.markNoShow")}
-              </Button>
-              <Button variant="secondary" className="flex-1" onClick={() => setConfirming("cancel")}>
-                <XCircle size={16} aria-hidden /> {t("booking.cancel")}
-              </Button>
-            </div>
-          )}
-
-          {confirming !== null && (
-            <Card className="space-y-2">
-              <h2 className="font-semibold">
-                {confirming === "cancel" ? t("booking.cancel") : t("booking.noShowConfirm")}
-              </h2>
-              {confirming === "cancel" && (
-                <Field label={t("booking.cancelReason")}>
-                  <input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
-                </Field>
-              )}
-              {!can("MANAGER") && (
-                <Field label={t("approval.pin")}>
-                  <input inputMode="numeric" type="password" value={approvalPin} onChange={(e) => setApprovalPin(e.target.value)} />
-                </Field>
-              )}
-              <div className="flex gap-2">
-                <Button
-                  variant="danger"
-                  className="flex-1"
-                  disabled={busy || (confirming === "cancel" && !cancelReason.trim())}
-                  onClick={confirming === "cancel" ? cancel : markNoShow}
-                >
-                  {t("action.done")}
-                </Button>
-                <Button variant="secondary" className="flex-1" onClick={() => setConfirming(null)}>
-                  {t("action.cancel")}
-                </Button>
-              </div>
-            </Card>
-          )}
-        </>
-      )}
-
-      {booking.state === "checked_in" && folio && (
-        <>
-          <Card className="space-y-2">
-            <h2 className="font-semibold">{t("action.takePayment")}</h2>
-            <div className="flex gap-2">
-              <input inputMode="decimal" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder={String(Math.max(0, due) / 100)} />
-              <select className="w-32" value={payMode} onChange={(e) => setPayMode(e.target.value)}>
-                <option value="cash">cash</option>
-                <option value="upi">upi</option>
-                <option value="card">card</option>
-                <option value="bank">bank</option>
-              </select>
-            </div>
-            <Button className="w-full" disabled={busy || toPaise(payAmount) <= 0} onClick={takePayment}>
-              <IndianRupee size={18} aria-hidden /> {t("action.takePayment")}
-            </Button>
-          </Card>
-
-          <Card className="space-y-2">
-            <h2 className="font-semibold">{t("stay.addExtra")}</h2>
-            <div className="flex gap-2">
-              <input value={extraText} onChange={(e) => setExtraText(e.target.value)} placeholder="Thali" />
-              <input className="w-32" inputMode="decimal" value={extraAmount} onChange={(e) => setExtraAmount(e.target.value)} placeholder="0" />
-            </div>
-            <Button variant="secondary" className="w-full" disabled={busy || !extraText || toPaise(extraAmount) <= 0} onClick={addExtra}>
-              {t("action.add")}
-            </Button>
-          </Card>
-
-          {due > 0 && can("MANAGER") && (
-            <Card className="space-y-2">
-              <h2 className="font-semibold">{t("approval.title")}</h2>
-              <Field label={t("approval.reason")}>
-                <input value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} />
-              </Field>
-              <Field label={t("approval.pin")}>
-                <input inputMode="numeric" type="password" value={approvalPin} onChange={(e) => setApprovalPin(e.target.value)} />
-              </Field>
-            </Card>
-          )}
-
-          <Button variant={due > 0 ? "secondary" : "primary"} className="w-full py-4" disabled={busy} onClick={checkOut}>
-            <LogOut size={18} aria-hidden /> {t("action.checkOut")}
-          </Button>
-        </>
-      )}
-
-      {booking.state === "checked_out" && folio && (
-        <Button className="w-full" disabled={busy} onClick={issueInvoice}>
-          <ReceiptIcon size={18} aria-hidden /> {t("stay.invoice")}
-        </Button>
+        </Disclosure>
       )}
 
       {receipts.length > 0 && (
-        <Card>
-          <h2 className="mb-2 font-semibold">{t("stay.receipts")}</h2>
-          <ul className="space-y-2 text-sm">
-            {receipts.map((receipt) => (
-              <li key={receipt.id} className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{receipt.number}</p>
-                  <p className="text-xs text-[var(--color-ink-soft)]">
-                    {receipt.kind} · {formatDateTime(receipt.issuedAt)} · {rupees(receipt.amountPaise)}
-                  </p>
-                </div>
-                <a href={`${API_BASE}/api/receipts/${receipt.id}/html`} target="_blank" rel="noreferrer">
-                  <Button variant="secondary">
-                    <Printer size={16} aria-hidden /> {t("action.print")}
-                  </Button>
-                </a>
-              </li>
+        <Disclosure title={t("stay.receipts")} summary={`${receipts.length}`}>
+          <ListCard className="border-0 shadow-none">
+            {receipts.map((r) => (
+              <ListRow
+                key={r.id}
+                className="px-0"
+                title={r.number}
+                subtitle={`${r.kind} · ${formatDateTime(r.issuedAt)} · ${rupees(r.amountPaise)}`}
+                right={
+                  <a href={`${API_BASE}/api/receipts/${r.id}/html`} target="_blank" rel="noreferrer">
+                    <Button variant="secondary" size="sm"><Printer size={15} aria-hidden /> {t("action.print")}</Button>
+                  </a>
+                }
+              />
             ))}
-          </ul>
-        </Card>
+          </ListCard>
+        </Disclosure>
       )}
 
-      <Link href="/" className="block">
-        <Button variant="ghost" className="w-full">
-          {t("action.back")}
-        </Button>
-      </Link>
-    </div>
-  )
-}
+      {/* --- sheets --- */}
+      <Sheet open={panel === "pay"} onOpenChange={(o) => !o && setPanel(null)} title={t("action.takePayment")} description={`${t("stay.balance")} ${rupees(Math.max(0, due))}`}
+        footer={<Button size="lg" className="w-full" disabled={busy || toPaise(payAmount) <= 0} onClick={takePayment}><IndianRupee size={18} aria-hidden /> {t("action.takePayment")}</Button>}>
+        <div className="space-y-4">
+          <Field label={t("stay.payment")}>
+            <input inputMode="decimal" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder="0" autoFocus className="text-2xl font-bold" />
+          </Field>
+          <Field label={t("checkin.mode")}>
+            <ChoiceChips value={payMode} onChange={setPayMode} options={MODES.map((m) => ({ value: m, label: m.toUpperCase() }))} />
+          </Field>
+        </div>
+      </Sheet>
 
-function Row({ label, value, strong, tone }: { label: string; value: string; strong?: boolean; tone?: "ok" | "danger" }) {
-  const color = tone === "danger" ? "text-[var(--color-danger)]" : tone === "ok" ? "text-[var(--color-ok)]" : ""
-  return (
-    <div className="flex justify-between">
-      <dt className={strong ? "font-semibold" : "text-[var(--color-ink-soft)]"}>{label}</dt>
-      <dd className={`tabular-nums ${strong ? "font-bold" : ""} ${color}`}>{value}</dd>
+      <Sheet open={panel === "extra"} onOpenChange={(o) => !o && setPanel(null)} title={t("stay.addExtra")}
+        footer={<Button size="lg" className="w-full" disabled={busy || !extraText || toPaise(extraAmount) <= 0} onClick={addExtra}>{t("action.add")}</Button>}>
+        <div className="grid grid-cols-[1fr_120px] gap-2">
+          <Field label={t("common.details")}><input value={extraText} onChange={(e) => setExtraText(e.target.value)} placeholder="Thali" autoFocus /></Field>
+          <Field label="₹"><input inputMode="decimal" value={extraAmount} onChange={(e) => setExtraAmount(e.target.value)} placeholder="0" /></Field>
+        </div>
+      </Sheet>
+
+      <Sheet open={panel === "checkout"} onOpenChange={(o) => !o && setPanel(null)} title={t("action.checkOut")} description={`${t("stay.balance")} ${rupees(due)}`}
+        footer={
+          <>
+            <Button variant="secondary" className="flex-1" onClick={() => { setPanel(null); setPayAmount(String(due / 100)); setPanel("pay") }}>{t("action.takePayment")}</Button>
+            {can("MANAGER") && <Button variant="danger" className="flex-1" disabled={busy || !overrideReason.trim() || !approvalPin} onClick={checkOut}>{t("action.checkOut")}</Button>}
+          </>
+        }>
+        {can("MANAGER") ? (
+          <div className="space-y-3">
+            <p className="text-sm text-ink-soft">{t("approval.title")}</p>
+            <Field label={t("approval.reason")}><input value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} autoFocus /></Field>
+            <Field label={t("approval.pin")}><input inputMode="numeric" type="password" value={approvalPin} onChange={(e) => setApprovalPin(e.target.value)} /></Field>
+          </div>
+        ) : (
+          <Banner tone="warn">{t("approval.title")}</Banner>
+        )}
+      </Sheet>
+
+      <Sheet open={panel === "cancel" || panel === "noShow"} onOpenChange={(o) => !o && setPanel(null)}
+        title={panel === "cancel" ? t("booking.cancel") : t("booking.noShowConfirm")}
+        footer={
+          <>
+            <Button variant="secondary" className="flex-1" onClick={() => setPanel(null)}>{t("action.back")}</Button>
+            <Button variant="danger" className="flex-1" disabled={busy || (panel === "cancel" && !cancelReason.trim()) || (needsPin && !approvalPin)} onClick={panel === "cancel" ? cancel : markNoShow}>{t("action.done")}</Button>
+          </>
+        }>
+        <div className="space-y-3">
+          {panel === "cancel" && <Field label={t("booking.cancelReason")}><input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} autoFocus /></Field>}
+          {needsPin && <Field label={t("approval.pin")}><input inputMode="numeric" type="password" value={approvalPin} onChange={(e) => setApprovalPin(e.target.value)} /></Field>}
+        </div>
+      </Sheet>
     </div>
   )
 }

@@ -15,7 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { QrCode, RefreshCw, X } from "lucide-react"
 import { api } from "@/lib/api"
 import { useI18n } from "@/i18n"
-import { Banner, Button, Card, Loading } from "@/components/ui"
+import { Banner, Button, Card, IconButton, Loading } from "@/components/ui"
 
 type NewLink = { id: string; url: string; qrDataUri: string; expiresAt: string }
 
@@ -103,7 +103,7 @@ export function SelfRegistrationQr({
   if (!open) {
     return (
       <div className="space-y-1">
-        <Button variant="secondary" className="w-full" onClick={start} disabled={busy}>
+        <Button variant="soft" className="w-full" onClick={start} disabled={busy}>
           <QrCode size={20} aria-hidden /> {t("selfreg.button")}
         </Button>
         {error && <Banner tone="danger">{error}</Banner>}
@@ -112,31 +112,30 @@ export function SelfRegistrationQr({
   }
 
   return (
-    <Card className="space-y-3 text-center">
-      <div className="flex items-start justify-between">
-        <p className="text-left font-semibold">{t("selfreg.showTitle")}</p>
-        <button onClick={() => setOpen(false)} aria-label={t("action.close")} className="rounded-lg border border-[var(--color-line)] px-2">
-          <X size={18} aria-hidden />
-        </button>
+    <Card className="space-y-3 border-brand/30 text-center">
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-left">
+          <p className="font-semibold">{t("selfreg.showTitle")}</p>
+          <p className="text-sm text-ink-soft">{t("selfreg.showHint")}</p>
+        </div>
+        <IconButton label={t("action.close")} onClick={() => setOpen(false)} className="-mr-2 -mt-2"><X size={18} aria-hidden /></IconButton>
       </div>
-
-      <p className="text-sm text-[var(--color-ink-soft)]">{t("selfreg.showHint")}</p>
 
       {link ? (
         /* Sized to fill a phone held out at arm's length; a smaller code is a slower scan.
            A plain <img>: the source is an inline data URI the server already rendered, so there is no
            remote image for next/image to fetch, resize or cache. */
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={link.qrDataUri} alt={t("selfreg.showTitle")} className="mx-auto w-full max-w-[280px] rounded-xl border border-[var(--color-line)] bg-white p-2" />
+        <img src={link.qrDataUri} alt={t("selfreg.showTitle")} className="mx-auto w-full max-w-[260px] rounded-2xl border border-line bg-white p-2" />
       ) : (
         <Loading />
       )}
 
-      <p className="text-sm font-semibold text-[var(--color-brand)]">{t("selfreg.waiting")}</p>
+      <p className="inline-flex items-center gap-2 text-sm font-semibold text-brand-ink"><span className="h-2 w-2 animate-pulse rounded-full bg-brand" aria-hidden /> {t("selfreg.waiting")}</p>
       {error && <Banner tone="warn">{error}</Banner>}
 
-      <Button variant="secondary" className="w-full" onClick={start} disabled={busy}>
-        <RefreshCw size={18} aria-hidden /> {t("selfreg.newCode")}
+      <Button variant="ghost" size="sm" onClick={start} disabled={busy}>
+        <RefreshCw size={16} aria-hidden /> {t("selfreg.newCode")}
       </Button>
     </Card>
   )

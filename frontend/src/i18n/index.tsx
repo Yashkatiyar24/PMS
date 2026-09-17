@@ -15,12 +15,15 @@ import hi from "./hi.json"
 const BUNDLES = { en, hi } as const
 export type Language = keyof typeof BUNDLES
 export type TextSize = "normal" | "large"
+export type Theme = "light" | "dark" | "system"
 
 type I18n = {
   language: Language
   setLanguage: (language: Language) => void
   textSize: TextSize
   setTextSize: (size: TextSize) => void
+  theme: Theme
+  setTheme: (theme: Theme) => void
   /** Translate a key, filling {placeholders}. Falls back to English, then to the key itself. */
   t: (key: keyof typeof en, values?: Record<string, string | number>) => string
 }
@@ -30,12 +33,15 @@ const Context = createContext<I18n | null>(null)
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = usePreference<Language>("pms.language", "hi", (v) => v in BUNDLES)
   const [textSize, setTextSize] = usePreference<TextSize>("pms.textSize", "normal", (v) => v === "normal" || v === "large")
+  const [theme, setTheme] = usePreference<Theme>("pms.theme", "system", (v) => v === "light" || v === "dark" || v === "system")
 
   // The document itself is the external system here: the lang attribute and the text-size scale live on it.
   useEffect(() => {
     document.documentElement.lang = language
     document.documentElement.dataset.text = textSize
-  }, [language, textSize])
+    if (theme === "system") delete document.documentElement.dataset.theme
+    else document.documentElement.dataset.theme = theme
+  }, [language, textSize, theme])
 
   const t = useMemo<I18n["t"]>(
     () => (key, values) => {
@@ -47,8 +53,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   )
 
   const value = useMemo(
-    () => ({ language, setLanguage, textSize, setTextSize, t }),
-    [language, setLanguage, textSize, setTextSize, t],
+    () => ({ language, setLanguage, textSize, setTextSize, theme, setTheme, t }),
+    [language, setLanguage, textSize, setTextSize, theme, setTheme, t],
   )
   return <Context.Provider value={value}>{children}</Context.Provider>
 }

@@ -57,7 +57,7 @@ export function OfflineBar() {
   if (online && queued === 0 && attention === 0) return null
 
   return (
-    <div className="space-y-1 px-4 pt-2 no-print">
+    <div className="mx-auto w-full max-w-3xl space-y-1 px-4 pt-3 no-print md:px-8">
       {(!online || queued > 0) && (
         <Banner tone={online ? "info" : "warn"}>
           {syncing ? t("offline.syncing") : t("offline.banner", { count: queued })}
@@ -65,7 +65,7 @@ export function OfflineBar() {
       )}
       {attention > 0 && (
         <Banner tone="danger">
-          <a href="/needs-attention" className="underline">
+          <a href="/needs-attention" className="font-semibold underline">
             {t("offline.needsAttention")} ({attention})
           </a>
         </Banner>

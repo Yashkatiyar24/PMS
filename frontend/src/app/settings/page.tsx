@@ -5,16 +5,16 @@
  *
  * That is the whole point of the registry: a new rule appears here, with its default, its description and
  * the role allowed to change it, without anyone editing this file. Sending null resets a key to its default.
+ * Each group folds closed; a rule that has been changed from its default says so in the summary.
  */
 import { useCallback, useMemo, useState } from "react"
-import Link from "next/link"
-import { Building2, ChevronRight, DoorOpen, Percent, ShieldCheck, Users } from "lucide-react"
+import { Building2, DoorOpen, LogOut, Percent, ShieldCheck, Users } from "lucide-react"
 import { api, ApiError } from "@/lib/api"
 import type { SettingDef } from "@/lib/types"
 import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
-import { Banner, Button, Card, Chip, Loading } from "@/components/ui"
+import { Avatar, Banner, Button, Chip, ChoiceChips, Disclosure, ListCard, ListRow, Loading, PageHeader, SectionLabel } from "@/components/ui"
 
 type Registry = { definitions: SettingDef[]; groups: Record<string, string> }
 type Values = Record<string, unknown>
@@ -68,103 +68,73 @@ export default function SettingsPage() {
 
   if (!registry) return <Loading />
 
+  const setup = [
+    { href: "/settings/property", label: t("setup.property"), icon: Building2, tone: "brand" as const, need: "MANAGER" as const },
+    { href: "/settings/rooms", label: t("setup.roomTypes"), icon: DoorOpen, tone: "teal" as const, need: "MANAGER" as const },
+    { href: "/settings/tax", label: t("setup.tax"), icon: Percent, tone: "violet" as const, need: "MANAGER" as const },
+    { href: "/settings/staff", label: t("setup.staff"), icon: Users, tone: "ok" as const, need: "MANAGER" as const },
+  ].filter((item) => can(item.need))
+
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">{t("settings.title")}</h1>
-      {error && <Banner tone="danger">{error}</Banner>}
+      <PageHeader title={t("settings.title")} subtitle={user ? `${user.name} · ${user.role?.toLowerCase() ?? ""}` : undefined} />
+      {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
 
-      <nav>
-        <ul className="space-y-2">
-          {[
-            { href: "/settings/property", label: t("setup.property"), icon: Building2, need: "MANAGER" as const },
-            { href: "/settings/rooms", label: t("setup.roomTypes"), icon: DoorOpen, need: "MANAGER" as const },
-            { href: "/settings/tax", label: t("setup.tax"), icon: Percent, need: "MANAGER" as const },
-            { href: "/settings/staff", label: t("setup.staff"), icon: Users, need: "MANAGER" as const },
-          ]
-            .filter((item) => can(item.need))
-            .map(({ href, label, icon: Icon }) => (
-              <li key={href}>
-                <Link href={href}>
-                  <Card className="flex items-center justify-between gap-2 py-3">
-                    <span className="flex items-center gap-2 font-medium">
-                      <Icon size={18} aria-hidden /> {label}
-                    </span>
-                    <ChevronRight size={18} aria-hidden className="text-[var(--color-ink-soft)]" />
-                  </Card>
-                </Link>
-              </li>
-            ))}
-          {user?.superAdmin && (
-            <li>
-              <Link href="/admin">
-                <Card className="flex items-center justify-between gap-2 py-3">
-                  <span className="flex items-center gap-2 font-medium">
-                    <ShieldCheck size={18} aria-hidden /> {t("admin.title")}
-                  </span>
-                  <ChevronRight size={18} aria-hidden className="text-[var(--color-ink-soft)]" />
-                </Card>
-              </Link>
-            </li>
-          )}
-        </ul>
-      </nav>
-
-      <h2 className="pt-2 text-lg font-bold">{t("settings.rules")}</h2>
-
-      {grouped.map(([group, defs]) => (
-        <Card key={group} className="space-y-4">
-          <h2 className="font-semibold">{registry.groups[group] ?? group}</h2>
-          {defs.map((def) => (
-            <SettingRow
-              key={def.key}
-              def={def}
-              value={values[def.key]}
-              editable={def.who === "MANAGER" ? can("MANAGER") : def.who === "OWNER" ? can("OWNER") : !!user?.superAdmin}
-              saved={saved === def.key}
-              onChange={(v) => save(def.key, v)}
-              onReset={() => save(def.key, null)}
-            />
+      {(setup.length > 0 || user?.superAdmin) && (
+        <ListCard>
+          {setup.map(({ href, label, icon: Icon, tone }) => (
+            <ListRow key={href} href={href} leading={<Avatar tone={tone} icon={Icon} size={38} />} title={label} />
           ))}
-        </Card>
-      ))}
+          {user?.superAdmin && <ListRow href="/admin" leading={<Avatar tone="warn" icon={ShieldCheck} size={38} />} title={t("admin.title")} />}
+        </ListCard>
+      )}
 
-      <Button variant="secondary" className="w-full" onClick={logout}>
-        {t("action.logout")}
+      <SectionLabel>{t("settings.rules")}</SectionLabel>
+
+      <div className="space-y-2">
+        {grouped.map(([group, defs]) => {
+          const changed = defs.filter((d) => JSON.stringify(values[d.key]) !== JSON.stringify(d.defaultValue)).length
+          return (
+            <Disclosure key={group} title={registry.groups[group] ?? group} summary={`${defs.length} · ${changed > 0 ? `${changed} ≠ ${t("settings.default").toLowerCase()}` : t("settings.default")}`}>
+              <div className="divide-y divide-line">
+                {defs.map((def) => (
+                  <SettingRow
+                    key={def.key}
+                    def={def}
+                    value={values[def.key]}
+                    editable={def.who === "MANAGER" ? can("MANAGER") : def.who === "OWNER" ? can("OWNER") : !!user?.superAdmin}
+                    saved={saved === def.key}
+                    onChange={(v) => save(def.key, v)}
+                    onReset={() => save(def.key, null)}
+                  />
+                ))}
+              </div>
+            </Disclosure>
+          )
+        })}
+      </div>
+
+      <Button variant="ghost" className="w-full text-danger hover:bg-danger-soft" onClick={logout}>
+        <LogOut size={18} aria-hidden /> {t("action.logout")}
       </Button>
     </div>
   )
 }
 
-function SettingRow({
-  def,
-  value,
-  editable,
-  saved,
-  onChange,
-  onReset,
-}: {
-  def: SettingDef
-  value: unknown
-  editable: boolean
-  saved: boolean
-  onChange: (value: unknown) => void
-  onReset: () => void
-}) {
+function SettingRow({ def, value, editable, saved, onChange, onReset }: { def: SettingDef; value: unknown; editable: boolean; saved: boolean; onChange: (value: unknown) => void; onReset: () => void }) {
   const { t } = useI18n()
   const isDefault = JSON.stringify(value) === JSON.stringify(def.defaultValue)
 
   return (
-    <div className="border-t border-[var(--color-line)] pt-3 first:border-0 first:pt-0">
+    <div className="py-3 first:pt-0 last:pb-0">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="font-medium">{humanise(def.key)}</span>
-        {saved && <Chip tone="ok">{t("settings.savedAt")}</Chip>}
+        {saved ? <Chip tone="ok">{t("settings.savedAt")}</Chip> : !isDefault && <Chip tone="brand">≠ {t("settings.default")}</Chip>}
       </div>
-      <p className="mb-2 text-xs text-[var(--color-ink-soft)]">{def.description}</p>
-
+      <p className="mb-2 text-xs text-ink-soft">{def.description}</p>
       <Control def={def} value={value} editable={editable} onChange={onChange} />
-
       {!isDefault && editable && (
-        <button onClick={onReset} className="mt-1 text-xs text-[var(--color-brand)] underline">
+        <button onClick={onReset} className="mt-1.5 text-xs font-semibold text-brand-ink">
           {t("settings.resetToDefault")} ({String(summarise(def.defaultValue))})
         </button>
       )}
@@ -172,68 +142,41 @@ function SettingRow({
   )
 }
 
-function Control({
-  def,
-  value,
-  editable,
-  onChange,
-}: {
-  def: SettingDef
-  value: unknown
-  editable: boolean
-  onChange: (value: unknown) => void
-}) {
+function Control({ def, value, editable, onChange }: { def: SettingDef; value: unknown; editable: boolean; onChange: (value: unknown) => void }) {
+  const { t } = useI18n()
   switch (def.type) {
     case "BOOL":
       return (
-        <label className="flex gap-3">
-          <input type="checkbox" disabled={!editable} checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
-          <span className="text-sm">{Boolean(value) ? "on" : "off"}</span>
-        </label>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={Boolean(value)}
+          disabled={!editable}
+          onClick={() => onChange(!value)}
+          className="flex items-center gap-3 disabled:opacity-45"
+        >
+          <span className={`relative inline-block h-7 w-12 rounded-full transition-colors ${value ? "bg-brand" : "bg-line-strong"}`}>
+            <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${value ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+          </span>
+          <span className="text-sm font-medium">{value ? t("common.yes") : t("common.no")}</span>
+        </button>
       )
     case "INT":
-      return (
-        <input
-          type="number"
-          disabled={!editable}
-          min={def.min ?? undefined}
-          max={def.max ?? undefined}
-          value={Number(value ?? 0)}
-          onChange={(e) => onChange(Number(e.target.value))}
-        />
-      )
+      return <input type="number" disabled={!editable} min={def.min ?? undefined} max={def.max ?? undefined} value={Number(value ?? 0)} onChange={(e) => onChange(Number(e.target.value))} className="max-w-[160px]" />
     case "TIME":
-      return <input type="time" disabled={!editable} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />
+      return <input type="time" disabled={!editable} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className="max-w-[160px]" />
     case "ENUM":
-      return (
-        <select disabled={!editable} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>
-          {(def.options ?? []).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      )
+      return <ChoiceChips disabled={!editable} value={String(value ?? "")} onChange={onChange} options={(def.options ?? []).map((o) => ({ value: o, label: o }))} />
     case "LIST": {
       const selected = Array.isArray(value) ? (value as string[]) : []
       if (!def.options) return <input disabled value={selected.join(", ")} />
       return (
-        <ul className="flex flex-wrap gap-2">
-          {def.options.map((option) => {
-            const on = selected.includes(option)
-            return (
-              <li key={option}>
-                <button
-                  disabled={!editable}
-                  onClick={() => onChange(on ? selected.filter((s) => s !== option) : [...selected, option])}
-                  className={`rounded-full border px-3 py-1 text-sm ${on ? "border-[var(--color-brand)] bg-[var(--color-brand-soft)] font-semibold text-[var(--color-brand)]" : "border-[var(--color-line)]"}`}
-                >
-                  {option}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+        <ChoiceChips
+          disabled={!editable}
+          value={selected}
+          onChange={(option) => onChange(selected.includes(option) ? selected.filter((s) => s !== option) : [...selected, option])}
+          options={def.options.map((o) => ({ value: o, label: o }))}
+        />
       )
     }
     case "I18N_TEXT": {
@@ -242,27 +185,15 @@ function Control({
         <div className="space-y-2">
           {["hi", "en"].map((lang) => (
             <div key={lang}>
-              <span className="text-xs font-semibold uppercase text-[var(--color-ink-soft)]">{lang}</span>
-              <textarea
-                rows={2}
-                disabled={!editable}
-                value={texts[lang] ?? ""}
-                onChange={(e) => onChange({ ...texts, [lang]: e.target.value })}
-              />
+              <span className="text-xs font-semibold uppercase text-ink-faint">{lang}</span>
+              <textarea rows={2} disabled={!editable} value={texts[lang] ?? ""} onChange={(e) => onChange({ ...texts, [lang]: e.target.value })} />
             </div>
           ))}
         </div>
       )
     }
     default:
-      return (
-        <input
-          disabled={!editable}
-          maxLength={def.maxLength ?? undefined}
-          value={String(value ?? "")}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )
+      return <input disabled={!editable} maxLength={def.maxLength ?? undefined} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />
   }
 }
 
