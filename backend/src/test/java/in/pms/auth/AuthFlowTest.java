@@ -138,6 +138,34 @@ class AuthFlowTest {
         mvc.perform(get("/api/auth/me").cookie(cookie)).andExpect(status().isOk());
     }
 
+    /**
+     * The desk app is served from another origin and sends the session cookie, so the browser will not let
+     * it call the API at all without these headers. Nothing below the browser can catch this: every
+     * server-to-server test passes while the real app is unable to sign in.
+     */
+    @Test
+    void theDeskAppsOriginMayCallTheApiWithItsCookie() throws Exception {
+        mvc.perform(options("/api/auth/login")
+                        .header("Origin", "http://localhost:3000")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "content-type,x-requested-with"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+
+        mvc.perform(get("/api/auth/me").cookie(loginByPassword()).header("Origin", "http://localhost:3000"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"));
+    }
+
+    @Test
+    void anUnknownOriginIsRefused() throws Exception {
+        mvc.perform(options("/api/auth/login")
+                        .header("Origin", "http://evil.example")
+                        .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     void logoutRevokesTheSession() throws Exception {
         Cookie c = loginByPassword();

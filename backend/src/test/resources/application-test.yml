@@ -1,3 +1,4 @@
 pms:
   jobs.enabled: false
 logging.level.root: warn
+pms.allowed-origins: http://localhost:3000

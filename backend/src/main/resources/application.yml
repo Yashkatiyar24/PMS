@@ -32,6 +32,10 @@ pms:
   app-url: ${PMS_APP_URL:http://localhost:3000}
   session-secret: ${PMS_SESSION_SECRET:dev-only-change-me-32-bytes-minimum!!}
   cookie-secure: ${PMS_COOKIE_SECURE:false}   # true behind HTTPS
+  # Browser origins allowed to call this API with a session cookie. The desk app is served from a different
+  # origin in development and may be in production too, so this is explicit rather than a wildcard:
+  # credentialed requests cannot use "*", and we would not want them to.
+  allowed-origins: ${PMS_ALLOWED_ORIGINS:http://localhost:3000}
   default-timezone: ${PMS_DEFAULT_TIMEZONE:Asia/Kolkata}
   db:
     app:

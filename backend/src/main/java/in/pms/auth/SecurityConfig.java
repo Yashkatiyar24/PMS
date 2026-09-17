@@ -1,6 +1,8 @@
 package in.pms.auth;
 
+import in.pms.config.PmsProperties;
 import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -10,6 +12,11 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
  * Stateless API security: our own cookie-backed sessions (see {@link SessionAuthFilter}), method-level role
@@ -19,9 +26,31 @@ import org.springframework.security.web.authentication.AnonymousAuthenticationFi
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /**
+     * The desk app runs on its own origin and sends the session cookie, so the browser demands an explicit
+     * allow-list: a credentialed request may not use a wildcard origin. Only the methods and headers the app
+     * actually uses are permitted, and {@code X-Requested-With} is among them because the CSRF check in
+     * {@link SessionAuthFilter} depends on a header a cross-site form cannot set without this preflight.
+     */
     @Bean
-    SecurityFilterChain api(HttpSecurity http, SessionService sessions) throws Exception {
+    CorsConfigurationSource corsConfigurationSource(PmsProperties props) {
+        var config = new CorsConfiguration();
+        config.setAllowedOrigins(props.allowedOrigins());
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Content-Type", "X-Requested-With"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+        var source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", config);
+        return source;
+    }
+
+    // Spring MVC contributes a CorsConfigurationSource of its own, so the one above is asked for by name.
+    @Bean
+    SecurityFilterChain api(HttpSecurity http, SessionService sessions,
+                            @Qualifier("corsConfigurationSource") CorsConfigurationSource cors) throws Exception {
         return http
+                .cors(c -> c.configurationSource(cors))
                 .csrf(csrf -> csrf.disable()) // replaced by the X-Requested-With check in SessionAuthFilter
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .formLogin(f -> f.disable()).httpBasic(b -> b.disable()).logout(l -> l.disable())

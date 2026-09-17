@@ -78,6 +78,7 @@ matter in production:
 | `PMS_DB_ADMIN_URL`, `PMS_DB_ADMIN_PASSWORD` | the RLS-bypassing connection for auth and jobs |
 | `PMS_SESSION_SECRET` | signs file links; must be set to something random |
 | `PMS_COOKIE_SECURE` | `true` once you are behind HTTPS |
+| `PMS_ALLOWED_ORIGINS` | the origins the desk app is served from; the browser is refused from anywhere else |
 | `PMS_STORAGE_PROVIDER` | `local` or `s3` (S3, Cloudflare R2, MinIO) |
 | `PMS_SMS_PROVIDER` | `console` or `msg91` |
 | `PMS_EMAIL_PROVIDER` | `console` or `brevo` |
@@ -89,15 +90,22 @@ Swapping a provider is one variable. Adding one is a class and a line in `Integr
 ## Tests
 
 ```bash
-cd backend && mvn test                  # 42 tests, needs Postgres on localhost:5432
+cd backend && mvn test                  # 52 tests, needs Postgres on localhost:5432
 cd frontend && npm test && npm run lint && npm run build
 python3 infra/smoke.py                  # a whole desk day against a running server
+cd frontend && npm run ui-check         # the same day in a real browser at phone size
 ```
 
 The backend tests are integration tests against a real Postgres, because the guarantees worth testing are
 the database's: that one tenant cannot see another's rows, that two concurrent check-ins for the last bed
 produce exactly one stay, that receipt numbers have no gaps under load, and that the audit log cannot be
 rewritten.
+
+`npm run ui-check` drives Chromium at 360x740 against a running dev server: sign in, switch language, read
+the day, open the check-in form, the tape chart, the settings and the reports, and fail if any control is
+under 44px or anything unexpected reaches the console. It exists because the other two suites talk to the
+API directly and so cannot notice when the browser is the thing being refused — a missing CORS header once
+left every test green while nobody could sign in at all.
 
 `infra/smoke.py` runs the real thing over HTTP after a deploy: sign in, check a guest in, fail to sell the
 same room twice, refuse an Aadhaar number, take payment, check out, print the receipt as HTML and PDF, and

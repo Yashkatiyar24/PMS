@@ -2,11 +2,14 @@ package in.pms.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.List;
+
 /** Typed view of the {@code pms.*} configuration block. Values come from application.yml and environment variables. */
 @ConfigurationProperties(prefix = "pms")
 public record PmsProperties(
         String appUrl,
         String sessionSecret,
+        List<String> allowedOrigins,
         boolean cookieSecure,
         String defaultTimezone,
         Db db,

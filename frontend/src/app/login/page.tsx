@@ -12,7 +12,7 @@ import { useI18n } from "@/i18n"
 import { Banner, Button, Card, Field } from "@/components/ui"
 
 export default function LoginPage() {
-  const { t } = useI18n()
+  const { t, language, setLanguage } = useI18n()
   const router = useRouter()
   const [mode, setMode] = useState<"phone" | "email">("phone")
   const [step, setStep] = useState<"target" | "code">("target")
@@ -57,8 +57,21 @@ export default function LoginPage() {
 
   return (
     <div className="pt-10">
-      <h1 className="mb-1 text-2xl font-bold">{t("app.name")}</h1>
-      <p className="mb-6 text-[var(--color-ink-soft)]">{t("login.title")}</p>
+      {/* The shell's header is not on this screen, so the language switch lives here too: this is the
+          first thing anyone sees, and a desk that works in English should not have to sign in first. */}
+      <div className="mb-4 flex items-start justify-between gap-2">
+        <div>
+          <h1 className="mb-1 text-2xl font-bold">{t("app.name")}</h1>
+          <p className="text-[var(--color-ink-soft)]">{t("login.title")}</p>
+        </div>
+        <button
+          onClick={() => setLanguage(language === "hi" ? "en" : "hi")}
+          aria-label={t("common.language")}
+          className="rounded-lg border border-[var(--color-line)] px-3 text-sm font-semibold"
+        >
+          {language === "hi" ? "EN" : "हिं"}
+        </button>
+      </div>
 
       <Card className="space-y-4">
         {error && <Banner tone="danger">{error}</Banner>}
