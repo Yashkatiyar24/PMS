@@ -1,16 +1,18 @@
 "use client"
 
 /**
- * Walk-in check-in (PRD Flow A). The target is under 60 seconds from first tap to receipt, so everything is
- * on one screen in the order the desk actually asks: who, which bed, what did they pay. The register's
- * extra questions (address, ID, photo) fold away until the desk needs them.
+ * Walk-in check-in (PRD Flow A). The target is under 60 seconds from first tap to receipt, so it is one
+ * screen in the order the desk actually asks: who, which bed, what did they pay. Each step unfolds as the
+ * one before it is answered (or on a tap, for a desk that wants to jump ahead) and never folds back, so a
+ * fresh screen asks one thing and nothing vanishes mid-edit. The register's extra questions (address, ID,
+ * photo) fold away until the desk needs them.
  *
  * Nothing here blocks on the network. If the phone is offline the whole check-in is stored on the device
  * with a client id and replayed later; the desk sees it saved either way.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Camera, Check, Search } from "lucide-react"
+import { Camera, Check, ChevronDown, Search } from "lucide-react"
 import { clsx } from "clsx"
 import { api, ApiError, newClientUuid, QueuedOffline, upload } from "@/lib/api"
 import { compressImage } from "@/lib/image"
@@ -39,6 +41,26 @@ function Step({ n, title, done }: { n: number; title: string; done?: boolean }) 
       </span>
       {title}
     </h2>
+  )
+}
+
+/** A step the desk has not reached yet: its name and number only, and a tap opens it early. */
+function FoldedStep({ n, title, onOpen }: { n: number; title: string; onOpen: () => void }) {
+  const { t } = useI18n()
+  return (
+    <button
+      type="button"
+      aria-expanded={false}
+      onClick={onOpen}
+      className="flex min-h-[56px] w-full items-center gap-2.5 rounded-[var(--radius-card)] border border-dashed border-line-strong bg-surface px-4 text-left transition-colors hover:bg-surface-2"
+    >
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-surface-2 text-xs font-bold text-ink-soft">{n}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold text-ink-soft">{title}</span>
+        <span className="block text-xs text-ink-faint">{t("checkin.stepOf", { n, total: 3 })}</span>
+      </span>
+      <ChevronDown size={18} aria-hidden className="shrink-0 text-ink-faint" />
+    </button>
   )
 }
 
@@ -78,6 +100,9 @@ export default function CheckInPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
+  // Steps the desk has reached, by answering one or by tapping ahead. Once reached, a step stays open.
+  const [opened, setOpened] = useState(1)
+  const reach = useCallback((n: number) => setOpened((o) => Math.max(o, n)), [])
 
   useEffect(() => {
     started.current = Date.now()
@@ -214,6 +239,7 @@ export default function CheckInPage() {
 
   const paymentModes = (settings.payment_modes as string[]) ?? ["cash"]
   const total = chosenRate * nights
+  const shown = Math.max(opened, unitKey ? 3 : name.trim() ? 2 : 1)
 
   return (
     <div className="space-y-4 pb-24">
@@ -249,7 +275,7 @@ export default function CheckInPage() {
 
           <div className="grid grid-cols-[1fr_auto] items-end gap-2">
             <Field label={t("checkin.name")}>
-              <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+              <input value={name} onChange={(e) => { setName(e.target.value); if (e.target.value.trim()) reach(2) }} autoComplete="name" />
             </Field>
             {guestId && <Chip tone="ok" className="mb-3">{t("checkin.guest")} ✓</Chip>}
           </div>
@@ -292,6 +318,9 @@ export default function CheckInPage() {
       </Disclosure>
 
       {/* 2 · Room */}
+      {shown < 2 ? (
+        <FoldedStep n={2} title={t("checkin.stepRoom")} onOpen={() => reach(2)} />
+      ) : (
       <Card>
         <Step n={2} title={t("checkin.stepRoom")} done={!!unitKey} />
         <div className="space-y-3">
@@ -321,7 +350,7 @@ export default function CheckInPage() {
                       key={u.key}
                       type="button"
                       aria-pressed={on}
-                      onClick={() => setUnitKey(u.key)}
+                      onClick={() => { setUnitKey(u.key); reach(3) }}
                       className={clsx("min-h-[44px] min-w-[64px] rounded-xl border px-3 text-[15px] font-bold tabular-nums transition-colors", on ? "border-brand bg-brand text-white" : "border-line-strong bg-surface hover:bg-surface-2")}
                     >
                       {u.label}
@@ -333,8 +362,12 @@ export default function CheckInPage() {
           </Field>
         </div>
       </Card>
+      )}
 
       {/* 3 · Payment */}
+      {shown < 3 ? (
+        <FoldedStep n={3} title={t("stay.payment")} onOpen={() => reach(3)} />
+      ) : (
       <Card>
         <Step n={3} title={t("stay.payment")} />
         <div className="space-y-3">
@@ -361,6 +394,7 @@ export default function CheckInPage() {
           </label>
         </div>
       </Card>
+      )}
 
       {/* Sticky total + submit: always within thumb reach. */}
       <div className="fixed inset-x-0 bottom-[58px] z-10 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-60">

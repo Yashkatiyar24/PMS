@@ -133,7 +133,7 @@ export default function ReportsPage() {
                 title={row.name}
                 subtitle={row.last_handover_at ? formatDate(row.last_handover_at) : undefined}
                 right={
-                  <span className="flex items-center gap-2">
+                  <span className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
                     <b className="tabular-nums">{rupees(row.cash_paise)}</b>
                     {row.cash_paise > 0 && (
                       <Button variant="soft" size="sm" disabled={busy} onClick={() => handOver(row.user_id)}>

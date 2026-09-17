@@ -209,6 +209,7 @@
   "checkin.stepRoom": "Room and nights",
   "checkin.moreDetails": "Address, ID and photo",
   "checkin.total": "To collect",
+  "checkin.stepOf": "Step {n} of {total}",
   "rooms.markClean": "Mark clean",
   "rooms.markDirty": "Needs cleaning",
   "rooms.unblock": "Unblock",

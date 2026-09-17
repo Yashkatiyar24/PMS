@@ -209,6 +209,7 @@
   "checkin.stepRoom": "कमरा और रातें",
   "checkin.moreDetails": "पता, पहचान पत्र और फोटो",
   "checkin.total": "लेना है",
+  "checkin.stepOf": "चरण {n} / {total}",
   "rooms.markClean": "साफ़ दर्ज करें",
   "rooms.markDirty": "सफ़ाई चाहिए",
   "rooms.unblock": "खोलें",

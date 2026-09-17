@@ -2,7 +2,7 @@
 
 /**
  * The same five destinations twice: a thumb-height bar on a phone, a rail down the left on a laptop.
- * Reports and Settings need a manager.
+ * Each keeps its own colour so the eye finds it without reading. Reports and Settings need a manager.
  */
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -15,11 +15,11 @@ function useItems() {
   const { t } = useI18n()
   const { can } = useSession()
   return [
-    { href: "/", label: t("nav.today"), icon: Home },
-    { href: "/bookings", label: t("nav.bookings"), icon: CalendarDays },
-    { href: "/rooms", label: t("nav.rooms"), icon: BedDouble },
-    ...(can("MANAGER") ? [{ href: "/reports", label: t("nav.reports"), icon: BarChart3 }] : []),
-    { href: "/settings", label: t("nav.settings"), icon: Settings },
+    { href: "/", label: t("nav.today"), icon: Home, tone: "text-brand" },
+    { href: "/bookings", label: t("nav.bookings"), icon: CalendarDays, tone: "text-violet" },
+    { href: "/rooms", label: t("nav.rooms"), icon: BedDouble, tone: "text-teal" },
+    ...(can("MANAGER") ? [{ href: "/reports", label: t("nav.reports"), icon: BarChart3, tone: "text-ok" }] : []),
+    { href: "/settings", label: t("nav.settings"), icon: Settings, tone: "text-ink-soft" },
   ]
 }
 
@@ -32,7 +32,7 @@ export function BottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 backdrop-blur no-print md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       <ul className="mx-auto flex max-w-2xl">
-        {items.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon, tone }) => {
           const active = isActive(href, path)
           return (
             <li key={href} className="flex-1">
@@ -45,7 +45,7 @@ export function BottomNav() {
                 )}
               >
                 <span className={clsx("inline-flex h-7 w-12 items-center justify-center rounded-full transition-colors", active && "bg-brand-soft")}>
-                  <Icon size={20} aria-hidden />
+                  <Icon size={20} aria-hidden className={tone} />
                 </span>
                 {label}
               </Link>
@@ -62,7 +62,7 @@ export function SideRail({ children }: { children?: React.ReactNode }) {
   const path = usePathname()
   return (
     <ul className="space-y-0.5">
-      {items.map(({ href, label, icon: Icon }) => {
+      {items.map(({ href, label, icon: Icon, tone }) => {
         const active = isActive(href, path)
         return (
           <li key={href}>
@@ -74,7 +74,7 @@ export function SideRail({ children }: { children?: React.ReactNode }) {
                 active ? "bg-brand-soft text-brand-ink" : "text-ink-soft hover:bg-surface-2 hover:text-ink",
               )}
             >
-              <Icon size={18} aria-hidden />
+              <Icon size={18} aria-hidden className={tone} />
               {label}
             </Link>
           </li>

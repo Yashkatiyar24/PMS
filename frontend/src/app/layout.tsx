@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next"
+import { Inter, Noto_Sans_Devanagari } from "next/font/google"
 import "./globals.css"
 import { I18nProvider } from "@/i18n"
 import { SessionProvider } from "@/lib/session"
@@ -23,12 +24,19 @@ export const viewport: Viewport = {
   ],
 }
 
+/**
+ * Both faces are self-hosted at build time, so the phone never asks Google for them and the text never
+ * reflows when they arrive. Inter carries Latin; Noto Sans Devanagari carries Hindi.
+ */
+const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter" })
+const devanagari = Noto_Sans_Devanagari({ subsets: ["devanagari", "latin"], display: "swap", variable: "--font-devanagari" })
+
 /** Applies the remembered theme before the first paint, so a dark-mode phone never flashes white. */
 const THEME_BOOT = `try{var t=localStorage.getItem("pms.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;var s=localStorage.getItem("pms.textSize");if(s==="large")document.documentElement.dataset.text=s}catch(e){}`
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="hi" data-text="normal" suppressHydrationWarning>
+    <html lang="hi" data-text="normal" className={`${inter.variable} ${devanagari.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>

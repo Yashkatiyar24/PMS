@@ -66,7 +66,7 @@ try {
   await page.waitForURL(`${BASE}/`, { timeout: 15000 })
   check("signing in lands on the today screen", page.url().endsWith("/"))
   await page.waitForSelector("text=/Staying now|Arriving today/", { timeout: 15000 })
-  check("the today screen shows the desk's lists", await page.getByText("Free rooms and beds").isVisible())
+  check("the today screen shows the desk's lists", await page.getByText(/Arriving today/).isVisible())
   await page.screenshot({ path: `${OUT}/ui-today.png`, fullPage: true })
 
   // 4. Tap targets are thumb-sized, as the PRD requires
@@ -76,13 +76,18 @@ try {
   check("every control clears the 44px tap target", small === 0, `${small} too small`)
   await overflows("the today screen")
 
-  // 5. Check-in screen loads its data from the API
+  // 5. Check-in: a fresh screen asks for the guest only; naming them unfolds the room step, which the API fills
   await page.getByRole("button", { name: /Check-in/i }).first().click()
   await page.waitForURL("**/check-in")
-  await page.waitForSelector("select", { timeout: 15000 })
+  const folded = page.getByRole("button", { name: "Room and nights", expanded: false })
+  await folded.waitFor({ timeout: 15000 })
+  check("the check-in form starts with the guest step alone", await folded.isVisible())
+  const choicesBefore = await page.locator("button[aria-pressed]").count()
+  await page.getByLabel("Name", { exact: true }).fill("Smoke Test")
+  await page.getByText("Adults").waitFor({ timeout: 15000 })
   await overflows("the check-in form")
-  const roomOptions = await page.locator("select").first().locator("option").count()
-  check("the check-in form offers free rooms from the server", roomOptions > 1, `${roomOptions - 1} units`)
+  const units = (await page.locator("button[aria-pressed]").count()) - choicesBefore
+  check("naming the guest unfolds the room step, with free rooms from the server", units > 1, `${units} choices`)
   await page.screenshot({ path: `${OUT}/ui-checkin.png`, fullPage: true })
 
   // 6. Navigation reaches the other screens
@@ -102,6 +107,16 @@ try {
   await page.goto(`${BASE}/reports`, { waitUntil: "networkidle" })
   check("reports show the day's money", await page.getByText(/Today's collection/).isVisible())
   await page.screenshot({ path: `${OUT}/ui-reports.png`, fullPage: true })
+
+  // 7. A laptop swaps the bottom bar for a rail, and the user menu switches the theme
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto(`${BASE}/`, { waitUntil: "networkidle" })
+  check("a laptop gets the side rail", await page.locator("aside").getByRole("link", { name: "Today" }).isVisible())
+  check("and loses the bottom bar", !(await page.locator("nav.fixed").isVisible()))
+  await page.locator("aside button[aria-haspopup='menu']").click()
+  await page.getByRole("menuitem", { name: /^Appearance:/ }).click()
+  check("the user menu switches the theme", (await page.locator("html").getAttribute("data-theme")) !== null)
+  await page.screenshot({ path: `${OUT}/ui-laptop.png`, fullPage: true })
 
   check("no JavaScript errors anywhere", errors.length === 0, errors.slice(0, 2).join(" | "))
 } catch (e) {

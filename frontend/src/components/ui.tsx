@@ -12,8 +12,6 @@ import Link from "next/link"
 import { AlertTriangle, ArrowLeft, Check, ChevronDown, ChevronRight, Info, Inbox, MoreHorizontal, X, XCircle } from "lucide-react"
 import { clsx } from "clsx"
 import { useI18n } from "@/i18n"
-import { rupees } from "@/lib/format"
-
 export type Tone = "neutral" | "brand" | "teal" | "violet" | "ok" | "warn" | "danger" | "info"
 
 /** Solid, soft and text colours for each tone, so a component never has to know a hex. */
@@ -575,10 +573,6 @@ export function Empty({ children, icon: Icon = Inbox, action }: { children?: Rea
       {action}
     </div>
   )
-}
-
-export function Money({ paise, className }: { paise: number; className?: string }) {
-  return <span className={clsx("tabular-nums", className)}>{rupees(paise)}</span>
 }
 
 /** Label on the left, value on the right. */
