@@ -58,8 +58,9 @@ try {
   await page.getByRole("button", { name: /भाषा|Language/ }).click()
   check("one tap switches to English", (await page.locator("html").getAttribute("lang")) === "en")
 
-  // 3. Sign in with email and password
-  await page.getByRole("button", { name: /Use email and password/i }).click()
+  // 3. Sign in with email and password. The chooser is a segmented control (role=tab), not a button:
+  // it replaced the old "Use email and password" button in the redesign.
+  await page.getByRole("tab", { name: /Email/ }).click()
   await page.getByLabel("Email").fill("manager@pms.local")
   await page.getByLabel("Password").fill("password123")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
@@ -111,6 +112,9 @@ try {
   // 7. A laptop swaps the bottom bar for a rail, and the user menu switches the theme
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto(`${BASE}/`, { waitUntil: "networkidle" })
+  // Next's dev overlay parks itself bottom-left, over the rail's user menu, and swallows the click.
+  // It never ships, so take it out of the way rather than testing around it.
+  await page.addStyleTag({ content: "nextjs-portal{display:none!important}" })
   check("a laptop gets the side rail", await page.locator("aside").getByRole("link", { name: "Today" }).isVisible())
   check("and loses the bottom bar", !(await page.locator("nav.fixed").isVisible()))
   await page.locator("aside button[aria-haspopup='menu']").click()

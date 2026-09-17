@@ -29,7 +29,6 @@
   "login.sendCode": "Send code",
   "login.code": "6-digit code",
   "login.verify": "Verify",
-  "login.useEmail": "Use email and password",
   "login.usePhone": "Use mobile number",
   "login.email": "Email",
   "login.password": "Password",

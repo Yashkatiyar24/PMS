@@ -29,7 +29,6 @@
   "login.sendCode": "कोड भेजें",
   "login.code": "6 अंकों का कोड",
   "login.verify": "सत्यापित करें",
-  "login.useEmail": "ईमेल और पासवर्ड से",
   "login.usePhone": "मोबाइल नंबर से",
   "login.email": "ईमेल",
   "login.password": "पासवर्ड",

@@ -66,6 +66,7 @@ export function Button({
 export function IconButton({ label, className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return (
     <button
+      type="button"
       {...props}
       aria-label={label}
       title={label}
@@ -307,6 +308,7 @@ export function Segmented<T extends string>({
         return (
           <button
             key={item.value}
+            type="button"
             role="tab"
             aria-selected={on}
             onClick={() => onChange(item.value)}
@@ -542,7 +544,7 @@ export function Banner({ tone = "info", children, onClose }: { tone?: "info" | "
       <Icon size={18} aria-hidden className="mt-px shrink-0" />
       <div className="min-w-0 flex-1">{children}</div>
       {onClose && (
-        <button onClick={onClose} aria-label="×" className="-mr-1 -mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-black/5">
+        <button type="button" onClick={onClose} aria-label="×" className="-mr-1 -mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-black/5">
           <X size={16} aria-hidden />
         </button>
       )}
