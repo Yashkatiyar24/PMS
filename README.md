@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dharamshala PMS
 
-## Getting Started
+A multi-tenant property management system for dharamshalas and small hotels in India. Version 1 replaces the
+paper guest register, the receipt book and the month-end ledger, on a phone, over a bad network, in Hindi.
 
-First, run the development server:
+The requirements are in [`docs/PRD.md`](docs/PRD.md); the build steps that shaped this repository are in
+[`docs/BUILD_PROMPTS.md`](docs/BUILD_PROMPTS.md).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## What is here
+
+```
+backend/    Spring Boot 3.5 on Java 21 (virtual threads), Postgres, Flyway
+frontend/   Next.js 16 App Router, TypeScript, Tailwind, installable PWA
+docs/       PRD and build prompts
+infra/      docker-compose for local Postgres
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Running it
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You need Java 21, Node 22 and Postgres 16.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# 1. database
+docker compose -f infra/docker-compose.yml up -d        # or use your own Postgres
 
-## Learn More
+# 2. backend (applies migrations and seeds a pilot property on the dev profile)
+cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
-To learn more about Next.js, take a look at the following resources:
+# 3. frontend
+cd frontend && npm install && npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Then open http://localhost:3000 and sign in as `owner@pms.local` / `password123`, or by phone `9000000001`
+with the code `123456` (the dev profile prints OTPs instead of sending them).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The seed creates one trust, one property in Haridwar, twenty rooms, two ten-bed dormitories, and three
+users: an owner, a manager and a staff member. The approval PIN is `1234`.
 
-## Deploy on Vercel
+## How it is put together
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**One database, many properties.** Every tenant table carries `property_id` and has Row Level Security. The
+API connects as `pms_app`, a role that cannot bypass RLS, and every transaction begins by setting the tenant
+for the request. A transaction that starts without one is refused rather than silently seeing nothing. Auth,
+sessions and scheduled jobs use a second role, `pms_admin`, and only through their own transaction manager.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**The database decides availability.** Rooms are claimed by inserting a `booking_units` row; an exclusion
+constraint over the unit and the stay's time range is what prevents a double booking. Two desks racing for
+the last bed cannot both win, however the application is deployed.
+
+**Rules that differ between properties are settings, not code.** They live in one registry
+(`SettingsRegistry`) with a default, a type and the role allowed to change them, and the settings screen is
+generated from it. Tax slabs are effective-dated rows, so a rate change is data entry, not a release.
+
+**Money is integer paise, never a float.** Receipts store an immutable snapshot at issue time, numbered
+gap-free per property, financial year and kind under a row lock. Corrections are credit notes; nothing
+issued is ever edited.
+
+**Nothing external can block the desk.** WhatsApp, SMS, email and push messages are rows in an outbox that a
+worker drains with backoff. Storage, messaging and PDF rendering all sit behind small interfaces chosen by
+configuration, with a console or local implementation for development.
+
+**The phone keeps working without a network.** Writes carry a client-generated id that the API treats as an
+idempotency key, so a queued check-in replayed later creates one booking. Anything the server refuses lands
+in a "needs attention" list instead of disappearing.
+
+**Every change is auditable.** Writes to bookings, folios, payments, rooms and settings leave a row in
+`audit_log`, which has no UPDATE or DELETE grant for either application role.
+
+## Configuration
+
+Everything is an environment variable with a working default; see
+[`backend/src/main/resources/application.yml`](backend/src/main/resources/application.yml). The ones that
+matter in production:
+
+| Variable | What it does |
+| --- | --- |
+| `PMS_DB_APP_URL`, `PMS_DB_APP_PASSWORD` | the RLS-enforced connection the API uses |
+| `PMS_DB_ADMIN_URL`, `PMS_DB_ADMIN_PASSWORD` | the RLS-bypassing connection for auth and jobs |
+| `PMS_SESSION_SECRET` | signs file links; must be set to something random |
+| `PMS_COOKIE_SECURE` | `true` once you are behind HTTPS |
+| `PMS_STORAGE_PROVIDER` | `local` or `s3` (S3, Cloudflare R2, MinIO) |
+| `PMS_SMS_PROVIDER` | `console` or `msg91` |
+| `PMS_EMAIL_PROVIDER` | `console` or `brevo` |
+| `PMS_WHATSAPP_PROVIDER` | `console` or `meta` |
+| `PMS_PUSH_PROVIDER` | `console` or `fcm` |
+
+Swapping a provider is one variable. Adding one is a class and a line in `IntegrationsConfig`.
+
+## Tests
+
+```bash
+cd backend && mvn test      # 42 tests, needs Postgres on localhost:5432
+cd frontend && npm test && npm run lint && npm run build
+```
+
+The backend tests are integration tests against a real Postgres, because the guarantees worth testing are
+the database's: that one tenant cannot see another's rows, that two concurrent check-ins for the last bed
+produce exactly one stay, that receipt numbers have no gaps under load, and that the audit log cannot be
+rewritten.
+
+## Not built yet
+
+Advance-booking screens beyond the tape chart, the room and rate setup screens, the super-admin area, and
+PDF export of the police register. The APIs for all of them exist; the screens do not.

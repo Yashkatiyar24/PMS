@@ -1,0 +1,18 @@
+# Local Postgres for development. Production uses the same image with a volume and a backup job.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: pms
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pms"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

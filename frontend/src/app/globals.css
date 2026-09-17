@@ -1,171 +1,65 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "SF Mono", "Fira Code", monospace;
+/*
+ * Designed for a ₹6,000 Android phone held in one hand at a reception desk, often in daylight.
+ * High contrast by default, 44px minimum tap targets, no colour-only status.
+ */
+@theme {
+  --font-sans: "Noto Sans", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  --color-background: #FAFAF8;
-  --color-foreground: #1C1C1E;
-  --color-primary: #1C1C1E;
-  --color-secondary: #8B7355;
-  --color-accent: #C9A227;
-  --color-muted: #8E8E93;
-  --color-border: #E5E5EA;
-  --color-card: #FFFFFF;
-  --color-card-hover: #F5F5F0;
-  --color-sidebar: #1C1C1E;
-  --color-sidebar-hover: #2C2C2E;
-  --color-sidebar-active: #3A3A3C;
-
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-error: #DC2626;
-  --color-info: #3B82F6;
-
-  --color-sand-50: #FAFAF5;
-  --color-sand-100: #F5F0EB;
-  --color-sand-200: #EBE3D8;
-  --color-sand-300: #D4C9B8;
-  --color-sand-400: #B8A88E;
-  --color-sand-500: #8B7355;
-  --color-sand-600: #6B5B42;
-  --color-sand-700: #554735;
-  --color-sand-800: #423628;
-  --color-sand-900: #342A1F;
-
-  --color-marble: #F8F6F1;
-  --color-gold-50: #FFF9E6;
-  --color-gold-100: #FFF0C2;
-  --color-gold-200: #FFE48A;
-  --color-gold-300: #F5D060;
-  --color-gold-400: #E8BC3A;
-  --color-gold-500: #C9A227;
-  --color-gold-600: #A17D1A;
-  --color-gold-700: #7A5E12;
-  --color-gold-800: #5C4510;
-  --color-gold-900: #42330E;
-
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03);
-  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 20px rgba(0, 0, 0, 0.04);
-  --shadow-gold: 0 4px 14px rgba(201, 162, 39, 0.15);
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-ink: #12151a;
+  --color-ink-soft: #4a5260;
+  --color-line: #d8dde5;
+  --color-brand: #0b5c4a;
+  --color-brand-soft: #e6f2ef;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdeceb;
+  --color-warn: #a35c00;
+  --color-warn-soft: #fdf3e4;
+  --color-ok: #0a6b3d;
+  --color-ok-soft: #e7f4ec;
+  --color-info: #1c4f9c;
+  --color-info-soft: #e8effa;
 }
 
-* {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+:root { color-scheme: light; }
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
-  background: var(--color-background);
-  color: var(--color-foreground);
+  background: var(--color-bg);
+  color: var(--color-ink);
   font-family: var(--font-sans);
+  margin: 0;
+  overscroll-behavior-y: contain;
 }
 
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #D4D4D8;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #A1A1AA;
-}
+/* Font size toggle (PRD accessibility): the desk can switch to large text for older staff. */
+html[data-text="large"] { font-size: 19px; }
+html[data-text="normal"] { font-size: 16px; }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Every interactive element clears the 44px tap target without each screen remembering to. */
+button, a[role="button"], select, input[type="checkbox"], input[type="radio"] { min-height: 44px; }
+input, select, textarea {
+  font: inherit;
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--color-surface);
+  color: var(--color-ink);
 }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 1px;
+}
+/* iOS zooms the page when a font under 16px gets focus. */
+@supports (-webkit-touch-callout: none) { input, select, textarea { font-size: 16px; } }
 
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
 }
-
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(20px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes slideInUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.5s ease-out forwards;
-}
-.animate-scaleIn {
-  animation: scaleIn 0.3s ease-out forwards;
-}
-.animate-slideInRight {
-  animation: slideInRight 0.4s ease-out forwards;
-}
-.animate-slideInUp {
-  animation: slideInUp 0.4s ease-out forwards;
-}
-
-.glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.glass-dark {
-  background: rgba(28, 28, 30, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.card-gradient {
-  background: linear-gradient(135deg, #FFFFFF 0%, #F8F6F1 100%);
-}
-
-.text-gradient {
-  background: linear-gradient(135deg, #C9A227 0%, #E8BC3A 50%, #C9A227 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.shimmer {
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-}
-.status-dot.available { background: #10B981; }
-.status-dot.occupied { background: #3B82F6; }
-.status-dot.reserved { background: #F59E0B; }
-.status-dot.dirty { background: #F97316; }
-.status-dot.cleaning { background: #8B5CF6; }
-.status-dot.maintenance { background: #EF4444; }
