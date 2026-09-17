@@ -1,0 +1,3 @@
+pms:
+  jobs.enabled: false
+logging.level.root: warn

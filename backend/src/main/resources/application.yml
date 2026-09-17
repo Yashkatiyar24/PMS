@@ -1,0 +1,95 @@
+# Every value here can be overridden by an environment variable (PMS_DB_APP_URL, PMS_STORAGE_PROVIDER, ...).
+spring:
+  application.name: pms-backend
+  threads.virtual.enabled: true          # Project Loom: one virtual thread per request / task
+  main.banner-mode: off
+  jackson:
+    default-property-inclusion: non_null
+    serialization.write-dates-as-timestamps: false
+  flyway:
+    enabled: true
+    url: ${PMS_DB_OWNER_URL:jdbc:postgresql://localhost:5432/pms}
+    user: ${PMS_DB_OWNER_USER:postgres}
+    password: ${PMS_DB_OWNER_PASSWORD:}
+  thymeleaf:
+    check-template-location: false
+    cache: true
+  servlet.multipart:
+    max-file-size: 5MB
+    max-request-size: 6MB
+
+server:
+  port: ${PMS_PORT:8080}
+  forward-headers-strategy: framework
+  error.include-message: never
+  error.include-stacktrace: never
+
+management:
+  endpoints.web.exposure.include: health,info
+  endpoint.health.probes.enabled: true
+
+pms:
+  app-url: ${PMS_APP_URL:http://localhost:3000}
+  cookie-secure: ${PMS_COOKIE_SECURE:false}   # true behind HTTPS
+  default-timezone: ${PMS_DEFAULT_TIMEZONE:Asia/Kolkata}
+  db:
+    app:
+      url: ${PMS_DB_APP_URL:jdbc:postgresql://localhost:5432/pms}
+      username: ${PMS_DB_APP_USER:pms_app}
+      password: ${PMS_DB_APP_PASSWORD:pms_app}
+      max-pool-size: ${PMS_DB_APP_POOL:20}
+    admin:
+      url: ${PMS_DB_ADMIN_URL:jdbc:postgresql://localhost:5432/pms}
+      username: ${PMS_DB_ADMIN_USER:pms_admin}
+      password: ${PMS_DB_ADMIN_PASSWORD:pms_admin}
+      max-pool-size: ${PMS_DB_ADMIN_POOL:6}
+  auth:
+    otp-length: 6
+    otp-ttl-minutes: 5
+    otp-max-sends-per-window: 3
+    otp-window-minutes: 15
+    otp-max-verify-attempts: 5
+    dev-otp: ${PMS_DEV_OTP:}                   # when set (dev only), every OTP equals this value
+  storage:
+    provider: ${PMS_STORAGE_PROVIDER:local}    # local | s3
+    local-dir: ${PMS_STORAGE_LOCAL_DIR:./storage}
+    signed-url-minutes: 5
+    s3:
+      endpoint: ${PMS_S3_ENDPOINT:}            # R2: https://<account>.r2.cloudflarestorage.com ; MinIO: http://localhost:9000
+      region: ${PMS_S3_REGION:auto}
+      bucket: ${PMS_S3_BUCKET:pms}
+      access-key: ${PMS_S3_ACCESS_KEY:}
+      secret-key: ${PMS_S3_SECRET_KEY:}
+      path-style: ${PMS_S3_PATH_STYLE:true}
+  sms:
+    provider: ${PMS_SMS_PROVIDER:console}      # console | msg91
+    msg91:
+      auth-key: ${PMS_MSG91_AUTH_KEY:}
+      sender-id: ${PMS_MSG91_SENDER_ID:}
+      otp-template-id: ${PMS_MSG91_OTP_TEMPLATE_ID:}
+  email:
+    provider: ${PMS_EMAIL_PROVIDER:console}    # console | brevo
+    from: ${PMS_EMAIL_FROM:PMS <no-reply@example.in>}
+    brevo.api-key: ${PMS_BREVO_API_KEY:}
+  whatsapp:
+    provider: ${PMS_WHATSAPP_PROVIDER:console} # console | meta
+    meta:
+      phone-number-id: ${PMS_META_WA_PHONE_NUMBER_ID:}
+      access-token: ${PMS_META_WA_ACCESS_TOKEN:}
+      api-version: ${PMS_META_WA_API_VERSION:v21.0}
+  push:
+    provider: ${PMS_PUSH_PROVIDER:console}     # console | fcm
+    fcm.credentials-json: ${PMS_FCM_CREDENTIALS_JSON:}   # service-account JSON, or a path prefixed with file:
+  pdf:
+    provider: ${PMS_PDF_PROVIDER:openhtml}     # openhtml | none
+  jobs:
+    enabled: ${PMS_JOBS_ENABLED:true}
+    outbox-poll-ms: 5000
+    outbox-max-attempts: 5
+  ops:
+    team-alert-email: ${PMS_TEAM_ALERT_EMAIL:}
+
+logging:
+  level:
+    root: info
+    in.pms: ${PMS_LOG_LEVEL:info}
