@@ -87,10 +87,16 @@ matter in production:
 
 Swapping a provider is one variable. Adding one is a class and a line in `IntegrationsConfig`.
 
+Every default above is chosen to make a fresh clone run, which also makes it unsafe to deploy. So the
+server refuses to start outside the `dev` and `test` profiles while any of them are still in place — the
+shipped session secret, a fixed login code, the demo seeder, a cookie that would travel over plain HTTP,
+or an origin list still pointing at localhost. It names all of them at once rather than one restart at a
+time, and it runs before the port is bound, so a misconfigured server never answers a request.
+
 ## Tests
 
 ```bash
-cd backend && mvn test                  # 52 tests, needs Postgres on localhost:5432
+cd backend && mvn test                  # 61 tests, needs Postgres on localhost:5432
 cd frontend && npm test && npm run lint && npm run build
 python3 infra/smoke.py                  # a whole desk day against a running server
 cd frontend && npm run ui-check         # the same day in a real browser at phone size
