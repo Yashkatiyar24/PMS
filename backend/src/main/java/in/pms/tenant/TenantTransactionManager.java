@@ -28,7 +28,7 @@ public class TenantTransactionManager extends DataSourceTransactionManager {
     protected void doBegin(Object transaction, TransactionDefinition definition) {
         UUID tenant = TenantContext.current()
                 .orElseThrow(() -> new IllegalStateException("Tenant transaction started without a tenant in context"));
-        super.doBegin(transaction, definition);
+        TenantDataSource.starting(() -> { super.doBegin(transaction, definition); return null; });
         var holder = (ConnectionHolder) TransactionSynchronizationManager.getResource(obtainDataSource());
         try (PreparedStatement ps = holder.getConnection().prepareStatement("select set_config('app.property_id', ?, true)")) {
             ps.setString(1, tenant.toString());

@@ -33,20 +33,22 @@ public class SessionAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws ServletException, IOException {
-        String token = cookie(req, sessions.cookieName());
-        var user = sessions.resolve(token);
+        var user = sessions.resolve(cookie(req, sessions.cookieName()));
         if (user.isEmpty()) { chain.doFilter(req, res); return; }
 
-        if (!SAFE.contains(req.getMethod()) && !"pms".equals(req.getHeader("X-Requested-With"))) {
-            res.sendError(HttpServletResponse.SC_FORBIDDEN, "Missing X-Requested-With header");
-            return;
-        }
-
-        CurrentUser u = user.get();
-        var auth = new UsernamePasswordAuthenticationToken(u, null, authorities(u));
-        SecurityContextHolder.getContext().setAuthentication(auth);
+        CurrentUser current = user.get();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(current, null, authorities(current)));
         try {
-            if (u.propertyId() != null) TenantContext.runAs(u.propertyId(), () -> { doChain(chain, req, res); });
+            // Checked after authenticating, so a refused write answers "forbidden" and is never mistaken
+            // for "signed out", which would send the desk back to the login screen for no reason.
+            if (!SAFE.contains(req.getMethod()) && !"pms".equals(req.getHeader("X-Requested-With"))) {
+                res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                res.setContentType("application/json;charset=UTF-8");
+                res.getWriter().write("{\"error\":\"Missing X-Requested-With header\"}");
+                return;
+            }
+            if (current.propertyId() != null) TenantContext.runAs(current.propertyId(), () -> doChain(chain, req, res));
             else doChain(chain, req, res);
         } finally {
             SecurityContextHolder.clearContext();

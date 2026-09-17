@@ -1,6 +1,7 @@
 package in.pms.config;
 
 import com.zaxxer.hikari.HikariDataSource;
+import in.pms.tenant.TenantDataSource;
 import in.pms.tenant.TenantTransactionManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -41,8 +42,9 @@ public class DataSourceConfig {
         return ds;
     }
 
+    /** Wrapped so that querying without a transaction fails loudly instead of silently returning nothing. */
     @Bean(name = "appDataSource") @Primary
-    public DataSource appDataSource(PmsProperties props) { return pool(props.db().app(), "pms-app"); }
+    public DataSource appDataSource(PmsProperties props) { return new TenantDataSource(pool(props.db().app(), "pms-app")); }
 
     @Bean(name = "adminDataSource")
     public DataSource adminDataSource(PmsProperties props) { return pool(props.db().admin(), "pms-admin"); }

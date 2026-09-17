@@ -146,6 +146,7 @@ public class InventoryService {
         return after;
     }
 
+    @Transactional(readOnly = true)
     public Room room(UUID id) {
         List<Room.Bed> beds = jdbc.sql("select id, label, active from beds where room_id = ? and property_id = ? order by label").params(id, TenantContext.require())
                 .query((rs, i) -> new Room.Bed(rs.getObject("id", UUID.class), rs.getString("label"), rs.getBoolean("active"))).list();

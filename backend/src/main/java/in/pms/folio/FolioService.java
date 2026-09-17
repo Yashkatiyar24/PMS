@@ -64,7 +64,11 @@ public class FolioService {
 
     /**
      * Replace the engine-generated lines with fresh ones for the given units. Manual lines are untouched.
-     * Tax is decided per line from the rules in force on the line date and the property's GSTIN.
+     *
+     * <p>Tax is decided per line from the rules in force on that line's date and the property's current
+     * registration. An open folio therefore always reflects today's rules: if the trust registers for GST
+     * mid-stay, the nights not yet invoiced are re-priced at checkout. That is the intended behaviour, and it
+     * stops at the invoice, whose snapshot is frozen at issue and never recomputed.
      */
     public void regenerateRoomCharges(UUID folioId, List<Unit> units, ZoneId zone, boolean hasGstin, UUID userId) {
         Settings s = settings.current();

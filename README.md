@@ -89,14 +89,23 @@ Swapping a provider is one variable. Adding one is a class and a line in `Integr
 ## Tests
 
 ```bash
-cd backend && mvn test      # 42 tests, needs Postgres on localhost:5432
+cd backend && mvn test                  # 42 tests, needs Postgres on localhost:5432
 cd frontend && npm test && npm run lint && npm run build
+python3 infra/smoke.py                  # a whole desk day against a running server
 ```
 
 The backend tests are integration tests against a real Postgres, because the guarantees worth testing are
 the database's: that one tenant cannot see another's rows, that two concurrent check-ins for the last bed
 produce exactly one stay, that receipt numbers have no gaps under load, and that the audit log cannot be
 rewritten.
+
+`infra/smoke.py` runs the real thing over HTTP after a deploy: sign in, check a guest in, fail to sell the
+same room twice, refuse an Aadhaar number, take payment, check out, print the receipt as HTML and PDF, and
+read the reports. It leaves one test stay behind, so run it against staging or a closed desk.
+
+One behaviour worth knowing: an open folio is re-priced from the current rules whenever the stay changes, so
+registering for GST mid-stay taxes the nights that have not been invoiced yet. Once the invoice is issued its
+snapshot is frozen and never recomputed.
 
 ## Not built yet
 
