@@ -41,8 +41,25 @@ html[data-text="large"] { font-size: 19px; }
 html[data-text="normal"] { font-size: 16px; }
 
 /* Every interactive element clears the 44px tap target without each screen remembering to. */
-button, a[role="button"], select, input[type="checkbox"], input[type="radio"] { min-height: 44px; }
-input, select, textarea {
+button, a[role="button"], select { min-height: 44px; }
+
+/* A tick box is not a text field. This rule is unlayered and so beats any utility class, which is why the
+   exclusion has to live here rather than on each checkbox: without it they inherit width:100% and swallow
+   their own label. The row that holds one carries the tap target instead, so the box stays box-sized. */
+input[type="checkbox"], input[type="radio"] {
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  flex: none;
+  accent-color: var(--color-brand);
+}
+label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) {
+  min-height: 44px;
+  padding-block: 10px;
+  align-items: center;
+}
+
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
   font: inherit;
   min-height: 44px;
   width: 100%;
@@ -57,7 +74,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
   outline-offset: 1px;
 }
 /* iOS zooms the page when a font under 16px gets focus. */
-@supports (-webkit-touch-callout: none) { input, select, textarea { font-size: 16px; } }
+@supports (-webkit-touch-callout: none) { input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; } }
 
 @media print {
   .no-print { display: none !important; }

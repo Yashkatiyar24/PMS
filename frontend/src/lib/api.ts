@@ -10,6 +10,11 @@ import { enqueue, type QueuedRequest } from "./offline-queue"
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080"
 
+/** Screens reachable without an account; a 401 there must not redirect anywhere. */
+export function isPublicScreen(pathname: string): boolean {
+  return pathname.startsWith("/login") || pathname.startsWith("/g/")
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string, readonly fields?: Record<string, string>) {
     super(message)
@@ -52,7 +57,10 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
       signal: options.signal,
     })
 
-    if (res.status === 401 && typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+    // "Signed out" only means something to someone who was signed in. The guest self-registration form
+    // under /g/ is opened by a stranger with no account, so bouncing them to a login screen would strand
+    // them; those screens use public-api.ts, and this guard is the backstop.
+    if (res.status === 401 && typeof window !== "undefined" && !isPublicScreen(window.location.pathname)) {
       window.location.href = "/login"
       throw new ApiError(401, "Signed out")
     }

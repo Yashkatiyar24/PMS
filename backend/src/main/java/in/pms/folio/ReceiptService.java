@@ -1,5 +1,6 @@
 package in.pms.folio;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import in.pms.audit.AuditService;
 import in.pms.charges.ReceiptNumberFormat;
@@ -35,12 +36,22 @@ import java.util.*;
 public class ReceiptService {
     private final JdbcClient jdbc;
     private final ObjectMapper json;
+    /**
+     * A snapshot keeps its nulls, unlike every API response.
+     *
+     * <p>The application's Jackson drops null properties, which is right for a response and wrong for a
+     * record: it made a receipt's shape depend on which fields the property happened to have filled in, so a
+     * trust with no GSTIN stored a snapshot with no {@code gstin} key at all and the template then failed to
+     * render it. "This property had no GSTIN" is part of what the document records.
+     */
+    private final ObjectMapper snapshotJson;
     private final AuditService audit;
     private final SettingsService settings;
     private final FolioService folios;
 
     public ReceiptService(@Qualifier("jdbc") JdbcClient jdbc, ObjectMapper json, AuditService audit, SettingsService settings, FolioService folios) {
         this.jdbc = jdbc; this.json = json; this.audit = audit; this.settings = settings; this.folios = folios;
+        this.snapshotJson = json.copy().setSerializationInclusion(JsonInclude.Include.ALWAYS);
     }
 
     public record Receipt(UUID id, UUID folioId, String kind, String number, String fy, long amountPaise, Map<String, Object> snapshot, UUID referencesReceiptId, OffsetDateTime issuedAt, String pdfKey) {}
@@ -105,7 +116,7 @@ public class ReceiptService {
         UUID id;
         try {
             id = jdbc.sql("insert into receipts(property_id, folio_id, kind, number, fy, snapshot, amount_paise, references_receipt_id, issued_by) values (?, ?, ?::receipt_kind, ?, ?, ?::jsonb, ?, ?, ?) returning id")
-                    .params(property, f.id(), kind, number, fy, json.writeValueAsString(snapshot), amountPaise, references, userId).query(UUID.class).single();
+                    .params(property, f.id(), kind, number, fy, snapshotJson.writeValueAsString(snapshot), amountPaise, references, userId).query(UUID.class).single();
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) { throw new IllegalStateException(e); }
         audit.record("receipts", id.toString(), "issue", null, Map.of("kind", kind, "number", number, "amountPaise", amountPaise), userId);
         return get(id);

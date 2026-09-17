@@ -131,6 +131,9 @@ Each requirement has an ID for tickets and an acceptance test. "Must" = v1 block
 | G3 | Must: never store a full Aadhaar number; only ID type + last 4 + photo. The capture screen asks for masked Aadhaar and offers a client-side blur box over the number before upload | Validation rejects any 12-digit sequence in the ID field; blur is applied before the file leaves the device |
 | G4 | Must: group booking = one leader guest + member count + member names; names required for adults when `register_requires_all_names` is on (default on) | Police register lists every named member |
 | G5 | Must: consent notice at check-in with property text; captures DPDP consent and WhatsApp opt-in with timestamp | Consent stored on the booking; no business-initiated WhatsApp without opt-in |
+| G6 | Must: guest self-registration. The desk shows a QR code; the guest scans it with their own phone and fills their own name, city, address, ID type, ID last 4, optional ID photo, companions and consent. Controlled by `self_registration_enabled`, `self_registration_minutes` and `self_registration_photo` | The desk's form fills with what the guest typed, without the desk touching the screen; the desk can correct every field before saving |
+| G7 | Must: a self-registration link is a bearer credential and is treated as public the moment it is displayed. 256 bits of entropy, stored only as a SHA-256 hash, expiring after `self_registration_minutes` (default 30), accepting one submission, revocable by the desk | Reading a link returns the property name and which fields to ask for, and never a guest, booking, room or amount; an unknown, expired, revoked and spent token are indistinguishable (all 404) |
+| G8 | Must: a submission is inert until a signed-in user acts on it. It is stored as JSON against the link and writes nothing to `guests`, `bookings` or `folios` | A stranger holding a valid token cannot read, alter or create any guest, booking or charge; the submission is validated by the same rules as the desk's form, so a full Aadhaar number is refused there too |
 
 **5.3 Bookings and tape chart**
 
@@ -459,6 +462,9 @@ Every key lives in `properties.settings`, validated by one Zod schema, with the 
 | `register_requires_all_names` | bool | `true` | manager | G4 |
 | `register_template` | list of columns | section R2 default | manager | R2 |
 | `consent_required` | bool | `true` | owner | G5 |
+| `self_registration_enabled` | bool | `true` | manager | G6 |
+| `self_registration_minutes` | int 5–240 | `30` | manager | G7 |
+| `self_registration_photo` | bool | `true` | manager | G6 |
 | `consent_text` | text per language | standard DPDP line | owner | G5 |
 | `gstin` | text | empty | owner | Tax engine, invoice |
 | `tax_exempt` | bool | `false` | owner | Tax engine |

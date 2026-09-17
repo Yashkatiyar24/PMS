@@ -186,8 +186,8 @@ function Control({
   switch (def.type) {
     case "BOOL":
       return (
-        <label className="flex items-center gap-2">
-          <input type="checkbox" className="h-6 w-6" disabled={!editable} checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
+        <label className="flex gap-3">
+          <input type="checkbox" disabled={!editable} checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
           <span className="text-sm">{Boolean(value) ? "on" : "off"}</span>
         </label>
       )

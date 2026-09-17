@@ -54,6 +54,9 @@ public final class Settings {
     public boolean registerRequiresAllNames() { return bool("register_requires_all_names"); }
     public List<String> registerTemplate() { return list("register_template"); }
     public boolean consentRequired() { return bool("consent_required"); }
+    public boolean selfRegistrationEnabled() { return bool("self_registration_enabled"); }
+    public int selfRegistrationMinutes() { return integer("self_registration_minutes"); }
+    public boolean selfRegistrationPhoto() { return bool("self_registration_photo"); }
     public Map<String, String> consentText() { return i18n("consent_text"); }
 
     public boolean taxExempt() { return bool("tax_exempt"); }

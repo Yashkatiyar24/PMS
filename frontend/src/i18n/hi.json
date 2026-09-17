@@ -188,5 +188,14 @@
   "admin.supportAccess": "सहायता पहुँच खुली",
   "admin.never": "कभी नहीं",
   "admin.activity": "हाल के बदलाव",
-  "admin.onboarded": "धर्मशाला जुड़ गई। मालिक अपने मोबाइल नंबर से साइन इन करें।"
+  "admin.onboarded": "धर्मशाला जुड़ गई। मालिक अपने मोबाइल नंबर से साइन इन करें।",
+  "action.close": "बंद करें",
+  "selfreg.button": "अतिथि खुद जानकारी भरें",
+  "selfreg.showTitle": "अतिथि से यह स्कैन करने को कहें",
+  "selfreg.showHint": "स्क्रीन उनकी ओर घुमाएं। वे अपने फ़ोन पर अपनी जानकारी भरेंगे।",
+  "selfreg.waiting": "अतिथि की प्रतीक्षा…",
+  "selfreg.newCode": "नया कोड दिखाएं",
+  "selfreg.received": "{name} की जानकारी मिल गई",
+  "selfreg.expired": "कोड की समय सीमा समाप्त। नया कोड दिखाएं।",
+  "selfreg.failed": "कोड नहीं बन सका। फिर कोशिश करें।"
 }

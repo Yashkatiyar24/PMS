@@ -33,12 +33,12 @@
 
   <div class="head">
     <h1 th:text="${property.name}">Property</h1>
-    <div class="muted" th:text="${property.address} + ', ' + ${property.city} + ' ' + ${property.state}">Address</div>
+    <div class="muted" th:text="${property['address']} + ', ' + ${property['city']} + ' ' + ${property['state']}">Address</div>
     <div class="muted">
-      <span th:if="${property.phone}" th:text="${property.phone}">Phone</span>
-      <span th:if="${property.gstin}" th:text="' · ' + ${labels.gstin} + ': ' + ${property.gstin}">GSTIN</span>
+      <span th:if="${property['phone']}" th:text="${property['phone']}">Phone</span>
+      <span th:if="${property['gstin']}" th:text="' · ' + ${labels.gstin} + ': ' + ${property['gstin']}">GSTIN</span>
     </div>
-    <div class="muted" th:if="${template.header}" th:text="${template.header}">Header</div>
+    <div class="muted" th:if="${template['header']}" th:text="${template['header']}">Header</div>
   </div>
 
   <div class="kind" th:text="${labels.get(r.kind)}">Tax Invoice</div>
@@ -55,13 +55,13 @@
 
   <table>
     <tr><td th:text="${labels.guest}">Guest</td><td><b th:text="${guest.name}">Name</b></td></tr>
-    <tr th:if="${guest.phone}"><td th:text="${labels.phone}">Phone</td><td th:text="${guest.phone}">Phone</td></tr>
-    <tr th:if="${guest.id_type}"><td th:text="${labels.idProof}">ID</td>
-        <td th:text="${guest.id_type} + (${guest.id_last4} ? ' ****' + ${guest.id_last4} : '')">ID</td></tr>
+    <tr th:if="${guest['phone']}"><td th:text="${labels.phone}">Phone</td><td th:text="${guest['phone']}">Phone</td></tr>
+    <tr th:if="${guest['id_type']}"><td th:text="${labels.idProof}">ID</td>
+        <td th:text="${guest['id_type']} + (${guest['id_last4']} ? ' ****' + ${guest['id_last4']} : '')">ID</td></tr>
     <tr th:if="${guest.units}"><td th:text="${labels.room}">Room</td><td th:text="${guest.units}">101</td></tr>
     <tr><td th:text="${labels.stay}">Stay</td><td th:text="${stayFrom} + ' → ' + ${stayTo}">dates</td></tr>
     <tr><td th:text="${labels.guests}">Guests</td>
-        <td th:text="${guest.adults} + ' ' + ${labels.adults} + (${guest.children} > 0 ? ', ' + ${guest.children} + ' ' + ${labels.children} : '')">2</td></tr>
+        <td th:text="${guest['adults']} + ' ' + ${labels.adults} + (${guest['children']} > 0 ? ', ' + ${guest['children']} + ' ' + ${labels.children} : '')">2</td></tr>
   </table>
 
   <table th:if="${!lines.isEmpty()}">
@@ -94,7 +94,7 @@
 
   <table class="totals">
     <tr class="grand"><td th:text="${labels.total}">Total</td><td class="num" th:text="${totals.total}">2100</td></tr>
-    <tr th:if="${totals.showDeposit}"><td th:text="${labels.deposit}">Deposit</td><td class="num" th:text="${totals.deposit}">200</td></tr>
+    <tr th:if="${totals['showDeposit']}"><td th:text="${labels.deposit}">Deposit</td><td class="num" th:text="${totals['deposit']}">200</td></tr>
     <tr><td th:text="${labels.paid}">Paid</td><td class="num" th:text="${totals.paid}">2100</td></tr>
     <tr><td th:text="${labels.balance}">Balance</td><td class="num" th:text="${totals.balance}">0</td></tr>
   </table>
@@ -111,19 +111,19 @@
 
   <div class="note" th:if="${r.kind == 'donation'}">
     <div th:text="${labels.noGoodsOrServices}">No goods or services.</div>
-    <div th:if="${property.reg_80g}" th:text="${labels.reg80g} + ': ' + ${property.reg_80g}">80G</div>
+    <div th:if="${property['reg_80g']}" th:text="${labels.reg80g} + ': ' + ${property['reg_80g']}">80G</div>
   </div>
   <div class="note" th:if="${r.kind == 'provisional'}" th:text="${labels.provisionalNote}">Provisional.</div>
-  <div class="note" th:if="${property.gstin}" th:text="${labels.hsn} + ': ' + ${hsn}">HSN 9963</div>
+  <div class="note" th:if="${property['gstin']}" th:text="${labels.hsn} + ': ' + ${hsn}">HSN 9963</div>
 
   <div class="qr" th:if="${qr}">
     <img th:src="${qr}" alt="UPI"/>
-    <div class="muted" th:text="${labels.scanToPay} + ' · ' + ${template.upiVpa}">Scan to pay</div>
+    <div class="muted" th:text="${labels.scanToPay} + ' · ' + ${template['upiVpa']}">Scan to pay</div>
   </div>
 
   <div class="foot">
-    <div th:if="${template.terms}" th:text="${template.terms}">Terms</div>
-    <div th:if="${template.footer}" th:text="${template.footer}">Footer</div>
+    <div th:if="${template['terms']}" th:text="${template['terms']}">Terms</div>
+    <div th:if="${template['footer']}" th:text="${template['footer']}">Footer</div>
   </div>
 </div>
 </body>

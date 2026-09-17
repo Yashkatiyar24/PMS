@@ -224,13 +224,13 @@ export default function NewBookingPage() {
           </Field>
         </div>
         {consentRequired && (
-          <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+          <label className="flex gap-3 text-sm">
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             <span>{t("checkin.consent")}</span>
           </label>
         )}
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} />
+        <label className="flex gap-3 text-sm">
+          <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} />
           <span>{t("checkin.whatsappOptIn")}</span>
         </label>
       </Card>

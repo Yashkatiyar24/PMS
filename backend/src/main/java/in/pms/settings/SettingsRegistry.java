@@ -67,6 +67,9 @@ public final class SettingsRegistry {
         bool("register_requires_all_names", "guests", MANAGER, true, "Require names of all adult members for the police register."),
         list("register_template", "guests", MANAGER, List.of("serial", "name", "address", "nationality", "id", "arrival", "departure", "unit", "adults", "children", "members", "purpose"), REGISTER_COLUMNS, "Columns and order of the police register export."),
         bool("consent_required", "guests", OWNER, true, "Show the consent notice at check-in."),
+        bool("self_registration_enabled", "guests", MANAGER, true, "Let the desk show a QR code so the guest fills their own details on their own phone."),
+        integer("self_registration_minutes", "guests", MANAGER, 30, 5, 240, "Minutes a self-registration QR code stays valid before it expires."),
+        bool("self_registration_photo", "guests", MANAGER, true, "Ask the guest to photograph their own ID when they fill the form."),
         i18n("consent_text", "guests", OWNER, Map.of(
                 "en", "Your details are collected for the guest register as required by law and to send your receipt. They are not shared for marketing.",
                 "hi", "आपकी जानकारी कानून के अनुसार अतिथि रजिस्टर और रसीद भेजने के लिए ली जा रही है। इसे विपणन के लिए साझा नहीं किया जाएगा।"),

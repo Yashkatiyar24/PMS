@@ -111,6 +111,13 @@ public class GuestService {
         return storage.signedGetUrl(key, Duration.ofMinutes(5));
     }
 
+    /**
+     * The rules the register depends on, in one place so the desk's form and the guest's own phone cannot
+     * drift apart: a name is required, a phone is ten digits, an ID type is one we know, and a full Aadhaar
+     * number is refused wherever it is typed. Returns the tidied values.
+     */
+    public GuestInput validateForRegister(GuestInput in) { return validate(in); }
+
     private GuestInput validate(GuestInput in) {
         if (in.name() == null || in.name().isBlank()) throw new BadRequestException("Name is required");
         String phone = in.phone() == null ? "" : in.phone().replaceAll("\\D", "");

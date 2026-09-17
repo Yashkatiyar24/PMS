@@ -16,6 +16,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useSession()
   const { t, language, setLanguage, textSize, setTextSize } = useI18n()
 
+  // The guest self-registration form is opened by someone with no account: no property name to show, no
+  // navigation they could use, and nothing to switch languages between — it carries both itself.
+  if (path.startsWith("/g/")) return <>{children}</>
+
   if (path.startsWith("/login")) return <main className="mx-auto max-w-md p-4">{children}</main>
 
   if (loading) return <Loading />

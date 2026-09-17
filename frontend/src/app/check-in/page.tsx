@@ -16,6 +16,7 @@ import { rupees, toPaise } from "@/lib/format"
 import type { Booking, Guest, Room, RoomType } from "@/lib/types"
 import { useI18n } from "@/i18n"
 import { Banner, Button, Card, Chip, Field, Loading } from "@/components/ui"
+import { SelfRegistrationQr, type Submission } from "@/components/SelfRegistrationQr"
 
 type Settings = Record<string, unknown>
 
@@ -185,6 +186,26 @@ export default function CheckInPage() {
     }
   }
 
+  /**
+   * The guest pressed send on their own phone. Their answers fill the form the desk is already looking at,
+   * so the desk reads them back, corrects anything wrong, and carries on to the room and the money. Nothing
+   * is saved until the desk completes the check-in, which is the point: the guest supplies, the desk decides.
+   */
+  const applySelfRegistration = useCallback((sub: Submission) => {
+    setName(sub.name)
+    if (sub.phone) setPhone(sub.phone)
+    setCity(sub.city ?? "")
+    setAddress(sub.address ?? "")
+    if (sub.idType) setIdType(sub.idType)
+    if (sub.idLast4) setIdLast4(sub.idLast4)
+    setAdults(sub.adults || 1)
+    setChildren(sub.children || 0)
+    setConsent(sub.consent)
+    setOptIn(sub.whatsappOptIn)
+    setGuestId(null)
+    setNotice(t("selfreg.received", { name: sub.name }))
+  }, [t])
+
   if (!settings) return <Loading />
 
   return (
@@ -192,6 +213,10 @@ export default function CheckInPage() {
       <h1 className="text-xl font-bold">{t("action.checkIn")}</h1>
       {error && <Banner tone="danger">{error}</Banner>}
       {notice && <Banner tone="info">{notice}</Banner>}
+
+      {Boolean(settings.self_registration_enabled) && (
+        <SelfRegistrationQr onReceived={applySelfRegistration} />
+      )}
 
       <Card className="space-y-3">
         <Field label={t("checkin.phoneLookup")} hint={t("checkin.phoneHint")}>
@@ -330,13 +355,13 @@ export default function CheckInPage() {
 
       <Card className="space-y-2">
         {consentRequired && (
-          <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+          <label className="flex gap-3 text-sm">
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             <span>{t("checkin.consent")}</span>
           </label>
         )}
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} />
+        <label className="flex gap-3 text-sm">
+          <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} />
           <span>{t("checkin.whatsappOptIn")}</span>
         </label>
       </Card>

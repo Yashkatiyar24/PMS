@@ -22,6 +22,21 @@ const check = (label, ok, detail = "") => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${label}${detail ? `  [${detail}]` : ""}`)
 }
 
+/**
+ * Nothing may spill past the right edge. A checkbox once inherited the full-width styling meant for text
+ * fields and pushed its own label off the screen; every tap target still cleared 44px, so only this catches
+ * it. Ignores anything deliberately scrollable, like the tape chart.
+ */
+const overflows = async (where) => {
+  const spills = await page.$$eval("body *", (nodes) =>
+    nodes.filter((n) => {
+      if (n.closest("[data-nextjs-dev-tools-button], nextjs-portal, .overflow-x-auto, .overflow-auto")) return false
+      const r = n.getBoundingClientRect()
+      return r.width > 0 && r.right > document.documentElement.clientWidth + 1
+    }).map((n) => `${n.tagName.toLowerCase()}.${n.className || "?"}`.slice(0, 60)))
+  check(`nothing spills off the right edge on ${where}`, spills.length === 0, spills.slice(0, 3).join(" | "))
+}
+
 const browser = await chromium.launch(process.env.PMS_CHROMIUM ? { executablePath: process.env.PMS_CHROMIUM } : {})
 const context = await browser.newContext({ viewport: { width: 360, height: 740 }, deviceScaleFactor: 2 })
 const page = await context.newPage()
@@ -56,14 +71,16 @@ try {
 
   // 4. Tap targets are thumb-sized, as the PRD requires
   // Next's development toolbar injects a button of its own; it is not part of the app and never ships.
-  const small = await page.$$eval("button:not([data-nextjs-dev-tools-button]), a[role='button']", (nodes) =>
+  const small = await page.$$eval("button:not([data-nextjs-dev-tools-button]), a[role='button'], label:has(> input[type=checkbox])", (nodes) =>
     nodes.filter((n) => n.getBoundingClientRect().height > 0 && n.getBoundingClientRect().height < 44).length)
   check("every control clears the 44px tap target", small === 0, `${small} too small`)
+  await overflows("the today screen")
 
   // 5. Check-in screen loads its data from the API
   await page.getByRole("button", { name: /Check-in/i }).first().click()
   await page.waitForURL("**/check-in")
   await page.waitForSelector("select", { timeout: 15000 })
+  await overflows("the check-in form")
   const roomOptions = await page.locator("select").first().locator("option").count()
   check("the check-in form offers free rooms from the server", roomOptions > 1, `${roomOptions - 1} units`)
   await page.screenshot({ path: `${OUT}/ui-checkin.png`, fullPage: true })

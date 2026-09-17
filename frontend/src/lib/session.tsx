@@ -6,8 +6,9 @@
  * The server decides all three; this only mirrors the answer so screens can hide what the user cannot do.
  * Hiding is a courtesy, not a control: every endpoint checks the role again.
  */
+import { usePathname } from "next/navigation"
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
-import { api } from "./api"
+import { api, isPublicScreen } from "./api"
 
 export type Role = "STAFF" | "MANAGER" | "OWNER"
 
@@ -39,7 +40,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [tick, setTick] = useState(0)
   const { user, loading } = state
 
+  // On a screen a stranger can open there is nobody to resolve, and asking would only produce a 401 that
+  // looks like a session ending.
+  const anonymous = isPublicScreen(usePathname() ?? "")
+
   useEffect(() => {
+    if (anonymous) return
     let current = true
     api<CurrentUser>("/api/auth/me")
       .then((user) => {
@@ -51,7 +57,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return () => {
       current = false
     }
-  }, [tick])
+  }, [tick, anonymous])
 
   /** Ask the server again, e.g. after switching property. */
   const reload = useCallback(async () => {
@@ -77,9 +83,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     window.location.href = "/login"
   }, [])
 
+  // Derived rather than stored: on a public screen there is nobody to resolve and nothing to wait for, so
+  // it reports "nobody, and done" without an effect ever writing state.
   const value = useMemo(
-    () => ({ user, loading, reload, can, switchProperty, logout }),
-    [user, loading, reload, can, switchProperty, logout],
+    () => ({
+      user: anonymous ? null : user,
+      loading: anonymous ? false : loading,
+      reload, can, switchProperty, logout,
+    }),
+    [anonymous, user, loading, reload, can, switchProperty, logout],
   )
   return <Context.Provider value={value}>{children}</Context.Provider>
 }

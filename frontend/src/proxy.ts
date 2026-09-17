@@ -6,7 +6,9 @@ import type { NextRequest } from "next/server"
  * loading a screen that will fail. It never decides what a user may do; the API checks the session and the
  * role on every request. (Next.js 16 renamed middleware to proxy.)
  */
-const PUBLIC_PATHS = ["/login", "/manifest.webmanifest", "/sw.js"]
+// "/g/" is the guest's own self-registration form, reached by scanning a QR at the desk. Whoever opens it
+// has no account and never will, so it must never be bounced to a login screen.
+const PUBLIC_PATHS = ["/login", "/g/", "/manifest.webmanifest", "/sw.js"]
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl

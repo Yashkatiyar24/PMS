@@ -62,6 +62,10 @@ public class SecurityConfig {
                         // overwriting the 403. The app reads 401 as "your session ended", so a staff member
                         // tapping something they may not do would be signed out instead of simply refused.
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC, DispatcherType.FORWARD).permitAll()
+                        // The guest self-registration form. Open by design: the person filling it has no account and
+                        // never will. The random token in the URL is the credential, and the endpoints behind
+                        // this line are written to disclose nothing and change nothing on their own.
+                        .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/auth/otp/**", "/api/auth/login", "/api/health", "/api/files/**", "/actuator/health/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/**").authenticated()

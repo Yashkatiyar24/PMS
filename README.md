@@ -66,6 +66,13 @@ in a "needs attention" list instead of disappearing.
 **Every change is auditable.** Writes to bookings, folios, payments, rooms and settings leave a row in
 `audit_log`, which has no UPDATE or DELETE grant for either application role.
 
+**The guest can fill their own register entry.** The desk shows a QR code, the guest scans it with their own
+phone and types their own name, address and ID — the things that used to be written into a paper register
+while a queue formed. It is the one door in the system that opens without a login, so it is built for the
+caller to be a stranger: the link is 256 random bits stored only as a SHA-256 hash, it expires and works
+once, reading it discloses nothing about any guest, booking or bill, and submitting it writes inert JSON
+that changes no guest, booking or folio. The desk, signed in, is what turns a submission into a record.
+
 ## Configuration
 
 Everything is an environment variable with a working default; see
@@ -79,6 +86,7 @@ matter in production:
 | `PMS_SESSION_SECRET` | signs file links; must be set to something random |
 | `PMS_COOKIE_SECURE` | `true` once you are behind HTTPS |
 | `PMS_ALLOWED_ORIGINS` | the origins the desk app is served from; the browser is refused from anywhere else |
+| `PMS_APP_URL` | where the desk app lives; self-registration QR codes point at it |
 | `PMS_STORAGE_PROVIDER` | `local` or `s3` (S3, Cloudflare R2, MinIO) |
 | `PMS_SMS_PROVIDER` | `console` or `msg91` |
 | `PMS_EMAIL_PROVIDER` | `console` or `brevo` |
@@ -96,10 +104,11 @@ time, and it runs before the port is bound, so a misconfigured server never answ
 ## Tests
 
 ```bash
-cd backend && mvn test                  # 61 tests, needs Postgres on localhost:5432
+cd backend && mvn test                  # 76 tests, needs Postgres on localhost:5432
 cd frontend && npm test && npm run lint && npm run build
 python3 infra/smoke.py                  # a whole desk day against a running server
 cd frontend && npm run ui-check         # the same day in a real browser at phone size
+cd frontend && npm run selfreg-check    # the QR handover, driven on two separate phones
 ```
 
 The backend tests are integration tests against a real Postgres, because the guarantees worth testing are
@@ -112,6 +121,11 @@ the day, open the check-in form, the tape chart, the settings and the reports, a
 under 44px or anything unexpected reaches the console. It exists because the other two suites talk to the
 API directly and so cannot notice when the browser is the thing being refused — a missing CORS header once
 left every test green while nobody could sign in at all.
+
+`npm run selfreg-check` drives the QR handover across two browser contexts, because one context would
+carry the desk's session onto the guest's page and prove nothing. It reads the QR off the desk's screen with
+a real decoder rather than reusing a link it already knew, then fills the form as the guest and watches the
+details land back on the desk.
 
 `infra/smoke.py` runs the real thing over HTTP after a deploy: sign in, check a guest in, fail to sell the
 same room twice, refuse an Aadhaar number, take payment, check out, print the receipt as HTML and PDF, and
@@ -126,7 +140,7 @@ snapshot is frozen and never recomputed.
 | Route | What it is for |
 | --- | --- |
 | `/` | today: arrivals, in-house, departures, what is free, and the check-in button |
-| `/check-in` | the 60-second walk-in flow |
+| `/check-in` | the 60-second walk-in flow, including the QR handover to the guest's own phone |
 | `/stays/[id]` | one stay: bill, payments, checkout, receipts, cancel and no-show |
 | `/bookings` | tape chart, rooms down and days across |
 | `/bookings/new` | advance booking taken over the phone |
@@ -139,8 +153,15 @@ snapshot is frozen and never recomputed.
 | `/settings/staff` | invite, change role, set approval PIN, remove access |
 | `/admin` | our back office: onboard a property, see health, set billing |
 | `/needs-attention` | offline entries the server refused |
+| `/g/[token]` | **no login:** the guest's own self-registration form, opened by scanning the desk's QR |
 
 ## Not built yet
 
 PDF export of the police register (the CSV export exists), guest self-booking, and payment links. These are
 v2 in the PRD.
+
+Self-registration links can be tied to an existing booking, and `POST /api/registrations/{id}/apply` turns
+such a submission straight into a guest record — useful for an advance booking whose guest fills their
+details before arriving. The walk-in screen deliberately does not use it: there the submission fills the
+desk's own form instead, so a human reads it back before anything is saved. Only the walk-in path has a
+screen today.

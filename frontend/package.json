@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "ui-check": "node ui-check.mjs"
+    "ui-check": "node ui-check.mjs",
+    "selfreg-check": "node selfreg-check.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.17",
@@ -36,6 +37,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "jsqr": "^1.4.0",
     "playwright": "^1.63.0",
     "tailwindcss": "^4",
     "typescript": "^5",

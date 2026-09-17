@@ -188,5 +188,14 @@
   "admin.supportAccess": "Support access open",
   "admin.never": "Never used",
   "admin.activity": "Recent changes",
-  "admin.onboarded": "Property added. The owner signs in with their mobile number."
+  "admin.onboarded": "Property added. The owner signs in with their mobile number.",
+  "action.close": "Close",
+  "selfreg.button": "Guest fills their own details",
+  "selfreg.showTitle": "Ask the guest to scan this",
+  "selfreg.showHint": "Turn the screen towards them. They fill their details on their own phone.",
+  "selfreg.waiting": "Waiting for the guest…",
+  "selfreg.newCode": "Show a new code",
+  "selfreg.received": "Details received from {name}",
+  "selfreg.expired": "That code has expired. Show a new one.",
+  "selfreg.failed": "Could not make a code. Try again."
 }
