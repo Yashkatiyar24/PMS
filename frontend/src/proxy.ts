@@ -21,6 +21,8 @@ export function proxy(request: NextRequest) {
   return NextResponse.next()
 }
 
+// "api/" is the backend, passed through when deployed (next.config.ts); it checks the session itself, and signing
+// in or a guest's booking must reach it without a cookie.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png).*)"],
+  matcher: ["/((?!api/|_next/static|_next/image|favicon.ico|icon-.*\\.png).*)"],
 }

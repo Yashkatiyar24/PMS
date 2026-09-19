@@ -105,6 +105,20 @@ matter in production:
 
 Swapping a provider is one variable. Adding one is a class and a line in `IntegrationsConfig`.
 
+### Deploying the desk app on Vercel
+
+Vercel runs the Next.js app only. The Spring Boot API and Postgres need a host that keeps a Java server running
+(Render, Railway, Fly.io, a VM), because the API holds sessions, runs scheduled jobs and keeps its own database
+connections.
+
+1. Import the repository in Vercel and set **Root Directory** to `frontend`; it detects Next.js by itself.
+2. Set `PMS_API_ORIGIN` to the API's address, e.g. `https://api.example.in`. Do not set `NEXT_PUBLIC_API_BASE`.
+   The browser then calls `/api/...` on the Vercel domain and Vercel passes it to the API, so the session cookie
+   is the app's own and no cross-site cookie is involved.
+3. On the API, set `PMS_APP_URL` and `PMS_ALLOWED_ORIGINS` to the Vercel address (e.g.
+   `https://pms.vercel.app`) and `PMS_COOKIE_SECURE=true`. If signing in on a preview deployment fails with
+   "forbidden", add that preview's address to `PMS_ALLOWED_ORIGINS` as well.
+
 Every default above is chosen to make a fresh clone run, which also makes it unsafe to deploy. So the
 server refuses to start outside the `dev` and `test` profiles while any of them are still in place — the
 shipped session secret, a fixed login code, the demo seeder, a cookie that would travel over plain HTTP,
