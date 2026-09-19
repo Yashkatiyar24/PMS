@@ -67,7 +67,10 @@ public class BookingController {
     @PostMapping("/{id}/check-out") @PreAuthorize("hasAuthority('PERM_checkout')")
     public Booking checkOut(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id, @RequestBody(required = false) CheckOutInput in) {
         CheckOutInput i = in == null ? new CheckOutInput(null, null, null, null) : in;
-        UUID approver = i.overrideReason() == null || i.overrideReason().isBlank() ? null : approvals.require(u, i.approverId(), i.pin());
+        // Leaving early lowers the bill. A manager or owner approves that themselves, as they do every other
+        // reduction; anyone else gives a reason and an approver's PIN. Writing off an unpaid balance always needs the reason.
+        boolean reasoned = i.overrideReason() != null && !i.overrideReason().isBlank();
+        UUID approver = reasoned ? approvals.require(u, i.approverId(), i.pin()) : u.can(Permissions.DISCOUNT) ? u.id() : null;
         return bookings.checkOut(id, i.departAt(), i.overrideReason(), u.id(), approver);
     }
 

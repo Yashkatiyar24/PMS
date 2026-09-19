@@ -37,6 +37,8 @@ public class UserAdminService {
 
     public record Member(UUID userId, String name, String phone, String email, String role, boolean active, boolean hasPin) {}
     public record InviteInput(String name, String phone, String email, String role) {}
+    /** {@code password} is their first password, shown once to whoever added them; null when they already had one. */
+    public record Invited(@com.fasterxml.jackson.annotation.JsonUnwrapped Member member, String password) {}
 
     @Transactional(value = "adminTx", readOnly = true)
     public List<Member> members() {
@@ -46,14 +48,18 @@ public class UserAdminService {
                 .param(TenantContext.require()).query(this::mapMember).list();
     }
 
-    /** Creates the user if the phone is new, then adds the membership. Idempotent for an existing member. */
+    /**
+     * Creates the user if the phone is new, then adds the membership. Idempotent for an existing member. Someone new
+     * gets a first password to sign in with the dharamshala's code; someone who already has one keeps it.
+     */
     @Transactional("adminTx")
-    public Member invite(InviteInput in, CurrentUser actor) {
+    public Invited invite(InviteInput in, CurrentUser actor) {
         String phone = OtpService.normalisePhone(in.phone());
         String role = grantable(in.role(), actor);
         if (in.name() == null || in.name().isBlank()) throw new BadRequestException("Name is required");
         UUID property = TenantContext.require();
-        UUID userId = admin.sql("select id from users where phone = ?").param(phone).query(UUID.class).optional().orElseGet(() ->
+        var found = admin.sql("select id from users where phone = ?").param(phone).query(UUID.class).optional();
+        UUID userId = found.orElseGet(() ->
                 admin.sql("insert into users(name, phone, email) values (?, ?, ?) returning id").params(in.name().trim(), phone, blank(in.email())).query(UUID.class).single());
         // Inviting someone who is already a member changes their role: the same rule as setRole applies, so an
         // admin cannot demote an owner by inviting their number again.
@@ -65,7 +71,40 @@ public class UserAdminService {
                 on conflict (property_id, user_id) do update set role = excluded.role, active = true""")
                 .params(property, userId, role).update();
         audit.recordPlatform(property, "property_users", userId.toString(), "invite", null, Map.of("role", role, "phone", mask(phone)), actor.id());
-        return member(userId);
+        // Only a person this dharamshala alone knows gets a password from it: an existing account that works
+        // anywhere else is not this owner's to open.
+        boolean passwordless = admin.sql("select password_hash is null and not is_super_admin from users where id = ?").param(userId).query(Boolean.class).single();
+        String password = passwordless && !worksElsewhere(userId, property) ? issuePassword(userId) : null;
+        return new Invited(member(userId), password);
+    }
+
+    /**
+     * A new password for someone who works here and has forgotten theirs, shown once to whoever reset it. Their
+     * sessions end. Refused for anyone who also works at another property, whose account is not this one's to open.
+     */
+    @Transactional("adminTx")
+    public String resetPassword(UUID userId, CurrentUser actor) {
+        if (userId.equals(actor.id())) throw new BadRequestException("Change your own password from your menu");
+        Member m = member(userId);
+        grantable(m.role(), actor); // an admin cannot take over an owner
+        if (!m.active()) throw new BadRequestException("This person no longer has access here");
+        boolean superAdmin = admin.sql("select is_super_admin from users where id = ?").param(userId).query(Boolean.class).single();
+        if (superAdmin || worksElsewhere(userId, TenantContext.require()))
+            throw new ForbiddenException("This person also works at another property; they reset their own password");
+        String password = issuePassword(userId);
+        sessions.revokeAll(userId);
+        audit.recordPlatform(TenantContext.require(), "users", userId.toString(), "password_reset", null, null, actor.id());
+        return password;
+    }
+
+    private boolean worksElsewhere(UUID userId, UUID property) {
+        return admin.sql("select exists (select 1 from property_users where user_id = ? and property_id <> ?)").params(userId, property).query(Boolean.class).single();
+    }
+
+    private String issuePassword(UUID userId) {
+        String password = passwords.generate();
+        admin.sql("update users set password_hash = ?, updated_at = now() where id = ?").params(passwords.hash(password), userId).update();
+        return password;
     }
 
     @Transactional("adminTx")
@@ -100,13 +139,19 @@ public class UserAdminService {
         audit.recordPlatform(TenantContext.require(), "property_users", userId.toString(), "pin", null, null, actor.id());
     }
 
-    /** A user sets their own email login password. */
+    /**
+     * A user changes their own password, proving the current one so that a device left signed in cannot lock its
+     * owner out. The email, when given, also becomes a way to sign in. Their other sessions end.
+     */
     @Transactional("adminTx")
-    public void setPassword(String email, String password, CurrentUser actor) {
+    public void setPassword(String email, String currentPassword, String password, CurrentUser actor) {
         if (password == null || password.length() < 8) throw new BadRequestException("Password must be at least 8 characters");
+        String hash = admin.sql("select password_hash from users where id = ?").param(actor.id()).query(String.class).optional().orElse(null);
+        if (hash != null && !passwords.matches(currentPassword == null ? "" : currentPassword, hash))
+            throw new BadRequestException("Your current password is not right");
         String e = email == null || email.isBlank() ? null : email.trim().toLowerCase();
-        if (e == null) throw new BadRequestException("Email is required for password login");
-        admin.sql("update users set email = ?, password_hash = ?, updated_at = now() where id = ?").params(e, passwords.hash(password), actor.id()).update();
+        admin.sql("update users set email = coalesce(?, email), password_hash = ?, updated_at = now() where id = ?").params(e, passwords.hash(password), actor.id()).update();
+        admin.sql("update sessions set revoked_at = now() where user_id = ? and id <> ? and revoked_at is null").params(actor.id(), actor.sessionId()).update();
         audit.recordPlatform(null, "users", actor.id().toString(), "password", null, null, actor.id());
     }
 

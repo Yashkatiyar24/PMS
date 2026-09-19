@@ -37,6 +37,10 @@ pms:
   # credentialed requests cannot use "*", and we would not want them to.
   allowed-origins: ${PMS_ALLOWED_ORIGINS:http://localhost:3000}
   default-timezone: ${PMS_DEFAULT_TIMEZONE:Asia/Kolkata}
+  # The first platform admin on a fresh database (who onboards dharamshalas); ignored once one exists.
+  bootstrap-admin:
+    email: ${PMS_ADMIN_EMAIL:}
+    password: ${PMS_ADMIN_PASSWORD:}
   db:
     app:
       url: ${PMS_DB_APP_URL:jdbc:postgresql://localhost:5432/pms}

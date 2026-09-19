@@ -4,6 +4,7 @@ import in.pms.audit.AuditService;
 import in.pms.auth.CurrentUser;
 import in.pms.auth.OtpService;
 import in.pms.auth.PasswordService;
+import in.pms.auth.Permissions;
 import in.pms.common.BadRequestException;
 import in.pms.common.ForbiddenException;
 import in.pms.common.NotFoundException;
@@ -40,7 +41,8 @@ public class AdminService {
             UUID propertyId, String propertyName, String city,
             UUID orgId, String orgName, String plan, String billingStatus,
             boolean active, int rooms, int bookingsLast30Days, OffsetDateTime lastActivityAt,
-            int openFolios, long outstandingPaise, int outboxPending, boolean supportAccess) {}
+            int openFolios, long outstandingPaise, int outboxPending, boolean supportAccess,
+            String code, List<String> modules) {}
 
     /** Every property with enough numbers to spot one that has gone quiet. No guest data. */
     @Transactional(value = "adminTx", readOnly = true)
@@ -55,7 +57,7 @@ public class AdminService {
                        (select coalesce(sum(f.total_paise + f.deposit_held_paise - f.paid_paise), 0) from folios f
                           where f.property_id = p.id and f.status = 'open') as outstanding,
                        (select count(*) from outbox ob where ob.property_id = p.id and ob.status = 'pending') as outbox_pending,
-                       coalesce(p.settings->>'support_access_until', '') as support_until
+                       coalesce(p.settings->>'support_access_until', '') as support_until, p.code, p.modules
                 from properties p join organisations o on o.id = p.org_id
                 order by o.name, p.name""")
                 .query((rs, i) -> new PropertyHealth(
@@ -64,17 +66,20 @@ public class AdminService {
                         rs.getString("billing_status"), rs.getBoolean("active"), rs.getInt("rooms"),
                         rs.getInt("recent_bookings"), rs.getObject("last_activity", OffsetDateTime.class),
                         rs.getInt("open_folios"), rs.getLong("outstanding"), rs.getInt("outbox_pending"),
-                        supportAccessOpen(rs.getString("support_until"))))
+                        supportAccessOpen(rs.getString("support_until")),
+                        rs.getString("code"), List.of((String[]) rs.getArray("modules").getArray())))
                 .list();
     }
 
     public record NewPropertyInput(String orgName, String propertyName, String city, String state, String phone,
                                    String ownerName, String ownerPhone, String ownerEmail, String planCode) {}
-    public record NewPropertyResult(UUID orgId, UUID propertyId, UUID ownerId, String ownerPhone) {}
+    /** {@code ownerPassword} is shown once and never stored in the clear; null when the owner already had one. */
+    public record NewPropertyResult(UUID orgId, UUID propertyId, UUID ownerId, String ownerPhone, String code, String ownerPassword) {}
 
     /**
-     * Onboard a property: organisation, property, first owner and their membership, in one transaction.
-     * The owner signs in with a one-time code on the phone given here, so no password is created or shared.
+     * Onboard a property: organisation, property, first owner and their membership, in one transaction. The
+     * property gets its code and starts with the basics only. The owner signs in with the code, their mobile number
+     * and the first password returned here, which they change after signing in.
      */
     @Transactional("adminTx")
     public NewPropertyResult createProperty(NewPropertyInput in, CurrentUser actor) {
@@ -86,15 +91,21 @@ public class AdminService {
 
         UUID orgId = admin.sql("insert into organisations(name, plan_code) values (?, ?) returning id")
                 .params(in.orgName().trim(), plan).query(UUID.class).single();
-        UUID propertyId = admin.sql("""
-                insert into properties(org_id, name, city, state, phone) values (?, ?, ?, ?, ?) returning id""")
+        var property = admin.sql("""
+                insert into properties(org_id, name, city, state, phone, modules) values (?, ?, ?, ?, ?, '{}') returning id, code""")
                 .params(orgId, in.propertyName().trim(), nz(in.city()), nz(in.state()), nz(in.phone()))
-                .query(UUID.class).single();
+                .query().singleRow();
+        UUID propertyId = (UUID) property.get("id");
 
-        UUID ownerId = admin.sql("select id from users where phone = ?").param(ownerPhone).query(UUID.class).optional()
-                .orElseGet(() -> admin.sql("insert into users(name, phone, email) values (?, ?, ?) returning id")
+        var existing = admin.sql("select id, password_hash is not null as has_password from users where phone = ?").param(ownerPhone).query().listOfRows();
+        UUID ownerId = existing.isEmpty()
+                ? admin.sql("insert into users(name, phone, email) values (?, ?, ?) returning id")
                         .params(in.ownerName().trim(), ownerPhone, blank(in.ownerEmail()) ? null : in.ownerEmail().trim().toLowerCase())
-                        .query(UUID.class).single());
+                        .query(UUID.class).single()
+                : (UUID) existing.getFirst().get("id");
+        // Someone who already signs in somewhere keeps the password they have.
+        String password = existing.isEmpty() || !Boolean.TRUE.equals(existing.getFirst().get("has_password")) ? passwords.generate() : null;
+        if (password != null) admin.sql("update users set password_hash = ?, updated_at = now() where id = ?").params(passwords.hash(password), ownerId).update();
         admin.sql("""
                 insert into property_users(property_id, user_id, role) values (?, ?, 'owner')
                 on conflict (property_id, user_id) do update set role = 'owner', active = true""")
@@ -102,7 +113,19 @@ public class AdminService {
 
         audit.recordPlatform(propertyId, "properties", propertyId.toString(), "onboard", null,
                 Map.of("org", in.orgName(), "property", in.propertyName(), "ownerPhone", mask(ownerPhone)), actor.id());
-        return new NewPropertyResult(orgId, propertyId, ownerId, ownerPhone);
+        return new NewPropertyResult(orgId, propertyId, ownerId, ownerPhone, (String) property.get("code"), password);
+    }
+
+    /** Switch the optional parts of the product on or off for one property; takes effect on everyone's next request. */
+    @Transactional("adminTx")
+    public void setModules(UUID propertyId, List<String> modules, CurrentUser actor) {
+        var wanted = modules == null ? List.<String>of() : modules.stream().distinct().toList();
+        var unknown = wanted.stream().filter(m -> !Permissions.MODULES.containsKey(m)).toList();
+        if (!unknown.isEmpty()) throw new BadRequestException("Unknown module " + unknown.getFirst());
+        int changed = admin.sql("update properties set modules = ?, updated_at = now() where id = ?")
+                .params(wanted.toArray(String[]::new), propertyId).update();
+        if (changed == 0) throw new NotFoundException("Property");
+        audit.recordPlatform(propertyId, "properties", propertyId.toString(), "modules", null, Map.of("modules", wanted), actor.id());
     }
 
     /** Billing state drives the banner and the read-only cut-off; the property's data is never deleted. */

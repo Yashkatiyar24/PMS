@@ -41,10 +41,10 @@ public class RestaurantController {
     @GetMapping("/menu")
     public List<RestaurantService.MenuItem> menu() { return restaurant.menu(); }
 
-    @PostMapping("/menu") @PreAuthorize("hasRole('MANAGER')")
+    @PostMapping("/menu") @PreAuthorize("hasRole('MANAGER') and hasAuthority('PERM_restaurant')")
     public RestaurantService.MenuItem addMenuItem(@AuthenticationPrincipal CurrentUser u, @RequestBody RestaurantService.MenuInput in) { return restaurant.saveMenuItem(null, in, u.id()); }
 
-    @PutMapping("/menu/{id}") @PreAuthorize("hasRole('MANAGER')")
+    @PutMapping("/menu/{id}") @PreAuthorize("hasRole('MANAGER') and hasAuthority('PERM_restaurant')")
     public RestaurantService.MenuItem updateMenuItem(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id, @RequestBody RestaurantService.MenuInput in) { return restaurant.saveMenuItem(id, in, u.id()); }
 
     /** Open orders, and with {@code all} the ones settled since yesterday. */

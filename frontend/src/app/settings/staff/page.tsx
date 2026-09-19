@@ -2,16 +2,18 @@
 
 /**
  * Who works here (PRD U1, U2). One login per person, because a shared login makes the audit log meaningless.
- * Inviting costs a name and a mobile number; the person signs in with a code, so no password is shared.
+ * Inviting costs a name and a mobile number; the person gets a first password, shown once, and signs in with the
+ * dharamshala's code, their number and that password, which they then change.
  * Removing access signs them out everywhere within a minute.
  */
 import { useState } from "react"
-import { KeyRound, Shield, UserMinus, UserPlus } from "lucide-react"
+import { KeyRound, RotateCcwKey, Shield, UserMinus, UserPlus } from "lucide-react"
 import { api, ApiError } from "@/lib/api"
 import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
-import { Avatar, Banner, Button, Chip, ChoiceChips, Field, ListCard, ListRow, Loading, Menu, PageHeader, Sheet, type MenuItem, type Tone } from "@/components/ui"
+import { Avatar, Banner, Button, Chip, ChoiceChips, Field, KV, ListCard, ListRow, Loading, Menu, PageHeader, Sheet, type MenuItem, type Tone } from "@/components/ui"
+import { Credentials } from "@/components/Credentials"
 
 const ROLES = ["receptionist", "housekeeping", "maintenance", "accountant", "manager", "admin", "owner", "staff"] as const
 type Member = { userId: string; name: string; phone: string; email: string | null; role: (typeof ROLES)[number]; active: boolean; hasPin: boolean }
@@ -25,6 +27,7 @@ export default function StaffPage() {
   const { t } = useI18n()
   const { can, has, user } = useSession()
   const { data: members, reload } = useResource(() => api<Member[]>("/api/users"), [], t("error.generic"))
+  const { data: property } = useResource(() => api<{ code: string }>("/api/property"), [], t("error.generic"))
 
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
@@ -36,6 +39,9 @@ export default function StaffPage() {
   const [pin, setPin] = useState("")
   const [roleFor, setRoleFor] = useState<Member | null>(null)
   const [removing, setRemoving] = useState<Member | null>(null)
+  const [resetting, setResetting] = useState<Member | null>(null)
+  // Sign-in details just created, shown once.
+  const [issued, setIssued] = useState<{ name: string; phone: string; password?: string | null } | null>(null)
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
@@ -63,6 +69,7 @@ export default function StaffPage() {
     const manage = has("staff.manage") && !me && (can("OWNER") || !["owner", "admin"].includes(m.role))
     return [
       ...(manage ? [{ label: t("setup.role"), icon: Shield, onSelect: () => setRoleFor(m) }] : []),
+      ...(manage ? [{ label: t("setup.resetPassword"), icon: RotateCcwKey, onSelect: () => setResetting(m) }] : []),
       ...(APPROVERS.includes(m.role) && (can("OWNER") || me) ? [{ label: t("setup.setPin"), icon: KeyRound, onSelect: () => { setPinFor(m); setPin("") } }] : []),
       ...(manage ? [{ label: t("setup.deactivate"), icon: UserMinus, onSelect: () => setRemoving(m), danger: true, separator: true }] : []),
     ]
@@ -77,6 +84,12 @@ export default function StaffPage() {
         actions={has("staff.manage") ? <Button size="sm" onClick={() => setInviting(true)}><UserPlus size={16} aria-hidden /> {t("setup.invite")}</Button> : undefined}
       />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
+      {property && (
+        <dl className="rounded-xl bg-surface-2 px-3 py-1">
+          <KV label={t("setup.code")} value={<span className="font-mono text-base font-bold tracking-wider">{property.code}</span>} />
+          <p className="pb-1.5 text-xs text-ink-faint">{t("setup.codeHint")}</p>
+        </dl>
+      )}
 
       <ListCard>
         {members.map((m) => {
@@ -102,7 +115,11 @@ export default function StaffPage() {
       <Sheet open={inviting} onOpenChange={setInviting} title={t("setup.invite")}
         footer={
           <Button size="lg" className="w-full" disabled={busy || !name.trim() || phone.replace(/\D/g, "").length < 10}
-            onClick={() => run(async () => { await api("/api/users", { method: "POST", body: { name, phone, email: null, role } }); setInviting(false); setName(""); setPhone("") })}>
+            onClick={() => run(async () => {
+              const added = await api<Member & { password?: string | null }>("/api/users", { method: "POST", body: { name, phone, email: null, role } })
+              setInviting(false); setName(""); setPhone("")
+              setIssued({ name: added.name, phone: added.phone, password: added.password })
+            })}>
             {t("setup.invite")}
           </Button>
         }>
@@ -147,6 +164,27 @@ export default function StaffPage() {
           </>
         }>
         <p className="text-sm text-ink-soft">{t("setup.deactivateConfirm")}</p>
+      </Sheet>
+
+      <Sheet open={!!resetting} onOpenChange={(o) => !o && setResetting(null)} title={t("setup.resetPassword")} description={resetting?.name}
+        footer={
+          <>
+            <Button variant="secondary" className="flex-1" onClick={() => setResetting(null)}>{t("action.cancel")}</Button>
+            <Button className="flex-1" disabled={busy}
+              onClick={() => resetting && run(async () => {
+                const { password } = await api<{ password: string }>(`/api/users/${resetting.userId}/password`, { method: "POST" })
+                setIssued({ name: resetting.name, phone: resetting.phone, password })
+                setResetting(null)
+              })}>
+              {t("setup.resetPassword")}
+            </Button>
+          </>
+        }>
+        <p className="text-sm text-ink-soft">{t("setup.resetConfirm")}</p>
+      </Sheet>
+
+      <Sheet open={!!issued} onOpenChange={(o) => !o && setIssued(null)} title={t("credentials.title")} description={issued?.name}>
+        {issued && <Credentials code={property?.code ?? ""} phone={issued.phone} password={issued.password} />}
       </Sheet>
     </div>
   )

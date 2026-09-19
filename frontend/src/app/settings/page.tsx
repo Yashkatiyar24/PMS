@@ -147,7 +147,7 @@ export default function SettingsPage() {
   const operations = [
     { href: "/guests", label: t("guests.title"), icon: UserRound, tone: "brand" as const, show: has("reservations.view") },
     { href: "/maintenance", label: t("maint.title"), icon: Wrench, tone: "warn" as const, show: has("maintenance") || has("maintenance.report") },
-    { href: "/lost-found", label: t("lost.title"), icon: PackageSearch, tone: "teal" as const, show: has("housekeeping") },
+    { href: "/lost-found", label: t("lost.title"), icon: PackageSearch, tone: "teal" as const, show: has("lost_found") },
     { href: "/restaurant", label: t("pos.title"), icon: UtensilsCrossed, tone: "ok" as const, show: has("restaurant") },
     { href: "/inventory", label: t("stock.title"), icon: Boxes, tone: "teal" as const, show: has("inventory") },
     { href: "/expenses", label: t("expense.title"), icon: ReceiptIndianRupee, tone: "warn" as const, show: has("expenses") },

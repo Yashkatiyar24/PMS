@@ -31,13 +31,13 @@ public class MaintenanceController {
     @GetMapping("/maintenance/technicians") @PreAuthorize("hasAuthority('PERM_maintenance')")
     public List<InventoryService.Person> technicians() { return maintenance.technicians(); }
 
-    @GetMapping("/lost-found") @PreAuthorize("hasAuthority('PERM_housekeeping')")
+    @GetMapping("/lost-found") @PreAuthorize("hasAuthority('PERM_lost_found')")
     public List<MaintenanceService.Item> items() { return maintenance.items(); }
 
-    @PostMapping("/lost-found") @PreAuthorize("hasAuthority('PERM_housekeeping')")
+    @PostMapping("/lost-found") @PreAuthorize("hasAuthority('PERM_lost_found')")
     public MaintenanceService.Item log(@AuthenticationPrincipal CurrentUser u, @RequestBody MaintenanceService.ItemInput in) { return maintenance.logItem(in, u.id()); }
 
-    @PatchMapping("/lost-found/{id}") @PreAuthorize("hasAuthority('PERM_housekeeping')")
+    @PatchMapping("/lost-found/{id}") @PreAuthorize("hasAuthority('PERM_lost_found')")
     public MaintenanceService.Item update(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id, @RequestBody MaintenanceService.ItemUpdate in) {
         return maintenance.updateItem(id, in, u.id());
     }

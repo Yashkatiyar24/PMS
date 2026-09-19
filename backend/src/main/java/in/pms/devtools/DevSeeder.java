@@ -16,7 +16,7 @@ import java.util.UUID;
 /**
  * Seeds the pilot property for development when {@code pms.seed.enabled=true}. Idempotent.
  * Logins: owner@pms.local / manager@pms.local / staff@pms.local with password "password123";
- * phones 9000000001..3 for OTP; approval PIN 1234.
+ * phones 9000000001..3 for OTP, or dharamshala code SRD1001 + phone + password; approval PIN 1234.
  */
 @Component
 @ConditionalOnProperty(name = "pms.seed.enabled", havingValue = "true")
@@ -36,8 +36,8 @@ public class DevSeeder implements CommandLineRunner {
         }
         UUID org = admin.sql("insert into organisations(name, plan_code) values ('Shri Ram Seva Trust', 'standard') returning id").query(UUID.class).single();
         UUID prop = admin.sql("""
-                insert into properties(org_id, name, address, city, state, phone, trust_reg_no, settings)
-                values (?, 'Shri Ram Dharamshala', 'Near Har Ki Pauri', 'Haridwar', 'Uttarakhand', '01334-000000', 'UK/HRD/2001/123',
+                insert into properties(org_id, name, code, address, city, state, phone, trust_reg_no, settings)
+                values (?, 'Shri Ram Dharamshala', 'SRD1001', 'Near Har Ki Pauri', 'Haridwar', 'Uttarakhand', '01334-000000', 'UK/HRD/2001/123',
                         '{"receipt_prefix":"SRD","upi_vpa":"shriram@upi","upi_payee_name":"Shri Ram Seva Trust","deposit_default_paise":20000}'::jsonb)
                 returning id""").param(org).query(UUID.class).single();
 

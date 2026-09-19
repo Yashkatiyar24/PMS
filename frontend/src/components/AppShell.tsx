@@ -7,11 +7,12 @@
  */
 import { useState } from "react"
 import { usePathname } from "next/navigation"
-import { ArrowLeftRight, Bell, Building2, CalendarPlus, Languages, LogOut, Monitor, Moon, Plus, Search, Sun, Type, UserPlus } from "lucide-react"
+import { ArrowLeftRight, Bell, Building2, CalendarPlus, KeyRound, Languages, LogOut, Monitor, Moon, Plus, Search, Sun, Type, UserPlus } from "lucide-react"
 import { clsx } from "clsx"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
 import { useUnreadNotifications } from "@/lib/notifications"
+import { ChangePassword } from "./ChangePassword"
 import { BottomNav, SideRail } from "./BottomNav"
 import { OfflineBar } from "./OfflineBar"
 import { SearchBox } from "./SearchBox"
@@ -38,6 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading, logout, switchProperty } = useSession()
   const { t, language, setLanguage, textSize, setTextSize, theme, setTheme } = useI18n()
   const [searching, setSearching] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
   const anonymous = path.startsWith("/g/") || path.startsWith("/book/") || path.startsWith("/login")
   const unread = useUnreadNotifications(!anonymous && !!user?.propertyId)
 
@@ -63,7 +65,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { label: `${t("common.language")}: ${language === "hi" ? "English" : "हिंदी"}`, icon: Languages, onSelect: () => setLanguage(language === "hi" ? "en" : "hi"), separator: true },
     { label: `${t("common.textSize")}: ${textSize === "large" ? t("common.normal") : t("common.large")}`, icon: Type, onSelect: () => setTextSize(textSize === "normal" ? "large" : "normal") },
     { label: `${t("common.theme")}: ${t(`theme.${theme === "system" ? "light" : theme === "light" ? "dark" : "system"}`)}`, icon: themeIcon, onSelect: () => setTheme(theme === "system" ? "light" : theme === "light" ? "dark" : "system") },
-    { label: t("action.logout"), icon: LogOut, onSelect: () => void logout(), danger: true, separator: true },
+    { label: t("account.changePassword"), icon: KeyRound, onSelect: () => setChangingPassword(true), separator: true },
+    { label: t("action.logout"), icon: LogOut, onSelect: () => void logout(), danger: true },
   ]
 
   const userButton = (
@@ -102,6 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Sheet open={searching} onOpenChange={setSearching} title={t("search.placeholder")}>
           <SearchBox autoFocus onDone={() => setSearching(false)} className="min-h-[50vh]" />
         </Sheet>
+        <ChangePassword open={changingPassword} onOpenChange={setChangingPassword} />
 
         {/* Laptop top bar: find any stay from any screen, and start the two things the desk starts most. */}
         <div className="no-print sticky top-0 z-10 hidden border-b border-line bg-surface/85 backdrop-blur md:block">

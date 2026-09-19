@@ -1,6 +1,8 @@
 package in.pms.auth;
 
 import in.pms.common.BadRequestException;
+import in.pms.common.ForbiddenException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -25,6 +27,10 @@ public class AuthController {
     private final SessionService sessions;
     private final PasswordService passwords;
     private final JdbcClient adminJdbc;
+    /** Wrong passwords per account: ten in a rolling quarter of an hour, then that account waits. */
+    private final Lockout wrong = new Lockout(10, Duration.ofMinutes(15));
+    /** ...and per connection, so trying one password against many accounts runs out too. */
+    private final Lockout wrongFrom = new Lockout(50, Duration.ofMinutes(15));
 
     public AuthController(OtpService otp, SessionService sessions, PasswordService passwords, @Qualifier("adminJdbc") JdbcClient adminJdbc) {
         this.otp = otp; this.sessions = sessions; this.passwords = passwords; this.adminJdbc = adminJdbc;
@@ -32,7 +38,8 @@ public class AuthController {
 
     public record TargetRequest(@NotBlank String target) {}
     public record VerifyRequest(@NotBlank String target, @NotBlank String code, String deviceName) {}
-    public record LoginRequest(@NotBlank String email, @NotBlank String password, String deviceName) {}
+    /** Either the dharamshala's code and a mobile number, or an email (the platform admin, an owner on a laptop). */
+    public record LoginRequest(String email, String code, String phone, @NotBlank String password, String deviceName) {}
     public record SwitchRequest(UUID propertyId) {}
 
     @PostMapping("/otp/send")
@@ -49,17 +56,41 @@ public class AuthController {
 
     @PostMapping("/login")
     @Transactional("adminTx")
-    public Map<String, Object> passwordLogin(@RequestBody @jakarta.validation.Valid LoginRequest r, HttpServletResponse res) {
-        var row = adminJdbc.sql("select id, password_hash from users where email = ? and active").param(r.email().trim().toLowerCase()).query().listOfRows().stream().findFirst();
-        // Always run the hash comparison so timing does not reveal whether the email exists.
+    public Map<String, Object> passwordLogin(@RequestBody @jakarta.validation.Valid LoginRequest r, HttpServletRequest req, HttpServletResponse res) {
+        boolean byCode = r.code() != null && !r.code().isBlank();
+        String code = byCode ? r.code().replaceAll("[^A-Za-z0-9]", "").toUpperCase() : null;
+        String phone = byCode ? OtpService.normalisePhone(r.phone() == null ? "" : r.phone()) : null;
+        String email = byCode ? null : r.email() == null ? "" : r.email().trim().toLowerCase();
+        String account = byCode ? code + ":" + phone : email;
+        String from = req.getRemoteAddr();
+        if (wrong.locked(account) || wrongFrom.locked(from)) throw new ForbiddenException("Too many attempts; please wait a few minutes");
+
+        // Someone deactivated in this dharamshala, or working only elsewhere, is not found here.
+        var row = (byCode
+                ? adminJdbc.sql("""
+                        select u.id, u.password_hash, p.id as property_id
+                        from properties p
+                        join property_users pu on pu.property_id = p.id and pu.active
+                        join users u on u.id = pu.user_id and u.active
+                        where p.code = ? and p.active and u.phone = ?""").params(code, phone)
+                : adminJdbc.sql("select id, password_hash, null::uuid as property_id from users where email = ? and active").param(email))
+                .query().listOfRows().stream().findFirst();
+        // Always run the hash comparison so timing does not reveal whether the account exists.
         String hash = row.map(m -> (String) m.get("password_hash")).orElse("{bcrypt}$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5XG1tE1dcKgTtqBfDDqjBqzs5eXfy");
         boolean ok = passwords.matches(r.password(), hash) && row.isPresent();
-        if (!ok) throw new BadRequestException("Wrong email or password");
-        return login((UUID) row.get().get("id"), r.deviceName(), res);
+        if (!ok) {
+            wrong.fail(account);
+            wrongFrom.fail(from);
+            throw new BadRequestException(byCode ? "Wrong dharamshala code, mobile number or password" : "Wrong email or password");
+        }
+        wrong.clear(account);
+        return login((UUID) row.get().get("id"), r.deviceName(), (UUID) row.get().get("property_id"), res);
     }
 
-    private Map<String, Object> login(UUID userId, String deviceName, HttpServletResponse res) {
-        var s = sessions.create(userId, deviceName);
+    private Map<String, Object> login(UUID userId, String deviceName, HttpServletResponse res) { return login(userId, deviceName, null, res); }
+
+    private Map<String, Object> login(UUID userId, String deviceName, UUID propertyId, HttpServletResponse res) {
+        var s = sessions.create(userId, deviceName, propertyId);
         long maxAge = Duration.between(OffsetDateTime.now(), s.expiresAt()).toSeconds();
         res.addHeader("Set-Cookie", ResponseCookie.from(sessions.cookieName(), s.token())
                 .httpOnly(true).secure(sessions.cookieSecure()).sameSite("Lax").path("/").maxAge(maxAge).build().toString());

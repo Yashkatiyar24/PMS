@@ -24,6 +24,7 @@ public class AdminController {
 
     public record BillingInput(String billingStatus) {}
     public record PlanInput(String planCode) {}
+    public record ModulesInput(List<String> modules) {}
 
     @GetMapping("/properties")
     public List<AdminService.PropertyHealth> properties() { return admin.properties(); }
@@ -42,6 +43,12 @@ public class AdminController {
     @PatchMapping("/organisations/{id}/plan")
     public ResponseEntity<Void> plan(@AuthenticationPrincipal CurrentUser user, @PathVariable UUID id, @RequestBody PlanInput in) {
         admin.setPlan(id, in.planCode(), user);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/properties/{id}/modules")
+    public ResponseEntity<Void> modules(@AuthenticationPrincipal CurrentUser user, @PathVariable UUID id, @RequestBody ModulesInput in) {
+        admin.setModules(id, in.modules(), user);
         return ResponseEntity.noContent().build();
     }
 

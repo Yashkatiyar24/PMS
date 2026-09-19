@@ -30,7 +30,9 @@ export default function TodayPage() {
   const { user, has } = useSession()
   const router = useRouter()
   const desk = !user || has("reservations.view")
-  useEffect(() => { if (!desk) router.replace("/rooms") }, [desk, router])
+  // The platform admin works in no dharamshala: their home is the list of them.
+  const platform = !!user?.superAdmin && !user.propertyId
+  useEffect(() => { if (!desk) router.replace(platform ? "/admin" : "/rooms") }, [desk, platform, router])
   return desk ? <Dashboard /> : <Loading />
 }
 

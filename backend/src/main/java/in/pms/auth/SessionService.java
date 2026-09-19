@@ -32,7 +32,11 @@ public class SessionService {
 
     /** Create a session for a user who has just proven their identity. Returns the raw token for the cookie. */
     @Transactional("adminTx")
-    public NewSession create(UUID userId, String deviceName) {
+    public NewSession create(UUID userId, String deviceName) { return create(userId, deviceName, null); }
+
+    /** As above, working in {@code propertyId} from the start: the dharamshala whose code they signed in with. */
+    @Transactional("adminTx")
+    public NewSession create(UUID userId, String deviceName, UUID propertyId) {
         byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -40,7 +44,7 @@ public class SessionService {
         OffsetDateTime expires = OffsetDateTime.now().plusDays(days);
         // Default the property to the user's only membership so the first screen is useful.
         List<UUID> props = adminJdbc.sql("select property_id from property_users where user_id = ? and active order by created_at").param(userId).query(UUID.class).list();
-        UUID current = props.size() == 1 ? props.get(0) : null;
+        UUID current = propertyId != null && props.contains(propertyId) ? propertyId : props.size() == 1 ? props.get(0) : null;
         UUID id = adminJdbc.sql("insert into sessions(user_id, token_hash, device_name, current_property_id, expires_at) values (?, ?, ?, ?, ?) returning id")
                 .params(userId, sha256(token), deviceName == null ? "" : deviceName.substring(0, Math.min(80, deviceName.length())), current, expires)
                 .query(UUID.class).single();
@@ -83,8 +87,10 @@ public class SessionService {
         var membership = memberships.stream().filter(m -> m.propertyId().equals(selected)).findFirst();
         UUID current = membership.isEmpty() ? null : selected; // membership may have been removed since the session was created
         String position = membership.map(CurrentUser.Membership::position).orElse(null);
+        Set<String> permissions = position == null ? Set.of()
+                : Permissions.of(position, adminJdbc.sql("select unnest(modules) from properties where id = ?").param(current).query(String.class).list());
         return Optional.of(new CurrentUser(userId, (String) r.get("name"), Boolean.TRUE.equals(r.get("is_super_admin")), sessionId, current,
-                membership.map(CurrentUser.Membership::role).orElse(null), memberships, position, position == null ? Set.of() : Permissions.of(position)));
+                membership.map(CurrentUser.Membership::role).orElse(null), memberships, position, permissions));
     }
 
     /** Switch the working property; refused unless the user is a member. */

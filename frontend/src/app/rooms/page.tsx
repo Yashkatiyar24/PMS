@@ -85,7 +85,7 @@ export default function RoomsPage() {
   const act = (room: Room, status: RoomStatus) => { void setStatus(room, status); close() }
   const more: MenuItem[] = [
     ...(has("maintenance") || has("maintenance.report") ? [{ label: t("maint.title"), icon: Wrench, href: "/maintenance" }] : []),
-    ...(housekeeping ? [{ label: t("lost.title"), icon: PackageSearch, href: "/lost-found" }] : []),
+    ...(has("lost_found") ? [{ label: t("lost.title"), icon: PackageSearch, href: "/lost-found" }] : []),
   ]
 
   return (

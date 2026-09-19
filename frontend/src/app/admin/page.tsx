@@ -13,6 +13,7 @@ import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
 import { Avatar, Banner, Button, Chip, ChoiceChips, Empty, Field, KV, ListCard, ListRow, Loading, PageHeader, Sheet, type Tone } from "@/components/ui"
+import { Credentials } from "@/components/Credentials"
 
 type PropertyHealth = {
   propertyId: string
@@ -30,11 +31,24 @@ type PropertyHealth = {
   outstandingPaise: number
   outboxPending: number
   supportAccess: boolean
+  code: string
+  modules: string[]
 }
+
+type Onboarded = { propertyId: string; code: string; ownerPhone: string; ownerPassword?: string | null }
 
 const BILLING_TONE: Record<string, Tone> = { active: "ok", trial: "brand", overdue: "warn", readonly: "danger", closed: "neutral" }
 const STATUSES = ["trial", "active", "overdue", "readonly", "closed"]
 const PLANS = ["basic", "standard", "large"]
+// The optional parts, labelled with their own screens' titles. A new dharamshala starts with none of them.
+const MODULES = [
+  { value: "restaurant", label: "pos.title" },
+  { value: "inventory", label: "stock.title" },
+  { value: "expenses", label: "expense.title" },
+  { value: "maintenance", label: "maint.title" },
+  { value: "lost_found", label: "lost.title" },
+  { value: "audit", label: "audit.title" },
+] as const
 const EMPTY_FORM = { orgName: "", propertyName: "", city: "", state: "", phone: "", ownerName: "", ownerPhone: "", planCode: "basic" }
 
 export default function AdminPage() {
@@ -45,7 +59,7 @@ export default function AdminPage() {
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
   const [adding, setAdding] = useState(false)
-  const [added, setAdded] = useState("")
+  const [added, setAdded] = useState<Onboarded | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
 
@@ -71,9 +85,8 @@ export default function AdminPage() {
   return (
     <div className="space-y-4">
       <PageHeader title={t("admin.title")} back="/settings" subtitle={properties ? `${properties.length}` : undefined}
-        actions={<Button size="sm" onClick={() => { setAdding(true); setAdded("") }}><Plus size={16} aria-hidden /> {t("admin.onboard")}</Button>} />
+        actions={<Button size="sm" onClick={() => { setAdding(true); setAdded(null) }}><Plus size={16} aria-hidden /> {t("admin.onboard")}</Button>} />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
-      {added && <Banner tone="ok" onClose={() => setAdded("")}>{added}</Banner>}
 
       {!properties ? (
         <Loading />
@@ -87,7 +100,7 @@ export default function AdminPage() {
               onClick={() => setOpenId(p.propertyId)}
               leading={<Avatar name={p.propertyName} tone={p.active ? BILLING_TONE[p.billingStatus] ?? "neutral" : "neutral"} icon={Building2} />}
               title={p.propertyName}
-              subtitle={`${p.orgName}${p.city ? ` · ${p.city}` : ""} · ${p.rooms} ${t("admin.roomsCount").toLowerCase()}`}
+              subtitle={`${p.code} · ${p.orgName}${p.city ? ` · ${p.city}` : ""} · ${p.rooms} ${t("admin.roomsCount").toLowerCase()}`}
               right={
                 <span className="flex flex-col items-end gap-1">
                   <Chip tone={BILLING_TONE[p.billingStatus] ?? "neutral"} dot>{p.billingStatus}</Chip>
@@ -104,6 +117,7 @@ export default function AdminPage() {
         {open && (
           <div className="space-y-4">
             <dl className="rounded-xl bg-surface-2 px-3 py-1">
+              <KV label={t("login.propertyCode")} value={<span className="font-mono font-bold tracking-wider">{open.code}</span>} />
               <KV label={t("admin.roomsCount")} value={open.rooms} />
               <KV label={t("admin.recentBookings")} value={open.bookingsLast30Days} />
               <KV label={t("reports.outstanding")} value={rupees(open.outstandingPaise)} tone={open.outstandingPaise > 0 ? "danger" : undefined} />
@@ -117,6 +131,13 @@ export default function AdminPage() {
               <ChoiceChips disabled={busy} value={open.plan} options={PLANS.map((p) => ({ value: p, label: p }))}
                 onChange={(planCode) => run(async () => { await api(`/api/admin/organisations/${open.orgId}/plan`, { method: "PATCH", body: { planCode } }) })} />
             </Field>
+            <Field label={t("admin.modules")} hint={t("admin.modulesHint")}>
+              <ChoiceChips disabled={busy} value={open.modules} options={MODULES.map((m) => ({ value: m.value, label: t(m.label) }))}
+                onChange={(m) => run(async () => {
+                  const modules = open.modules.includes(m) ? open.modules.filter((x) => x !== m) : [...open.modules, m]
+                  await api(`/api/admin/properties/${open.propertyId}/modules`, { method: "PATCH", body: { modules } })
+                })} />
+            </Field>
             <Field label="Billing">
               <ChoiceChips disabled={busy} value={open.billingStatus} options={STATUSES.map((s) => ({ value: s, label: s }))}
                 onChange={(billingStatus) => run(async () => { await api(`/api/admin/organisations/${open.orgId}/billing`, { method: "PATCH", body: { billingStatus } }) })} />
@@ -129,7 +150,7 @@ export default function AdminPage() {
         footer={
           <Button size="lg" className="w-full"
             disabled={busy || !form.orgName.trim() || !form.propertyName.trim() || !form.ownerName.trim() || form.ownerPhone.replace(/\D/g, "").length < 10}
-            onClick={() => run(async () => { await api("/api/admin/properties", { method: "POST", body: { ...form, ownerEmail: null } }); setAdding(false); setAdded(t("admin.onboarded")); setForm(EMPTY_FORM) })}>
+            onClick={() => run(async () => { setAdded(await api<Onboarded>("/api/admin/properties", { method: "POST", body: { ...form, ownerEmail: null } })); setAdding(false); setForm(EMPTY_FORM) })}>
             <CreditCard size={18} aria-hidden /> {t("action.save")}
           </Button>
         }>
@@ -147,6 +168,10 @@ export default function AdminPage() {
           </div>
           <Field label={t("admin.plan")}><ChoiceChips value={form.planCode} onChange={(planCode) => setForm({ ...form, planCode })} options={PLANS.map((p) => ({ value: p, label: p }))} /></Field>
         </div>
+      </Sheet>
+
+      <Sheet open={!!added} onOpenChange={(o) => !o && setAdded(null)} title={t("admin.onboarded")} description={t("credentials.title")}>
+        {added && <Credentials code={added.code} phone={added.ownerPhone} password={added.ownerPassword} />}
       </Sheet>
     </div>
   )

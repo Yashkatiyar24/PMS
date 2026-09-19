@@ -38,13 +38,26 @@ public final class Permissions {
     public static final String INVENTORY = "inventory";
     public static final String RESTAURANT = "restaurant";
     public static final String AUDIT_VIEW = "audit.view";
+    public static final String LOST_FOUND = "lost_found";
 
     public static final List<String> ALL = List.of(RESERVATIONS_VIEW, RESERVATIONS_CREATE, RESERVATIONS_EDIT, RESERVATIONS_CANCEL,
             CHECKIN, CHECKOUT, DISCOUNT, REFUND, INVOICE_EDIT, REVENUE_VIEW, ROOMS_MANAGE, HOUSEKEEPING, MAINTENANCE, MAINTENANCE_REPORT,
-            STAFF_MANAGE, SETTINGS_MANAGE, EXPENSES, INVENTORY, RESTAURANT, AUDIT_VIEW);
+            STAFF_MANAGE, SETTINGS_MANAGE, EXPENSES, INVENTORY, RESTAURANT, AUDIT_VIEW, LOST_FOUND);
 
     private static final Set<String> DESK = Set.of(RESERVATIONS_VIEW, RESERVATIONS_CREATE, RESERVATIONS_EDIT, CHECKIN, CHECKOUT,
-            HOUSEKEEPING, MAINTENANCE_REPORT, RESTAURANT);
+            HOUSEKEEPING, MAINTENANCE_REPORT, RESTAURANT, LOST_FOUND);
+
+    /**
+     * The optional parts of the product (properties.modules) and the permissions each carries. A property without a
+     * part gives nobody its permissions, so its screens are hidden and its endpoints refuse, through the same checks.
+     */
+    public static final Map<String, Set<String>> MODULES = Map.of(
+            "restaurant", Set.of(RESTAURANT),
+            "inventory", Set.of(INVENTORY),
+            "expenses", Set.of(EXPENSES),
+            "maintenance", Set.of(MAINTENANCE, MAINTENANCE_REPORT),
+            "lost_found", Set.of(LOST_FOUND),
+            "audit", Set.of(AUDIT_VIEW));
 
     private static final Map<String, Set<String>> BY_ROLE = Map.of(
             "owner", Set.copyOf(ALL),
@@ -52,13 +65,19 @@ public final class Permissions {
             "manager", Set.copyOf(ALL.stream().filter(p -> !p.equals(STAFF_MANAGE)).toList()),
             "receptionist", DESK,
             "staff", DESK,
-            "housekeeping", Set.of(HOUSEKEEPING, MAINTENANCE_REPORT, INVENTORY),
+            "housekeeping", Set.of(HOUSEKEEPING, MAINTENANCE_REPORT, INVENTORY, LOST_FOUND),
             "maintenance", Set.of(MAINTENANCE, MAINTENANCE_REPORT),
             "accountant", Set.of(RESERVATIONS_VIEW, REVENUE_VIEW, REFUND, INVOICE_EDIT, EXPENSES, INVENTORY, AUDIT_VIEW));
 
     public static final List<String> ROLES = List.of("owner", "admin", "manager", "receptionist", "staff", "housekeeping", "accountant", "maintenance");
 
     public static Set<String> of(String role) { return BY_ROLE.getOrDefault(role, Set.of()); }
+
+    /** What the role may do in a property that has switched on only these modules. */
+    public static Set<String> of(String role, java.util.Collection<String> modules) {
+        var off = MODULES.entrySet().stream().filter(m -> !modules.contains(m.getKey())).flatMap(m -> m.getValue().stream()).toList();
+        return of(role).stream().filter(p -> !off.contains(p)).collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
 
     public static CurrentUser.Role rank(String role) {
         return switch (role) {

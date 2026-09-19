@@ -19,7 +19,7 @@ public class PropertyService {
     public PropertyService(@Qualifier("jdbc") JdbcClient jdbc, AuditService audit) { this.jdbc = jdbc; this.audit = audit; }
 
     public record Property(UUID id, String name, String address, String city, String state, String phone, String email, String gstin,
-                           String trustRegNo, String reg12a, String reg80g, String timezone) {}
+                           String trustRegNo, String reg12a, String reg80g, String timezone, String code) {}
     public record PropertyInput(String name, String address, String city, String state, String phone, String email, String gstin,
                                 String trustRegNo, String reg12a, String reg80g, String timezone) {}
 
@@ -50,6 +50,6 @@ public class PropertyService {
     private Property find() {
         return jdbc.sql("select * from properties where id = ?").param(TenantContext.require()).query((rs, i) -> new Property(
                 rs.getObject("id", UUID.class), rs.getString("name"), rs.getString("address"), rs.getString("city"), rs.getString("state"), rs.getString("phone"), rs.getString("email"),
-                rs.getString("gstin"), rs.getString("trust_reg_no"), rs.getString("reg_12a"), rs.getString("reg_80g"), rs.getString("timezone"))).single();
+                rs.getString("gstin"), rs.getString("trust_reg_no"), rs.getString("reg_12a"), rs.getString("reg_80g"), rs.getString("timezone"), rs.getString("code"))).single();
     }
 }

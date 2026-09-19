@@ -1,32 +1,41 @@
 "use client"
 
 /**
- * Two ways in: a one-time code by SMS (what the desk uses, because nobody remembers a password) or email
- * and password (for the owner on a laptop). The server answers the same way whether or not the number is
- * registered, so this page cannot be used to find out who works here.
+ * Two ways in: the dharamshala's code, a mobile number and a password (what the desk uses; no SMS is needed), or
+ * email and password (the platform admin, an owner on a laptop). A wrong code, number or password all get the
+ * same answer, so this page cannot be used to find out who works where.
  */
-import { useEffect, useState } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, KeyRound, Smartphone } from "lucide-react"
+import { ArrowRight, Building2, KeyRound } from "lucide-react"
 import { clsx } from "clsx"
 import { api, ApiError } from "@/lib/api"
 import { useI18n } from "@/i18n"
 import { Banner, Button, Field, Logo, Segmented } from "@/components/ui"
 import { Landing } from "./Landing"
 
+/** The desk signs in on the same phone every morning, so the code is remembered on the device. */
+const CODE_KEY = "pms.propertyCode"
+const noSubscribe = () => () => {}
+function readSavedCode() {
+  try { return localStorage.getItem(CODE_KEY) ?? "" } catch { return "" }
+}
+
 export default function LoginPage() {
   const { t, language, setLanguage } = useI18n()
   const router = useRouter()
-  const [mode, setMode] = useState<"phone" | "email">("phone")
-  const [step, setStep] = useState<"target" | "code">("target")
+  const [mode, setMode] = useState<"code" | "email">("code")
   const [phone, setPhone] = useState("")
-  const [code, setCode] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [notice, setNotice] = useState("")
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+
+  // The remembered code, or nothing on the server and in a private window. Typing replaces it.
+  const saved = useSyncExternalStore(noSubscribe, readSavedCode, () => "")
+  const [typed, setCode] = useState<string | null>(null)
+  const code = typed ?? saved
 
   // The window's scroll position is the external system the header follows.
   useEffect(() => {
@@ -48,30 +57,17 @@ export default function LoginPage() {
     }
   }
 
-  const sendCode = () =>
-    run(async () => {
-      await api("/api/auth/otp/send", { method: "POST", body: { target: phone } })
-      setNotice(t("login.codeSent"))
-      setStep("code")
-    })
-
-  const verify = () =>
-    run(async () => {
-      await api("/api/auth/otp/verify", { method: "POST", body: { target: phone, code, deviceName: navigator.userAgent.slice(0, 60) } })
-      router.push("/")
-    })
-
-  const signIn = () =>
-    run(async () => {
-      await api("/api/auth/login", { method: "POST", body: { email, password, deviceName: navigator.userAgent.slice(0, 60) } })
-      router.push("/")
-    })
-
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (mode === "email") return void signIn()
-    return step === "target" ? void sendCode() : void verify()
+    void run(async () => {
+      const who = mode === "code" ? { code, phone } : { email }
+      await api("/api/auth/login", { method: "POST", body: { ...who, password, deviceName: navigator.userAgent.slice(0, 60) } })
+      if (mode === "code") try { localStorage.setItem(CODE_KEY, code.replace(/[^a-z0-9]/gi, "").toUpperCase()) } catch { /* not remembered */ }
+      router.push("/")
+    })
   }
+
+  const ready = mode === "code" ? code.replace(/[^a-z0-9]/gi, "").length >= 4 && phone.replace(/\D/g, "").length >= 10 && !!password : !!email && !!password
 
   return (
     <div className="overflow-x-clip">
@@ -111,54 +107,36 @@ export default function LoginPage() {
         <form id="signin" onSubmit={submit} className="relative z-10 mx-4 scroll-mt-24 mt-8 space-y-4 rounded-3xl border border-surface/60 bg-surface/80 p-5 shadow-[var(--shadow-pop)] backdrop-blur-md sm:mx-auto sm:w-full sm:max-w-sm">
           <Segmented
             value={mode}
-            onChange={(m) => { setMode(m); setStep("target"); setError(""); setNotice("") }}
+            onChange={(m) => { setMode(m); setError("") }}
             items={[
-              { value: "phone", label: <span className="inline-flex items-center gap-1.5"><Smartphone size={15} aria-hidden /> {t("login.usePhone")}</span> },
+              { value: "code", label: <span className="inline-flex items-center gap-1.5"><Building2 size={15} aria-hidden /> {t("login.useCode")}</span> },
               { value: "email", label: <span className="inline-flex items-center gap-1.5"><KeyRound size={15} aria-hidden /> {t("login.email")}</span> },
             ]}
           />
 
           {error && <Banner tone="danger">{error}</Banner>}
-          {notice && !error && <Banner tone="info">{notice}</Banner>}
 
-          {mode === "phone" && step === "target" && (
+          {mode === "code" ? (
             <>
+              <Field label={t("login.propertyCode")} hint={t("login.codeHint")}>
+                <input autoCapitalize="characters" autoCorrect="off" spellCheck={false} autoComplete="organization" value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="SRD4821" className="font-semibold tracking-wider" autoFocus />
+              </Field>
               <Field label={t("login.phone")}>
-                <input inputMode="numeric" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" autoFocus />
+                <input inputMode="numeric" autoComplete="username" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" />
               </Field>
-              <Button type="submit" size="lg" className="w-full" disabled={busy || phone.replace(/\D/g, "").length < 10}>
-                {t("login.sendCode")} <ArrowRight size={18} aria-hidden />
-              </Button>
             </>
+          ) : (
+            <Field label={t("login.email")}>
+              <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
+            </Field>
           )}
-
-          {mode === "phone" && step === "code" && (
-            <>
-              <Field label={t("login.code")} hint={phone}>
-                <input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} autoFocus className="text-center text-2xl font-bold tracking-[.4em]" />
-              </Field>
-              <Button type="submit" size="lg" className="w-full" disabled={busy || code.length < 4}>
-                {t("login.verify")}
-              </Button>
-              <Button type="button" variant="ghost" className="w-full" onClick={() => setStep("target")}>
-                {t("action.back")}
-              </Button>
-            </>
-          )}
-
-          {mode === "email" && (
-            <>
-              <Field label={t("login.email")}>
-                <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
-              </Field>
-              <Field label={t("login.password")}>
-                <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-              </Field>
-              <Button type="submit" size="lg" className="w-full" disabled={busy || !email || !password}>
-                {t("login.signIn")} <ArrowRight size={18} aria-hidden />
-              </Button>
-            </>
-          )}
+          <Field label={t("login.password")}>
+            <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Field>
+          <Button type="submit" size="lg" className="w-full" disabled={busy || !ready}>
+            {t("login.signIn")} <ArrowRight size={18} aria-hidden />
+          </Button>
         </form>
 
         {/* Two layers so the entrance and the scroll sink each own a transform. */}

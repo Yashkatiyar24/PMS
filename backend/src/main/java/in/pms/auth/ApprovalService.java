@@ -7,10 +7,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Approval for exceptions (discounts, refunds, reductions, cancellations, credit notes).
@@ -20,14 +17,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Service
 public class ApprovalService {
-    private static final int MAX_WRONG_PINS = 5;
-    private static final Duration LOCKOUT = Duration.ofMinutes(15);
-
     private final JdbcClient adminJdbc;
     private final PasswordService passwords;
-    /** Wrong PINs per person asking, in a rolling quarter of an hour. ponytail: in memory, per server; a shared store if several servers run. */
-    private final Map<UUID, Strikes> wrong = new ConcurrentHashMap<>();
-    private record Strikes(Instant since, int count) {}
+    /** Wrong PINs per person asking: five in a rolling quarter of an hour. */
+    private final Lockout wrong = new Lockout(5, Duration.ofMinutes(15));
 
     public ApprovalService(@Qualifier("adminJdbc") JdbcClient adminJdbc, PasswordService passwords) {
         this.adminJdbc = adminJdbc; this.passwords = passwords;
@@ -46,10 +39,8 @@ public class ApprovalService {
     public UUID require(CurrentUser actor, String permission, UUID approverId, String pin) {
         if (actor.can(permission)) return actor.id();
         if (pin == null || pin.isBlank()) throw new ForbiddenException("Manager approval required");
-        // A four-digit PIN falls to guessing unless guesses run out.
-        Strikes s = wrong.get(actor.id());
-        if (s != null && s.count() >= MAX_WRONG_PINS && s.since().plus(LOCKOUT).isAfter(Instant.now()))
-            throw new ForbiddenException("Too many wrong PINs; try again in a few minutes");
+        String who = actor.id().toString();
+        if (wrong.locked(who)) throw new ForbiddenException("Too many wrong PINs; try again in a few minutes");
         UUID property = TenantContext.require();
         var roles = Permissions.rolesWith(permission).toArray(String[]::new);
         // The desk screen has no approver picker: it sends its own id, or none, and the PIN says who approved.
@@ -59,9 +50,8 @@ public class ApprovalService {
                 where property_id = ? and active and approval_pin_hash is not null and role::text = any(?) and (? or user_id = ?)""")
                 .params(property, roles, !named, approverId).query().listOfRows();
         for (var a : approvers)
-            if (passwords.matches(pin, (String) a.get("approval_pin_hash"))) { wrong.remove(actor.id()); return (UUID) a.get("user_id"); }
-        wrong.merge(actor.id(), new Strikes(Instant.now(), 1), (old, n) ->
-                old.since().plus(LOCKOUT).isBefore(Instant.now()) ? n : new Strikes(old.since(), old.count() + 1));
+            if (passwords.matches(pin, (String) a.get("approval_pin_hash"))) { wrong.clear(who); return (UUID) a.get("user_id"); }
+        wrong.fail(who);
         throw new ForbiddenException("Wrong approval PIN");
     }
 }

@@ -49,7 +49,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
   const { t } = useI18n()
   const label = useLabel()
   const router = useRouter()
-  const { can, has, user } = useSession()
+  const { has, user } = useSession()
   const search = useSearchParams()
   const justCheckedIn = search.get("checkedIn")
 
@@ -136,15 +136,22 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
 
   const checkOut = () =>
     run(async () => {
-      await api(`/api/bookings/${id}/check-out`, {
-        method: "POST",
-        body: {
-          departAt: null,
-          overrideReason: overrideReason || null,
-          approverId: overrideReason ? user?.id : null,
-          pin: overrideReason ? approvalPin : null,
-        },
-      })
+      try {
+        await api(`/api/bookings/${id}/check-out`, {
+          method: "POST",
+          body: {
+            departAt: null,
+            overrideReason: overrideReason || null,
+            approverId: overrideReason ? user?.id : null,
+            pin: overrideReason ? approvalPin : null,
+          },
+        })
+      } catch (e) {
+        // The server works the bill out as of now: leaving early can lower it. It asks for an approval when the bill
+        // drops, or for one with a reason to write off what is still unpaid, and the sheet collects either.
+        if (e instanceof ApiError && !overrideReason && (e.status === 403 || (e.status === 409 && due > 0))) setPanel("checkout")
+        throw e
+      }
       setOverrideReason("")
     })
 
@@ -326,7 +333,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
               <Button size="lg" className="flex-1 sm:flex-none" onClick={() => { setPayAmount(due > 0 ? String(due / 100) : ""); setPanel("pay") }}>
                 <IndianRupee size={20} aria-hidden /> {t("action.takePayment")}
               </Button>
-              <Button size="lg" className="flex-1 sm:flex-none" variant={due > 0 ? "secondary" : "primary"} disabled={busy} onClick={() => (due > 0 ? setPanel("checkout") : void checkOut())}>
+              <Button size="lg" className="flex-1 sm:flex-none" variant={due > 0 ? "secondary" : "primary"} disabled={busy} onClick={() => void checkOut()}>
                 <LogOut size={20} aria-hidden /> {t("action.checkOut")}
               </Button>
             </>
@@ -507,22 +514,20 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
         </div>
       </Sheet>
 
-      <Sheet open={panel === "checkout"} onOpenChange={(o) => !o && setPanel(null)} title={t("action.checkOut")} description={`${t("stay.balance")} ${rupees(due)}`}
+      <Sheet open={panel === "checkout"} onOpenChange={(o) => !o && setPanel(null)} title={t("action.checkOut")}
         footer={
           <>
-            <Button variant="secondary" className="flex-1" onClick={() => { setPanel(null); setPayAmount(String(due / 100)); setPanel("pay") }}>{t("action.takePayment")}</Button>
-            {can("MANAGER") && <Button variant="danger" className="flex-1" disabled={busy || !overrideReason.trim() || !approvalPin} onClick={checkOut}>{t("action.checkOut")}</Button>}
+            {due > 0 && <Button variant="secondary" className="flex-1" onClick={() => { setPanel(null); setPayAmount(String(due / 100)); setPanel("pay") }}>{t("action.takePayment")}</Button>}
+            {/* Whoever holds the approval signs it off themselves; anyone else has them type their PIN here. */}
+            <Button variant="danger" className="flex-1" disabled={busy || !overrideReason.trim() || (pin("discount.apply") && !approvalPin)} onClick={checkOut}>{t("action.checkOut")}</Button>
           </>
         }>
-        {can("MANAGER") ? (
-          <div className="space-y-3">
-            <p className="text-sm text-ink-soft">{t("approval.title")}</p>
-            <Field label={t("approval.reason")}><input value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} autoFocus /></Field>
-            <Field label={t("approval.pin")}><input inputMode="numeric" type="password" value={approvalPin} onChange={(e) => setApprovalPin(e.target.value)} /></Field>
-          </div>
-        ) : (
-          <Banner tone="warn">{t("approval.title")}</Banner>
-        )}
+        <div className="space-y-3">
+          {error && <Banner tone="danger">{error}</Banner>}
+          <p className="text-sm text-ink-soft">{t("approval.title")}</p>
+          <Field label={t("approval.reason")}><input value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} autoFocus /></Field>
+          {pin("discount.apply") && <PinField value={approvalPin} onChange={setApprovalPin} />}
+        </div>
       </Sheet>
 
       <Sheet open={panel === "cancel" || panel === "noShow"} onOpenChange={(o) => !o && setPanel(null)}

@@ -18,13 +18,16 @@ public class UserAdminController {
 
     public record RoleInput(String role) {}
     public record PinInput(String pin) {}
-    public record PasswordInput(String email, String password) {}
+    public record PasswordInput(String email, String currentPassword, String password) {}
 
     @GetMapping @PreAuthorize("hasRole('MANAGER')")
     public List<UserAdminService.Member> members() { return users.members(); }
 
     @PostMapping @PreAuthorize("hasAuthority('PERM_staff.manage')")
-    public UserAdminService.Member invite(@AuthenticationPrincipal CurrentUser u, @RequestBody UserAdminService.InviteInput in) { return users.invite(in, u); }
+    public UserAdminService.Invited invite(@AuthenticationPrincipal CurrentUser u, @RequestBody UserAdminService.InviteInput in) { return users.invite(in, u); }
+
+    @PostMapping("/{id}/password") @PreAuthorize("hasAuthority('PERM_staff.manage')")
+    public java.util.Map<String, String> resetPassword(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id) { return java.util.Map.of("password", users.resetPassword(id, u)); }
 
     @PatchMapping("/{id}/role") @PreAuthorize("hasAuthority('PERM_staff.manage')")
     public UserAdminService.Member setRole(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id, @RequestBody RoleInput in) { return users.setRole(id, in.role(), u); }
@@ -36,5 +39,5 @@ public class UserAdminController {
     public ResponseEntity<Void> setPin(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id, @RequestBody PinInput in) { users.setPin(id, in.pin(), u); return ResponseEntity.noContent().build(); }
 
     @PostMapping("/me/password") @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<Void> setPassword(@AuthenticationPrincipal CurrentUser u, @RequestBody PasswordInput in) { users.setPassword(in.email(), in.password(), u); return ResponseEntity.noContent().build(); }
+    public ResponseEntity<Void> setPassword(@AuthenticationPrincipal CurrentUser u, @RequestBody PasswordInput in) { users.setPassword(in.email(), in.currentPassword(), in.password(), u); return ResponseEntity.noContent().build(); }
 }
