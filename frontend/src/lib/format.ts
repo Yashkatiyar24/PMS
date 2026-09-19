@@ -22,5 +22,16 @@ const TIME = new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digi
 
 export const formatDate = (iso: string | null | undefined) => (iso ? DATE.format(new Date(iso)) : "")
 export const formatTime = (iso: string | null | undefined) => (iso ? TIME.format(new Date(iso)) : "")
+/**
+ * The calendar day a local Date falls on, as yyyy-mm-dd. Never toISOString(): that is the UTC day, which
+ * in India is the day before for anything between midnight and 05:30.
+ */
+export const dayKey = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+
+/** "101", or a dormitory bed: "D1-3" when the bed is already named after its room, else "D1/3". */
+export const unitName = (roomNumber: string, bedLabel?: string | null) =>
+  !bedLabel ? roomNumber : bedLabel.startsWith(roomNumber) ? bedLabel : `${roomNumber}/${bedLabel}`
+
 export const formatDateTime = (iso: string | null | undefined) =>
   iso ? `${DATE.format(new Date(iso))} ${TIME.format(new Date(iso))}` : ""

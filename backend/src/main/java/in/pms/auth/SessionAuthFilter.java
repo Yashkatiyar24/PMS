@@ -64,12 +64,17 @@ public class SessionAuthFilter extends OncePerRequestFilter {
         try { chain.doFilter(req, res); } catch (IOException | ServletException e) { throw new RuntimeException(e); }
     }
 
-    /** Roles are cumulative: an owner also holds MANAGER and STAFF, so {@code hasRole('STAFF')} means "any member". */
+    /**
+     * Ranks are cumulative: an owner also holds MANAGER and STAFF, so {@code hasRole('STAFF')} means "the front
+     * desk or above" and {@code hasRole('LIMITED')} means "any member". Each permission of the role is an
+     * authority too, {@code PERM_<name>}, for the endpoints a narrow role (housekeeping, accountant) may reach.
+     */
     static List<GrantedAuthority> authorities(CurrentUser u) {
         List<GrantedAuthority> out = new ArrayList<>();
         out.add(new SimpleGrantedAuthority("ROLE_USER"));
         if (u.superAdmin()) out.add(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"));
         if (u.role() != null) for (CurrentUser.Role r : CurrentUser.Role.values()) if (u.role().atLeast(r)) out.add(new SimpleGrantedAuthority("ROLE_" + r.name()));
+        if (u.permissions() != null) for (String p : u.permissions()) out.add(new SimpleGrantedAuthority("PERM_" + p));
         return out;
     }
 

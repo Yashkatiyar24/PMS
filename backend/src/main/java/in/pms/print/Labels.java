@@ -34,6 +34,9 @@ public final class Labels {
         put("taxable", "Taxable", "कर योग्य");
         put("cgst", "CGST", "सीजीएसटी");
         put("sgst", "SGST", "एसजीएसटी");
+        put("igst", "IGST", "आईजीएसटी");
+        put("billTo", "Bill to", "बिल प्राप्तकर्ता");
+        put("buyerGstin", "Buyer GSTIN", "क्रेता जीएसटीआईएन");
         put("total", "Total", "कुल");
         put("paid", "Paid", "भुगतान");
         put("deposit", "Deposit held", "जमा राशि");

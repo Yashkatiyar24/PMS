@@ -55,6 +55,20 @@ export function useResource<T>(load: () => Promise<T>, deps: unknown[], fallback
   return { data: state.data, error: state.error, loading: state.loading, reload, set }
 }
 
+/**
+ * Keep a screen in step with the server: reload when the desk comes back to the tab and every `ms` while it is
+ * visible. The server is the source of truth, so a room cleaned on the housekeeper's phone shows as ready on
+ * the desk's screen without anyone pressing refresh.
+ */
+export function useAutoRefresh(reload: () => void, ms = 30_000) {
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") reload() }
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible") reload() }, ms)
+    document.addEventListener("visibilitychange", onVisible)
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisible) }
+  }, [reload, ms])
+}
+
 /** Reload whenever the offline queue finishes sending, so synced entries appear without a manual refresh. */
 export function useReloadAfterSync(reload: () => void) {
   useEffect(() => {

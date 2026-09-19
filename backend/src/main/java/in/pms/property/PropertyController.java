@@ -13,7 +13,7 @@ public class PropertyController {
 
     public PropertyController(PropertyService property) { this.property = property; }
 
-    @GetMapping
+    @GetMapping @PreAuthorize("hasRole('LIMITED')")
     public PropertyService.Property current() { return property.current(); }
 
     @PutMapping @PreAuthorize("hasRole('MANAGER')")

@@ -10,7 +10,8 @@ import { usePathname } from "next/navigation"
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 import { api, isPublicScreen } from "./api"
 
-export type Role = "STAFF" | "MANAGER" | "OWNER"
+/** Rank. LIMITED is the narrow roles (housekeeping, accountant, maintenance), below the front desk. */
+export type Role = "LIMITED" | "STAFF" | "MANAGER" | "OWNER"
 
 export type CurrentUser = {
   id: string
@@ -18,10 +19,13 @@ export type CurrentUser = {
   superAdmin: boolean
   propertyId: string | null
   role: Role | null
-  memberships: { propertyId: string; propertyName: string; role: Role }[]
+  memberships: { propertyId: string; propertyName: string; role: Role; position: string }[]
+  /** The role as stored (owner, admin, receptionist, housekeeping, ...) and what it may do. */
+  position: string | null
+  permissions: string[]
 }
 
-const RANK: Record<Role, number> = { STAFF: 0, MANAGER: 1, OWNER: 2 }
+const RANK: Record<Role, number> = { LIMITED: 0, STAFF: 1, MANAGER: 2, OWNER: 3 }
 
 type Session = {
   user: CurrentUser | null
@@ -29,6 +33,8 @@ type Session = {
   reload: () => Promise<void>
   /** True when the signed-in user holds at least this role in the current property. */
   can: (role: Role) => boolean
+  /** True when the signed-in user's role holds this permission, e.g. "revenue.view". */
+  has: (permission: string) => boolean
   switchProperty: (propertyId: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -69,6 +75,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     [user],
   )
 
+  const has = useCallback((permission: string) => !!user?.permissions?.includes(permission), [user])
+
   const switchProperty = useCallback(
     async (propertyId: string) => {
       await api("/api/auth/switch-property", { method: "POST", body: { propertyId } })
@@ -89,9 +97,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user: anonymous ? null : user,
       loading: anonymous ? false : loading,
-      reload, can, switchProperty, logout,
+      reload, can, has, switchProperty, logout,
     }),
-    [anonymous, user, loading, reload, can, switchProperty, logout],
+    [anonymous, user, loading, reload, can, has, switchProperty, logout],
   )
   return <Context.Provider value={value}>{children}</Context.Provider>
 }

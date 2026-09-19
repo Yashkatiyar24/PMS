@@ -19,9 +19,9 @@ public record Folio(UUID id, UUID bookingId, String status, long totalPaise, lon
     public long balanceDuePaise() { return totalPaise + depositHeldPaise - paidPaise; }
 
     public record Line(UUID id, String kind, String description, int qty, long unitPaise, int taxRateBp, long cgstPaise, long sgstPaise,
-                       LocalDate lineDate, boolean auto, String reason, UUID approvedBy) {
+                       LocalDate lineDate, boolean auto, String reason, UUID approvedBy, long igstPaise, String category) {
         public long amountPaise() { return unitPaise * qty; }
-        public long totalPaise() { return amountPaise() + cgstPaise + sgstPaise; }
+        public long totalPaise() { return amountPaise() + cgstPaise + sgstPaise + igstPaise; }
     }
     public record Payment(UUID id, String mode, long amountPaise, String reference, boolean refund, String reason, OffsetDateTime receivedAt, UUID receivedBy, UUID approvedBy) {}
 }

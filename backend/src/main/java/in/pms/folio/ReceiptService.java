@@ -128,6 +128,7 @@ public class ReceiptService {
         var prop = jdbc.sql("select name, address, city, state, phone, email, gstin, trust_reg_no, reg_80g from properties where id = ?").param(property).query().listOfRows().get(0);
         var guest = jdbc.sql("""
                 select g.name, g.phone, g.city, g.address, g.nationality, g.id_type::text as id_type, g.id_last4, b.arrive_at, b.depart_at, b.adults, b.children, b.member_count,
+                       b.organization, b.billing_gstin, b.group_name,
                        (select string_agg(coalesce(r.number, '') || case when bu.bed_id is not null then '/' || bd.label else '' end, ', ')
                           from booking_units bu join rooms r on r.id = bu.room_id left join beds bd on bd.id = bu.bed_id where bu.booking_id = b.id and bu.cancelled_at is null) as units
                 from bookings b join guests g on g.id = b.guest_id where b.id = ?""").param(f.bookingId()).query().listOfRows().get(0);
@@ -135,14 +136,20 @@ public class ReceiptService {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("kind", kind); m.put("number", number); m.put("fy", fy); m.put("date", date.toString()); m.put("amountPaise", amountPaise);
         m.put("property", prop); m.put("guest", guest);
-        m.put("lines", f.lines().stream().map(l -> Map.of("kind", l.kind(), "description", l.description(), "qty", l.qty(), "unitPaise", l.unitPaise(),
-                "amountPaise", l.amountPaise(), "taxRateBp", l.taxRateBp(), "cgstPaise", l.cgstPaise(), "sgstPaise", l.sgstPaise(), "date", l.lineDate().toString())).toList());
+        m.put("lines", f.lines().stream().map(l -> Map.ofEntries(Map.entry("kind", l.kind()), Map.entry("description", l.description()), Map.entry("qty", l.qty()),
+                Map.entry("unitPaise", l.unitPaise()), Map.entry("amountPaise", l.amountPaise()), Map.entry("taxRateBp", l.taxRateBp()), Map.entry("cgstPaise", l.cgstPaise()),
+                Map.entry("sgstPaise", l.sgstPaise()), Map.entry("igstPaise", l.igstPaise()), Map.entry("category", String.valueOf(l.category())),
+                Map.entry("date", l.lineDate().toString()))).toList());
         m.put("payments", f.payments().stream().map(p -> Map.of("mode", p.mode(), "amountPaise", p.amountPaise(), "reference", p.reference(), "receivedAt", p.receivedAt().toString())).toList());
         m.put("totals", Map.of("totalPaise", f.totalPaise(), "taxPaise", f.taxPaise(), "paidPaise", f.paidPaise(), "depositHeldPaise", f.depositHeldPaise(), "balanceDuePaise", f.balanceDuePaise()));
         // Tax breakup by rate for the invoice footer and GSTR-1
         Map<Integer, long[]> byRate = new TreeMap<>();
-        for (var l : f.lines()) if (l.taxRateBp() > 0) { long[] acc = byRate.computeIfAbsent(l.taxRateBp(), k -> new long[3]); acc[0] += l.amountPaise(); acc[1] += l.cgstPaise(); acc[2] += l.sgstPaise(); }
-        m.put("taxBreakup", byRate.entrySet().stream().map(e -> Map.of("rateBp", e.getKey(), "taxablePaise", e.getValue()[0], "cgstPaise", e.getValue()[1], "sgstPaise", e.getValue()[2])).toList());
+        for (var l : f.lines()) if (l.taxRateBp() > 0) {
+            long[] acc = byRate.computeIfAbsent(l.taxRateBp(), k -> new long[4]);
+            acc[0] += l.amountPaise(); acc[1] += l.cgstPaise(); acc[2] += l.sgstPaise(); acc[3] += l.igstPaise();
+        }
+        m.put("taxBreakup", byRate.entrySet().stream().map(e -> Map.of("rateBp", e.getKey(), "taxablePaise", e.getValue()[0], "cgstPaise", e.getValue()[1],
+                "sgstPaise", e.getValue()[2], "igstPaise", e.getValue()[3])).toList());
         m.put("template", Map.of("header", s.receiptHeader(), "footer", s.receiptFooter(), "terms", s.receiptTerms(), "logoKey", s.receiptLogoKey(), "upiVpa", s.upiVpa(), "upiPayeeName", s.upiPayeeName(), "language", s.guestLanguage()));
         m.put("hsn", "9963");
         return m;

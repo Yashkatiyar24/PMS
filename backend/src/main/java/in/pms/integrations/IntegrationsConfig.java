@@ -69,6 +69,17 @@ public class IntegrationsConfig {
     }
 
     @Bean
+    public in.pms.integrations.payments.PaymentGateway paymentGateway(PmsProperties p) {
+        String provider = p.payments() == null || p.payments().provider() == null ? "none" : p.payments().provider();
+        return switch (provider) {
+            case "razorpay" -> new in.pms.integrations.payments.RazorpayGateway(p.payments().razorpay());
+            case "console" -> new in.pms.integrations.payments.ConsoleGateway();
+            case "none" -> new in.pms.integrations.payments.DisabledGateway();
+            default -> throw new IllegalArgumentException("Unknown payment provider " + provider);
+        };
+    }
+
+    @Bean
     public PdfRenderer pdfRenderer(PmsProperties p) {
         return switch (p.pdf().provider()) {
             case "openhtml" -> new OpenHtmlPdfRenderer();

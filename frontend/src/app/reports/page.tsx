@@ -5,7 +5,7 @@
  * who is holding cash, and the guest register the police ask for. Numbers first; lists fold away.
  */
 import { useState } from "react"
-import { ArrowDownToLine, BedDouble, Download, IndianRupee, LogIn, LogOut, Send, Wallet } from "lucide-react"
+import { ArrowDownToLine, BarChart3, BedDouble, Download, IndianRupee, LogIn, LogOut, Send, Wallet } from "lucide-react"
 import { api, API_BASE, ApiError } from "@/lib/api"
 import { useResource } from "@/lib/use-resource"
 import { formatDate, rupees } from "@/lib/format"
@@ -87,7 +87,8 @@ export default function ReportsPage() {
         actions={
           <Menu
             items={[
-              { label: t("action.sendNow"), icon: Send, onSelect: () => void sendNow(), disabled: busy },
+              { label: t("period.title"), icon: BarChart3, href: "/reports/period" },
+              { label: t("action.sendNow"), icon: Send, onSelect: () => void sendNow(), disabled: busy, separator: true },
               { label: `${t("reports.register")} (CSV)`, icon: Download, href: `${API_BASE}/api/reports/police-register.csv?from=${fromDate}&to=${to}`, separator: true },
               { label: `${t("reports.month")} (CSV)`, icon: Download, href: `${API_BASE}/api/reports/month.csv` },
             ]}
@@ -98,16 +99,16 @@ export default function ReportsPage() {
       {sent && <Banner tone="ok" onClose={() => setSent(false)}>{t("action.sendNow")} ✓</Banner>}
 
       {/* Headline: today's money. */}
-      <Card className="bg-gradient-to-br from-brand to-brand-strong text-white [&_*]:!text-white border-0">
-        <p className="text-xs font-semibold uppercase tracking-wide opacity-80">{t("reports.daily")}</p>
-        <p className="mt-1 text-[36px] font-bold leading-none tabular-nums tracking-tight">{rupees(daily.collectedPaise)}</p>
+      <Card className="p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t("reports.daily")}</p>
+        <p className="mt-1 text-[40px] font-extrabold leading-none tabular-nums tracking-tight">{rupees(daily.collectedPaise)}</p>
         <ul className="mt-3 flex flex-wrap gap-1.5">
           {daily.collections.map((row) => (
-            <li key={row.mode} className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold">
-              {row.mode.toUpperCase()} {rupees(row.amount)} <span className="opacity-70">· {row.count}</span>
+            <li key={row.mode} className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-semibold">
+              {row.mode.toUpperCase()} {rupees(row.amount)} <span className="text-ink-soft">· {row.count}</span>
             </li>
           ))}
-          {daily.collections.length === 0 && <li className="text-xs opacity-80">{t("common.none")}</li>}
+          {daily.collections.length === 0 && <li className="text-xs text-ink-soft">{t("common.none")}</li>}
         </ul>
       </Card>
 

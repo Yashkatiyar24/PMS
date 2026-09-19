@@ -58,6 +58,8 @@
     <tr th:if="${guest['phone']}"><td th:text="${labels.phone}">Phone</td><td th:text="${guest['phone']}">Phone</td></tr>
     <tr th:if="${guest['id_type']}"><td th:text="${labels.idProof}">ID</td>
         <td th:text="${guest['id_type']} + (${guest['id_last4']} ? ' ****' + ${guest['id_last4']} : '')">ID</td></tr>
+    <tr th:if="${guest['organization']}"><td th:text="${labels.billTo}">Bill to</td><td><b th:text="${guest['organization']}">Company</b></td></tr>
+    <tr th:if="${guest['billing_gstin']}"><td th:text="${labels.buyerGstin}">Buyer GSTIN</td><td th:text="${guest['billing_gstin']}">GSTIN</td></tr>
     <tr th:if="${guest.units}"><td th:text="${labels.room}">Room</td><td th:text="${guest.units}">101</td></tr>
     <tr><td th:text="${labels.stay}">Stay</td><td th:text="${stayFrom} + ' → ' + ${stayTo}">dates</td></tr>
     <tr><td th:text="${labels.guests}">Guests</td>
@@ -87,8 +89,13 @@
     <tr th:each="t : ${taxBreakup}">
       <td th:text="${labels.taxable} + ' @ ' + ${t.rate}">Taxable @ 5%</td>
       <td class="num" th:text="${t.taxable}">2000</td>
-      <td th:text="${labels.cgst}">CGST</td><td class="num" th:text="${t.cgst}">50</td>
-      <td th:text="${labels.sgst}">SGST</td><td class="num" th:text="${t.sgst}">50</td>
+      <th:block th:if="${!igst}">
+        <td th:text="${labels.cgst}">CGST</td><td class="num" th:text="${t.cgst}">50</td>
+        <td th:text="${labels.sgst}">SGST</td><td class="num" th:text="${t.sgst}">50</td>
+      </th:block>
+      <th:block th:if="${igst}">
+        <td th:text="${labels.igst}">IGST</td><td class="num" th:text="${t.igst}">100</td>
+      </th:block>
     </tr>
   </table>
 

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "ui-check": "node ui-check.mjs",
+    "feature-check": "node feature-check.mjs",
     "selfreg-check": "node selfreg-check.mjs"
   },
   "dependencies": {

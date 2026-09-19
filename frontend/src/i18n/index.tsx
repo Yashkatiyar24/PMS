@@ -33,7 +33,7 @@ const Context = createContext<I18n | null>(null)
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = usePreference<Language>("pms.language", "hi", (v) => v in BUNDLES)
   const [textSize, setTextSize] = usePreference<TextSize>("pms.textSize", "normal", (v) => v === "normal" || v === "large")
-  const [theme, setTheme] = usePreference<Theme>("pms.theme", "system", (v) => v === "light" || v === "dark" || v === "system")
+  const [theme, setTheme] = usePreference<Theme>("pms.theme", "light", (v) => v === "light" || v === "dark" || v === "system")
 
   // The document itself is the external system here: the lang attribute and the text-size scale live on it.
   useEffect(() => {

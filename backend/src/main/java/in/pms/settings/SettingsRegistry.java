@@ -27,7 +27,7 @@ public final class SettingsRegistry {
             Map.entry("reservations", "Reservations"), Map.entry("day", "Business day and reports"),
             Map.entry("people", "People and approvals"), Map.entry("guests", "Guests and compliance"),
             Map.entry("tax", "Tax"), Map.entry("receipts", "Receipts and printing"), Map.entry("money", "Money"),
-            Map.entry("messaging", "Messaging"), Map.entry("platform", "Platform"));
+            Map.entry("messaging", "Messaging"), Map.entry("online", "Selling online"), Map.entry("platform", "Platform"));
 
     public static final List<SettingDef> ALL = List.of(
         // Language
@@ -50,6 +50,7 @@ public final class SettingsRegistry {
         time("noshow_hour", "reservations", MANAGER, "18:00", "Reserved bookings not arrived by this time are flagged."),
         enumOf("noshow_policy", "reservations", OWNER, "forfeit", List.of("forfeit", "refund", "partial"), "What happens to the advance on a no-show."),
         integer("noshow_partial_pct", "reservations", OWNER, 50, 0, 100, "Percentage of the advance kept when the policy is partial."),
+        integer("tentative_hold_hours", "reservations", MANAGER, 24, 1, 720, "Hours a pending (unconfirmed) booking holds its rooms before they are released."),
 
         // Business day and reports
         time("business_day_start", "day", OWNER, "21:00", "A business day runs from this hour to the same hour next day; the report is sent then."),
@@ -81,6 +82,9 @@ public final class SettingsRegistry {
         integer("exemption_threshold_paise", "tax", OWNER, 100000, 0, 100000000, "Per-day rate below which rooms are exempt when religious_precinct is on (confirm value with CA)."),
         bool("donation_mode", "tax", OWNER, false, "Issue donation receipts (80G) instead of invoices. Requires CA confirmation below."),
         bool("donation_mode_ca_confirmed", "tax", OWNER, false, "The trust's CA has confirmed donation receipts are appropriate."),
+        integer("restaurant_tax_bp", "tax", OWNER, 500, 0, 2800, "GST on restaurant food and drink, in basis points (500 = 5%). Confirm the rate with your CA."),
+        bool("rates_include_tax", "tax", OWNER, false, "Room rates and charges already include GST: the taxable value is taken out of them, so the guest pays exactly the rate quoted."),
+        bool("igst_for_interstate_b2b", "tax", OWNER, false, "Charge IGST instead of CGST + SGST when the billed company's GSTIN is from another state. Accommodation is normally intra-state; turn on only if your CA advises."),
 
         // Receipts and printing
         text("receipt_prefix", "receipts", OWNER, "", 5, "Prefix for receipt numbers (max 5 characters)."),
@@ -102,7 +106,17 @@ public final class SettingsRegistry {
 
         // Messaging
         bool("whatsapp_enabled", "messaging", OWNER, true, "Send WhatsApp messages from this property."),
+        bool("whatsapp_guest_updates", "messaging", OWNER, false, "Also send opted-in guests a WhatsApp for payments received, cancellations and checkout reminders. Turn on once those templates are approved by Meta."),
         bool("push_enabled", "messaging", OWNER, true, "Send push notifications to staff devices."),
+        integer("checkout_reminder_minutes", "messaging", MANAGER, 60, 0, 720, "Minutes before a guest's checkout to remind the desk and, with their opt-in, the guest. 0 turns it off."),
+
+        // Selling online
+        bool("online_booking_enabled", "online", OWNER, false, "Let guests book on the property's own booking page. Payment is taken at the property."),
+        integer("online_booking_max_nights", "online", MANAGER, 7, 1, 30, "Longest stay a guest can book online."),
+        integer("online_booking_days_ahead", "online", MANAGER, 180, 7, 365, "How many days ahead guests can book online."),
+        enumOf("online_payment", "online", OWNER, "off", List.of("off", "optional", "required"), "Take payment on the booking page: not at all, if the guest chooses, or always. Needs the payment gateway to be set up."),
+        integer("online_payment_advance_pct", "online", OWNER, 100, 10, 100, "How much of the stay a guest pays online, as a percentage."),
+        integer("online_payment_hold_minutes", "online", OWNER, 30, 10, 240, "Minutes a room is held for a guest who is paying online before it is released."),
 
         // Platform
         text("support_access_until", "platform", OWNER, "", 40, "ISO timestamp until which our support may view guest data."),

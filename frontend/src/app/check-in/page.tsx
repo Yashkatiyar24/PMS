@@ -16,8 +16,8 @@ import { Camera, Check, ChevronDown, Search } from "lucide-react"
 import { clsx } from "clsx"
 import { api, ApiError, newClientUuid, QueuedOffline, upload } from "@/lib/api"
 import { compressImage } from "@/lib/image"
-import { rupees, toPaise } from "@/lib/format"
-import type { Booking, Guest, Room, RoomType } from "@/lib/types"
+import { rupees, toPaise, unitName } from "@/lib/format"
+import { OFF_SALE, type Booking, type Guest, type Room, type RoomType } from "@/lib/types"
 import { useI18n } from "@/i18n"
 import { Banner, Button, Card, Chip, ChoiceChips, Disclosure, Field, Loading, PageHeader, Stepper } from "@/components/ui"
 import { SelfRegistrationQr, type Submission } from "@/components/SelfRegistrationQr"
@@ -36,7 +36,7 @@ const ID_TYPES = [
 function Step({ n, title, done }: { n: number; title: string; done?: boolean }) {
   return (
     <h2 className="mb-3 flex items-center gap-2.5 font-semibold">
-      <span className={clsx("grid h-6 w-6 place-items-center rounded-full text-xs font-bold", done ? "bg-ok text-white" : "bg-brand-soft text-brand-ink")}>
+      <span className={clsx("grid h-6 w-6 place-items-center rounded-full text-xs font-bold", done ? "bg-ok text-on-solid" : "bg-brand-soft text-brand-ink")}>
         {done ? <Check size={14} aria-hidden /> : n}
       </span>
       {title}
@@ -116,18 +116,23 @@ export default function CheckInPage() {
     })()
   }, [])
 
-  /** Free units for tonight, grouped by type, with the rate the desk will charge. */
+  /**
+   * Free units for tonight, grouped by type, with the rate the desk will charge. A unit with a guest in it, or
+   * one reserved for today, is left out; the server would refuse it anyway. A room still to be cleaned is
+   * offered (when the property allows it) with an amber dot, so nobody sends a guest to it unawares.
+   */
   const options = useMemo(() => {
-    const byType = new Map<string, { label: string; key: string; ratePaise: number }[]>()
+    const byType = new Map<string, { label: string; key: string; ratePaise: number; dirty: boolean }[]>()
     for (const room of rooms) {
-      if (!room.active || room.status === "blocked") continue
+      if (!room.active || OFF_SALE.includes(room.status) || room.occupancy) continue
       const type = types.find((x) => x.id === room.roomTypeId)
       if (!type) continue
       const entries = byType.get(type.name) ?? []
+      const dirty = room.status === "dirty" || room.status === "cleaning"
       if (type.dormitory) {
-        for (const bed of room.beds.filter((b) => b.active)) entries.push({ label: `${room.number}/${bed.label}`, key: `${room.id}:${bed.id}`, ratePaise: type.baseRatePaise })
+        for (const bed of room.beds.filter((b) => b.active && !b.occupancy)) entries.push({ label: unitName(room.number, bed.label), key: `${room.id}:${bed.id}`, ratePaise: type.baseRatePaise, dirty })
       } else {
-        entries.push({ label: room.number, key: `${room.id}:`, ratePaise: type.baseRatePaise })
+        entries.push({ label: room.number, key: `${room.id}:`, ratePaise: type.baseRatePaise, dirty })
       }
       byType.set(type.name, entries)
     }
@@ -351,8 +356,9 @@ export default function CheckInPage() {
                       type="button"
                       aria-pressed={on}
                       onClick={() => { setUnitKey(u.key); reach(3) }}
-                      className={clsx("min-h-[44px] min-w-[64px] rounded-xl border px-3 text-[15px] font-bold tabular-nums transition-colors", on ? "border-brand bg-brand text-white" : "border-line-strong bg-surface hover:bg-surface-2")}
+                      className={clsx("min-h-[44px] min-w-[64px] rounded-xl border px-3 text-[15px] font-bold tabular-nums transition-colors", on ? "border-brand bg-brand text-on-solid" : "border-line-strong bg-surface hover:bg-surface-2")}
                     >
+                      {u.dirty && <span aria-label={t("rooms.status.dirty")} title={t("rooms.status.dirty")} className="mr-1.5 inline-block h-2 w-2 rounded-full bg-warn align-middle" />}
                       {u.label}
                     </button>
                   )

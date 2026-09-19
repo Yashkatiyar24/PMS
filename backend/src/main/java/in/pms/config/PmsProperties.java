@@ -21,7 +21,8 @@ public record PmsProperties(
         Push push,
         Pdf pdf,
         Jobs jobs,
-        Ops ops
+        Ops ops,
+        Payments payments
 ) {
     public record Db(Pool app, Pool admin) {}
     public record Pool(String url, String username, String password, int maxPoolSize) {}
@@ -39,4 +40,7 @@ public record PmsProperties(
     public record Pdf(String provider) {}
     public record Jobs(boolean enabled, long outboxPollMs, int outboxMaxAttempts) {}
     public record Ops(String teamAlertEmail) {}
+    /** Online payments: none (off), console (a simulator for development), or razorpay. */
+    public record Payments(String provider, Razorpay razorpay) {}
+    public record Razorpay(String keyId, String keySecret, String webhookSecret) {}
 }

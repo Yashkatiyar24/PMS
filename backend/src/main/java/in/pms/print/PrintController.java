@@ -22,10 +22,10 @@ public class PrintController {
 
     public PrintController(ReceiptRenderer renderer) { this.renderer = renderer; }
 
-    @GetMapping(value = "/{id}/html", produces = MediaType.TEXT_HTML_VALUE)
+    @GetMapping(value = "/{id}/html", produces = MediaType.TEXT_HTML_VALUE) @PreAuthorize("hasAuthority('PERM_reservations.view')")
     public String html(@PathVariable UUID id, @RequestParam(required = false) String profile) { return renderer.html(id, profile); }
 
-    @GetMapping(value = "/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @GetMapping(value = "/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE) @PreAuthorize("hasAuthority('PERM_reservations.view')")
     public ResponseEntity<byte[]> pdf(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id, @RequestParam(required = false) String profile) {
         byte[] bytes = renderer.pdf(id, profile, u.id());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)

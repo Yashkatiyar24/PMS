@@ -28,13 +28,16 @@ public class PublicRateLimiter {
     private record Counter(Instant resets, AtomicInteger hits) {}
 
     /** @return true when this caller is within its allowance. */
-    public boolean allow(String caller) {
+    public boolean allow(String caller) { return allow(caller, MAX_PER_WINDOW); }
+
+    /** A tighter allowance for one action, e.g. {@code allow("book:" + ip, 5)}: its own key, its own count. */
+    public boolean allow(String caller, int maxPerWindow) {
         Instant now = Instant.now();
         if (counters.size() > MAX_TRACKED) counters.entrySet().removeIf(e -> e.getValue().resets().isBefore(now));
         Counter c = counters.compute(caller == null ? "unknown" : caller,
                 (k, existing) -> existing == null || existing.resets().isBefore(now)
                         ? new Counter(now.plus(WINDOW), new AtomicInteger())
                         : existing);
-        return c.hits().incrementAndGet() <= MAX_PER_WINDOW;
+        return c.hits().incrementAndGet() <= maxPerWindow;
     }
 }

@@ -2,3 +2,7 @@ pms:
   jobs.enabled: false
 logging.level.root: warn
 pms.allowed-origins: http://localhost:3000
+# Several test contexts stay cached side by side (one per distinct configuration); small pools keep them all
+# within Postgres's connection limit alongside a running dev server.
+pms.db.app.max-pool-size: 6
+pms.db.admin.max-pool-size: 3

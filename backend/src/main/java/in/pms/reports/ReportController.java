@@ -30,14 +30,47 @@ public class ReportController {
     private final DailyReportService dailyReports;
     private final SettingsService settings;
     private final JdbcClient jdbc;
+    private final PeriodReportService period;
 
-    public ReportController(ReportService reports, DailyReportService dailyReports, SettingsService settings, @Qualifier("jdbc") JdbcClient jdbc) {
-        this.reports = reports; this.dailyReports = dailyReports; this.settings = settings; this.jdbc = jdbc;
+    public ReportController(ReportService reports, DailyReportService dailyReports, SettingsService settings, @Qualifier("jdbc") JdbcClient jdbc, PeriodReportService period) {
+        this.reports = reports; this.dailyReports = dailyReports; this.settings = settings; this.jdbc = jdbc; this.period = period;
+    }
+
+    /** Every report over a range of days: occupancy, ADR, RevPAR, revenue, GST, bookings, sources, payments, expenses, housekeeping, maintenance, guests. */
+    @GetMapping("/period") @PreAuthorize("hasAuthority('PERM_revenue.view')")
+    public Map<String, Object> period(@RequestParam LocalDate from, @RequestParam LocalDate to) { return period.report(from, to); }
+
+    /** The same, flattened to section,item,value rows for a spreadsheet. */
+    @GetMapping(value = "/period.csv", produces = "text/csv") @PreAuthorize("hasAuthority('PERM_revenue.view')")
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<byte[]> periodCsv(@RequestParam LocalDate from, @RequestParam LocalDate to) {
+        Map<String, Object> data = period.report(from, to);
+        StringBuilder csv = new StringBuilder("section,item,field,value\n");
+        for (var section : data.entrySet()) flatten(csv, section.getKey(), "", section.getValue());
+        return csvResponse(csv.toString(), "report-" + from + "-to-" + to + ".csv");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void flatten(StringBuilder csv, String section, String item, Object value) {
+        if (value instanceof Map<?, ?> m) {
+            // A row of a list (it has a name-like first column) keeps that as the item; a plain group spreads its fields.
+            for (var e : ((Map<String, Object>) m).entrySet()) {
+                if (e.getValue() instanceof Map<?, ?> || e.getValue() instanceof List<?>) flatten(csv, section, e.getKey(), e.getValue());
+                else csv.append(quote(section)).append(',').append(quote(item)).append(',').append(quote(e.getKey())).append(',').append(quote(str(e.getValue()))).append('\n');
+            }
+        } else if (value instanceof List<?> list) {
+            for (Object row : list) {
+                String name = row instanceof Map<?, ?> r ? str(r.values().iterator().next()) : "";
+                flatten(csv, section, item.isEmpty() ? name : item + ":" + name, row);
+            }
+        } else {
+            csv.append(quote(section)).append(',').append(quote(item)).append(",,").append(quote(str(value))).append('\n');
+        }
     }
 
     public record HandoverInput(UUID userId, String notes) {}
 
-    @GetMapping("/daily") @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping("/daily") @PreAuthorize("hasAuthority('PERM_revenue.view')")
     public Map<String, Object> daily(@RequestParam(required = false) LocalDate date) { return reports.daily(date); }
 
     /** Send the evening report now, for the desk or for testing; the job's idempotency key still applies. */
@@ -50,25 +83,32 @@ public class ReportController {
         return dailyReports.send(ref, businessDate, settings.current());
     }
 
-    @GetMapping("/month") @PreAuthorize("hasRole('MANAGER')")
+    /** The dashboard's forecast: occupancy, room nights, ADR, RevPAR and revenue for the next nights. */
+    @GetMapping("/forecast") @PreAuthorize("hasAuthority('PERM_revenue.view')")
+    public Map<String, Object> forecast(@RequestParam(required = false) LocalDate from, @RequestParam(defaultValue = "14") int days) {
+        return reports.forecast(from, days);
+    }
+
+    @GetMapping("/month") @PreAuthorize("hasAuthority('PERM_revenue.view')")
     public Map<String, Object> month(@RequestParam(required = false) String month) {
         return reports.month(month == null ? YearMonth.now() : YearMonth.parse(month));
     }
 
     /** CSV for the accountant: one row per tax rate, which is what GSTR-1 needs. */
-    @GetMapping(value = "/month.csv", produces = "text/csv") @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping(value = "/month.csv", produces = "text/csv") @PreAuthorize("hasAuthority('PERM_revenue.view')")
     public ResponseEntity<byte[]> monthCsv(@RequestParam(required = false) String month) {
         var data = reports.month(month == null ? YearMonth.now() : YearMonth.parse(month));
-        StringBuilder csv = new StringBuilder("rate_bp,taxable_paise,cgst_paise,sgst_paise\n");
+        StringBuilder csv = new StringBuilder("rate_bp,taxable_paise,cgst_paise,sgst_paise,igst_paise\n");
         for (var r : (List<Map<String, Object>>) data.get("taxableByRate"))
-            csv.append(r.get("tax_rate_bp")).append(',').append(r.get("taxable")).append(',').append(r.get("cgst")).append(',').append(r.get("sgst")).append('\n');
+            csv.append(r.get("tax_rate_bp")).append(',').append(r.get("taxable")).append(',').append(r.get("cgst")).append(',').append(r.get("sgst"))
+                    .append(',').append(r.get("igst")).append('\n');
         return csvResponse(csv.toString(), "month-" + data.get("month") + ".csv");
     }
 
-    @GetMapping("/outstanding")
+    @GetMapping("/outstanding") @PreAuthorize("hasAuthority('PERM_reservations.view')")
     public List<Map<String, Object>> outstanding() { return reports.outstanding(); }
 
-    @GetMapping("/cash-in-hand") @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping("/cash-in-hand") @PreAuthorize("hasAuthority('PERM_revenue.view')")
     public List<Map<String, Object>> cashInHand() { return reports.cashInHand(); }
 
     @PostMapping("/cash-handover") @PreAuthorize("hasRole('MANAGER')")

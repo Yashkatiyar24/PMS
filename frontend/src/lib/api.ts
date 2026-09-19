@@ -12,7 +12,7 @@ export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:80
 
 /** Screens reachable without an account; a 401 there must not redirect anywhere. */
 export function isPublicScreen(pathname: string): boolean {
-  return pathname.startsWith("/login") || pathname.startsWith("/g/")
+  return pathname.startsWith("/login") || pathname.startsWith("/g/") || pathname.startsWith("/book/")
 }
 
 export class ApiError extends Error {

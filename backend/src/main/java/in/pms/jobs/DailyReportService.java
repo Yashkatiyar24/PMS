@@ -56,7 +56,7 @@ public class DailyReportService {
 
         var recipients = jdbc.sql("""
                 select u.phone, u.email from property_users pu join users u on u.id = pu.user_id
-                where pu.property_id = ? and pu.active and pu.role in ('owner','manager') and u.active""")
+                where pu.property_id = ? and pu.active and pu.role in ('owner','admin','manager') and u.active""")
                 .param(property.id()).query().listOfRows();
 
         String key = "daily_report:" + property.id() + ":" + businessDate;

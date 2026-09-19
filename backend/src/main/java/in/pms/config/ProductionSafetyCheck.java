@@ -33,6 +33,8 @@ public class ProductionSafetyCheck {
         this.env = env;
     }
 
+    private static boolean blank(String s) { return s == null || s.isBlank(); }
+
     @PostConstruct
     public void verify() {
         List<String> profiles = List.of(env.getActiveProfiles());
@@ -54,6 +56,14 @@ public class ProductionSafetyCheck {
                 || props.allowedOrigins().stream().anyMatch(o -> o.contains("localhost") || o.equals("*")))
             problems.add("PMS_ALLOWED_ORIGINS is empty, a wildcard, or still points at localhost. "
                     + "List the origins the desk app is actually served from.");
+
+        if (props.payments() != null && "console".equals(props.payments().provider()))
+            problems.add("PMS_PAYMENT_PROVIDER is console, a simulator that accepts payments nobody made. "
+                    + "Use razorpay, or none to switch online payment off.");
+        if (props.payments() != null && "razorpay".equals(props.payments().provider()) && props.payments().razorpay() != null
+                && (blank(props.payments().razorpay().keySecret()) || blank(props.payments().razorpay().webhookSecret())))
+            problems.add("PMS_PAYMENT_PROVIDER is razorpay but PMS_RAZORPAY_KEY_SECRET or PMS_RAZORPAY_WEBHOOK_SECRET is empty, "
+                    + "so no payment could be verified.");
 
         if (problems.isEmpty()) return;
         throw new IllegalStateException("Refusing to start with development settings in production:\n  - "

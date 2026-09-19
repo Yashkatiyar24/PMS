@@ -102,8 +102,16 @@ try {
 
   await page.goto(`${BASE}/settings`, { waitUntil: "networkidle" })
   await page.waitForSelector("text=Rules", { timeout: 15000 })
-  check("settings are generated from the registry", (await page.locator("input, select, textarea").count()) > 20,
-        `${await page.locator("input, select, textarea").count()} controls`)
+  // One section at a time: the list names every registry group, and a group opens with its own controls.
+  const groups = await page.locator("nav[aria-label='Settings'] li button").count()
+  check("settings are generated from the registry", groups >= 10, `${groups} groups`)
+  await page.getByRole("button", { name: "Guests and compliance" }).click()
+  const controls = await page.locator("main input, main textarea, main [role=switch]").count()
+  check("a settings group opens with its controls", controls > 5, `${controls} controls`)
+  // Edits wait for Save, so a toggle raises the save bar instead of writing straight away.
+  await page.locator("main [role=switch]").first().click()
+  check("an edit waits for Save", await page.getByRole("button", { name: "Save changes" }).isVisible())
+  await page.getByRole("button", { name: "Discard" }).click()
 
   await page.goto(`${BASE}/reports`, { waitUntil: "networkidle" })
   check("reports show the day's money", await page.getByText(/Today's collection/).isVisible())

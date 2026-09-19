@@ -2,7 +2,8 @@
 
 /**
  * The same five destinations twice: a thumb-height bar on a phone, a rail down the left on a laptop.
- * Each keeps its own colour so the eye finds it without reading. Reports and Settings need a manager.
+ * Each keeps its own colour so the eye finds it without reading. Each shows only when the role can use it:
+ * a housekeeper sees rooms, an accountant sees the money.
  */
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -13,12 +14,13 @@ import { useSession } from "@/lib/session"
 
 function useItems() {
   const { t } = useI18n()
-  const { can } = useSession()
+  const { has } = useSession()
+  const desk = has("reservations.view")
   return [
-    { href: "/", label: t("nav.today"), icon: Home, tone: "text-brand" },
-    { href: "/bookings", label: t("nav.bookings"), icon: CalendarDays, tone: "text-violet" },
-    { href: "/rooms", label: t("nav.rooms"), icon: BedDouble, tone: "text-teal" },
-    ...(can("MANAGER") ? [{ href: "/reports", label: t("nav.reports"), icon: BarChart3, tone: "text-ok" }] : []),
+    ...(desk ? [{ href: "/", label: t("nav.today"), icon: Home, tone: "text-brand" }] : []),
+    ...(desk ? [{ href: "/bookings", label: t("nav.bookings"), icon: CalendarDays, tone: "text-violet" }] : []),
+    ...(desk || has("housekeeping") || has("maintenance") ? [{ href: "/rooms", label: t("nav.rooms"), icon: BedDouble, tone: "text-teal" }] : []),
+    ...(has("revenue.view") ? [{ href: "/reports", label: t("nav.reports"), icon: BarChart3, tone: "text-ok" }] : []),
     { href: "/settings", label: t("nav.settings"), icon: Settings, tone: "text-ink-soft" },
   ]
 }
@@ -70,7 +72,8 @@ export function SideRail({ children }: { children?: React.ReactNode }) {
               href={href}
               aria-current={active ? "page" : undefined}
               className={clsx(
-                "flex min-h-[42px] items-center gap-3 rounded-lg px-3 text-[14px] font-semibold transition-colors",
+                // The focus ring sits inside the pill, so a focused active item is not a box around a box.
+                "flex min-h-[42px] items-center gap-3 rounded-lg px-3 text-[14px] font-semibold transition-colors focus-visible:-outline-offset-2!",
                 active ? "bg-brand-soft text-brand-ink" : "text-ink-soft hover:bg-surface-2 hover:text-ink",
               )}
             >

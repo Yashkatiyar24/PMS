@@ -4,6 +4,7 @@ import in.pms.audit.AuditService;
 import in.pms.auth.CurrentUser;
 import in.pms.auth.OtpService;
 import in.pms.auth.PasswordService;
+import in.pms.auth.Permissions;
 import in.pms.auth.SessionService;
 import in.pms.common.BadRequestException;
 import in.pms.common.ForbiddenException;
@@ -49,11 +50,16 @@ public class UserAdminService {
     @Transactional("adminTx")
     public Member invite(InviteInput in, CurrentUser actor) {
         String phone = OtpService.normalisePhone(in.phone());
-        String role = role(in.role());
+        String role = grantable(in.role(), actor);
         if (in.name() == null || in.name().isBlank()) throw new BadRequestException("Name is required");
         UUID property = TenantContext.require();
         UUID userId = admin.sql("select id from users where phone = ?").param(phone).query(UUID.class).optional().orElseGet(() ->
                 admin.sql("insert into users(name, phone, email) values (?, ?, ?) returning id").params(in.name().trim(), phone, blank(in.email())).query(UUID.class).single());
+        // Inviting someone who is already a member changes their role: the same rule as setRole applies, so an
+        // admin cannot demote an owner by inviting their number again.
+        if (userId.equals(actor.id())) throw new BadRequestException("You cannot change your own role");
+        admin.sql("select role::text from property_users where property_id = ? and user_id = ?").params(property, userId).query(String.class).optional()
+                .ifPresent(existing -> grantable(existing, actor));
         admin.sql("""
                 insert into property_users(property_id, user_id, role) values (?, ?, ?::user_role)
                 on conflict (property_id, user_id) do update set role = excluded.role, active = true""")
@@ -66,7 +72,8 @@ public class UserAdminService {
     public Member setRole(UUID userId, String role, CurrentUser actor) {
         if (userId.equals(actor.id())) throw new BadRequestException("You cannot change your own role");
         Member before = member(userId);
-        admin.sql("update property_users set role = ?::user_role where property_id = ? and user_id = ?").params(role(role), TenantContext.require(), userId).update();
+        grantable(before.role(), actor); // an admin cannot demote an owner
+        admin.sql("update property_users set role = ?::user_role where property_id = ? and user_id = ?").params(grantable(role, actor), TenantContext.require(), userId).update();
         audit.recordPlatform(TenantContext.require(), "property_users", userId.toString(), "role", Map.of("role", before.role()), Map.of("role", role), actor.id());
         return member(userId);
     }
@@ -76,6 +83,7 @@ public class UserAdminService {
     public void deactivate(UUID userId, CurrentUser actor) {
         if (userId.equals(actor.id())) throw new BadRequestException("You cannot deactivate yourself");
         Member before = member(userId);
+        grantable(before.role(), actor); // an admin cannot remove an owner
         admin.sql("update property_users set active = false where property_id = ? and user_id = ?").params(TenantContext.require(), userId).update();
         sessions.revokeAll(userId);
         audit.recordPlatform(TenantContext.require(), "property_users", userId.toString(), "deactivate", Map.of("role", before.role()), null, actor.id());
@@ -87,7 +95,7 @@ public class UserAdminService {
         if (!actor.id().equals(userId) && !actor.hasRole(CurrentUser.Role.OWNER)) throw new ForbiddenException("Only an owner can set another user's PIN");
         if (pin == null || !pin.matches("\\d{4,6}")) throw new BadRequestException("PIN must be 4 to 6 digits");
         Member m = member(userId);
-        if (!"manager".equals(m.role()) && !"owner".equals(m.role())) throw new BadRequestException("Only managers and owners have an approval PIN");
+        if (!APPROVER_ROLES.contains(m.role())) throw new BadRequestException("Only roles that approve exceptions have an approval PIN");
         admin.sql("update property_users set approval_pin_hash = ? where property_id = ? and user_id = ?").params(passwords.hash(pin), TenantContext.require(), userId).update();
         audit.recordPlatform(TenantContext.require(), "property_users", userId.toString(), "pin", null, null, actor.id());
     }
@@ -102,8 +110,14 @@ public class UserAdminService {
         audit.recordPlatform(null, "users", actor.id().toString(), "password", null, null, actor.id());
     }
 
-    private static String role(String r) {
-        if (r == null || !List.of("owner", "manager", "staff").contains(r)) throw new BadRequestException("Role must be owner, manager or staff");
+    /** Roles that approve something (a discount, refund, cancellation or credit note) for someone else. */
+    private static final java.util.Set<String> APPROVER_ROLES = java.util.stream.Stream.of(Permissions.DISCOUNT, Permissions.REFUND, Permissions.INVOICE_EDIT, Permissions.RESERVATIONS_CANCEL)
+            .flatMap(p -> Permissions.rolesWith(p).stream()).collect(java.util.stream.Collectors.toUnmodifiableSet());
+
+    /** A known role, and only an owner hands out (or takes away) owner and admin. */
+    private static String grantable(String r, CurrentUser actor) {
+        if (r == null || !Permissions.ROLES.contains(r)) throw new BadRequestException("Role must be one of " + Permissions.ROLES);
+        if (List.of("owner", "admin").contains(r) && !actor.hasRole(CurrentUser.Role.OWNER)) throw new ForbiddenException("Only an owner can grant or change the owner and admin roles");
         return r;
     }
     private static String blank(String s) { return s == null || s.isBlank() ? null : s.trim(); }

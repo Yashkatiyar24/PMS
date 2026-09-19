@@ -1,6 +1,7 @@
 package in.pms.auth;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -14,14 +15,17 @@ public record CurrentUser(
         boolean superAdmin,
         UUID sessionId,
         UUID propertyId,          // null until a property is selected
-        Role role,                // role in propertyId, or null
-        List<Membership> memberships
+        Role role,                // rank in propertyId, or null
+        List<Membership> memberships,
+        String position,          // the role as stored: owner, admin, receptionist, housekeeping, ...
+        Set<String> permissions   // what that role may do, from Permissions
 ) {
-    public enum Role { STAFF, MANAGER, OWNER;
+    /** Rank. LIMITED is the narrow roles (housekeeping, accountant, maintenance), below the front desk. */
+    public enum Role { LIMITED, STAFF, MANAGER, OWNER;
         public boolean atLeast(Role other) { return ordinal() >= other.ordinal(); }
-        public static Role parse(String s) { return valueOf(s.toUpperCase()); }
     }
-    public record Membership(UUID propertyId, String propertyName, Role role) {}
+    public record Membership(UUID propertyId, String propertyName, Role role, String position) {}
 
     public boolean hasRole(Role r) { return role != null && role.atLeast(r); }
+    public boolean can(String permission) { return permissions != null && permissions.contains(permission); }
 }

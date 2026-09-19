@@ -20,11 +20,11 @@ public class SettingsController {
     public record RegistryView(List<SettingDef> definitions, Map<String, String> groups) {}
 
     /** Definitions, defaults and descriptions: what the UI renders. */
-    @GetMapping("/registry")
+    @GetMapping("/registry") @PreAuthorize("hasRole('LIMITED')")
     public RegistryView registry() { return new RegistryView(SettingsRegistry.ALL, SettingsRegistry.GROUPS); }
 
     /** Resolved values for the current property (defaults merged in). */
-    @GetMapping
+    @GetMapping @PreAuthorize("hasRole('LIMITED')")
     public Map<String, Object> current() { return settings.current().asMap(); }
 
     /** Partial update; send {@code null} for a key to reset it to its default. */

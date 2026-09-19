@@ -8,7 +8,7 @@ import type { NextRequest } from "next/server"
  */
 // "/g/" is the guest's own self-registration form, reached by scanning a QR at the desk. Whoever opens it
 // has no account and never will, so it must never be bounced to a login screen.
-const PUBLIC_PATHS = ["/login", "/g/", "/manifest.webmanifest", "/sw.js"]
+const PUBLIC_PATHS = ["/login", "/g/", "/book/", "/manifest.webmanifest", "/sw.js"]
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl

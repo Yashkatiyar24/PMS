@@ -1,4 +1,5 @@
 pms:
   seed.enabled: true
   auth.dev-otp: "123456"
+  payments.provider: console
 logging.level.in.pms: debug

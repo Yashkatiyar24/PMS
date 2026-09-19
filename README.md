@@ -47,6 +47,14 @@ sessions and scheduled jobs use a second role, `pms_admin`, and only through the
 constraint over the unit and the stay's time range is what prevents a double booking. Two desks racing for
 the last bed cannot both win, however the application is deployed.
 
+A whole dormitory room and one of its beds are the same place under two names, which the constraint cannot
+see; a trigger on `booking_units` locks the room row and refuses the second of the two, and also refuses a unit
+whose room belongs to another property or whose bed belongs to another room.
+
+**A payment the browser reports is only a claim.** A booking paid online stays pending, holding its room, until
+the server has checked the gateway's signature with a secret the browser never sees and asked the gateway itself
+for the payment. The browser, the webhook and reconciliation may all report the same payment; it is recorded once.
+
 **Rules that differ between properties are settings, not code.** They live in one registry
 (`SettingsRegistry`) with a default, a type and the role allowed to change them, and the settings screen is
 generated from it. Tax slabs are effective-dated rows, so a rate change is data entry, not a release.
@@ -92,22 +100,25 @@ matter in production:
 | `PMS_EMAIL_PROVIDER` | `console` or `brevo` |
 | `PMS_WHATSAPP_PROVIDER` | `console` or `meta` |
 | `PMS_PUSH_PROVIDER` | `console` or `fcm` |
+| `PMS_PAYMENT_PROVIDER` | `none` (default), `razorpay`, or `console` (a simulator; development only) |
+| `PMS_RAZORPAY_KEY_ID`, `PMS_RAZORPAY_KEY_SECRET`, `PMS_RAZORPAY_WEBHOOK_SECRET` | Razorpay API keys, and the secret its webhook to `/api/public/payments/webhook` is signed with |
 
 Swapping a provider is one variable. Adding one is a class and a line in `IntegrationsConfig`.
 
 Every default above is chosen to make a fresh clone run, which also makes it unsafe to deploy. So the
 server refuses to start outside the `dev` and `test` profiles while any of them are still in place — the
 shipped session secret, a fixed login code, the demo seeder, a cookie that would travel over plain HTTP,
-or an origin list still pointing at localhost. It names all of them at once rather than one restart at a
+an origin list still pointing at localhost, the payment simulator, or Razorpay without its secrets. It names all of them at once rather than one restart at a
 time, and it runs before the port is bound, so a misconfigured server never answers a request.
 
 ## Tests
 
 ```bash
-cd backend && mvn test                  # 76 tests, needs Postgres on localhost:5432
+cd backend && mvn test                  # 132 tests, needs Postgres on localhost:5432
 cd frontend && npm test && npm run lint && npm run build
 python3 infra/smoke.py                  # a whole desk day against a running server
 cd frontend && npm run ui-check         # the same day in a real browser at phone size
+cd frontend && npm run feature-check    # the later screens (operations, reports, groups) at phone size
 cd frontend && npm run selfreg-check    # the QR handover, driven on two separate phones
 ```
 
@@ -152,13 +163,32 @@ snapshot is frozen and never recomputed.
 | `/settings/tax` | GST slabs, effective-dated |
 | `/settings/staff` | invite, change role, set approval PIN, remove access |
 | `/admin` | our back office: onboard a property, see health, set billing |
+| `/guests`, `/guests/[id]` | guest search, and one guest's stays, payments, balance, photo and ID |
+| `/maintenance` | repair tickets: report, assign, resolve; a ticket can take its room off sale |
+| `/lost-found` | things guests left behind, and who they were returned to |
+| `/expenses` | money out by month and category, with a photo of each bill |
+| `/inventory` | supplies and linen: stock in, used, to the laundry and back, low-stock warnings |
+| `/restaurant` | menu and orders; an order is posted to a guest's bill or paid at the counter |
+| `/reports/period` | every report over any dates: occupancy, ADR, RevPAR, revenue, GST, sources, expenses, housekeeping, maintenance |
+| `/notifications` | what happened lately that the user's role cares about |
+| `/portfolio` | an owner's properties side by side, and switching between them |
+| `/audit` | who changed what, from what to what |
 | `/needs-attention` | offline entries the server refused |
 | `/g/[token]` | **no login:** the guest's own self-registration form, opened by scanning the desk's QR |
 
+## Roles
+
+`owner`, `admin`, `manager`, `receptionist` (the old `staff`), `housekeeping`, `accountant` and `maintenance`.
+What each may do is one table in `in.pms.auth.Permissions`. The desk roles keep exactly the access they always
+had; the three narrow roles rank below the desk and reach only the endpoints that name their permission. An
+exception (a discount, refund, cancellation or credit note) needs the matching permission, or the approval PIN of
+someone who holds it.
+
 ## Not built yet
 
-PDF export of the police register (the CSV export exists), guest self-booking, and payment links. These are
-v2 in the PRD.
+PDF export of the police register (the CSV export exists), payment links sent from the desk, and pushing
+notifications to browsers (the server sends FCM pushes to registered tokens, but the web app does not register
+one yet; the in-app feed is what staff see).
 
 Self-registration links can be tied to an existing booking, and `POST /api/registrations/{id}/apply` turns
 such a submission straight into a guest record — useful for an advance booking whose guest fills their

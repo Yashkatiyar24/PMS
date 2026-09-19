@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest"
-import { rupees, toPaise } from "../format"
+import { dayKey, rupees, toPaise, unitName } from "../format"
+
+describe("dates and units on screen", () => {
+  it("keys a day by the local calendar, not the UTC one", () => {
+    // Local midnight: in India the UTC day is still the 17th.
+    expect(dayKey(new Date(2026, 8, 18, 0, 0))).toBe("2026-09-18")
+    expect(dayKey(new Date(2026, 0, 5, 23, 59))).toBe("2026-01-05")
+  })
+
+  it("names a bed once", () => {
+    expect(unitName("101")).toBe("101")
+    expect(unitName("D1", "D1-3")).toBe("D1-3")
+    expect(unitName("D1", "3")).toBe("D1/3")
+  })
+})
 
 describe("money on screen", () => {
   it("uses Indian grouping", () => {

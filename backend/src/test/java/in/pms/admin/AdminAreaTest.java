@@ -152,7 +152,7 @@ class AdminAreaTest {
     @Test
     void supportAccessToGuestDataNeedsTheOwnersConsentWindow() {
         AdminService service = new AdminService(admin, passwords, new in.pms.audit.AuditService(admin, admin, new com.fasterxml.jackson.databind.ObjectMapper()));
-        var actor = new in.pms.auth.CurrentUser(superAdminId, "Support", true, UUID.randomUUID(), null, null, List.of());
+        var actor = new in.pms.auth.CurrentUser(superAdminId, "Support", true, UUID.randomUUID(), null, null, List.of(), null, java.util.Set.of());
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() ->
                 new TransactionTemplate(adminTx).executeWithoutResult(tx -> service.requireSupportAccess(propertyId, actor, "guest list")))

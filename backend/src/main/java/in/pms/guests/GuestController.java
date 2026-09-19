@@ -19,12 +19,12 @@ public class GuestController {
 
     public GuestController(GuestService guests) { this.guests = guests; }
 
-    @GetMapping
+    @GetMapping @PreAuthorize("hasAuthority('PERM_reservations.view')")
     public List<Guest> search(@RequestParam(required = false) String phone, @RequestParam(required = false) String q) {
         return phone != null ? guests.lookupByPhone(phone) : guests.search(q);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id}") @PreAuthorize("hasAuthority('PERM_reservations.view')")
     public Guest get(@PathVariable UUID id) { return guests.get(id); }
 
     @PostMapping
@@ -38,6 +38,19 @@ public class GuestController {
         return guests.storeIdPhoto(id, file.getInputStream(), file.getSize(), String.valueOf(file.getContentType()), u.id());
     }
 
-    @GetMapping("/{id}/id-photo-url")
+    /** Identity documents are for the desk that checks guests in, not for everyone who can read a booking. */
+    @GetMapping("/{id}/id-photo-url") @PreAuthorize("hasAuthority('PERM_checkin')")
     public Map<String, String> idPhotoUrl(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id) { return Map.of("url", guests.idPhotoUrl(id, u.id())); }
+
+    /** Current stay, stay history, payments and what is still owed. */
+    @GetMapping("/{id}/profile") @PreAuthorize("hasAuthority('PERM_reservations.view')")
+    public GuestService.Profile profile(@PathVariable UUID id) { return guests.profile(id); }
+
+    @PostMapping(value = "/{id}/photo", consumes = "multipart/form-data")
+    public Guest photo(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id, @RequestParam("file") MultipartFile file) throws IOException {
+        return guests.storePhoto(id, file.getInputStream(), file.getSize(), String.valueOf(file.getContentType()), u.id());
+    }
+
+    @GetMapping("/{id}/photo-url") @PreAuthorize("hasAuthority('PERM_checkin')")
+    public Map<String, String> photoUrl(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id) { return Map.of("url", guests.photoUrl(id, u.id())); }
 }

@@ -126,10 +126,15 @@ public class ReceiptRenderer {
         ctx.setVariable("lines", lines);
 
         List<Map<String, Object>> tax = new ArrayList<>();
-        for (Map<String, Object> t : (List<Map<String, Object>>) snap.getOrDefault("taxBreakup", List.of()))
+        boolean igst = false;
+        for (Map<String, Object> t : (List<Map<String, Object>>) snap.getOrDefault("taxBreakup", List.of())) {
+            // Snapshots issued before IGST existed have no igstPaise: zero, and they print exactly as before.
+            igst |= num(t.get("igstPaise")) != 0;
             tax.add(Map.of("rate", (num(t.get("rateBp")) / 100.0) + "%", "taxable", Money.format(num(t.get("taxablePaise"))),
-                    "cgst", Money.format(num(t.get("cgstPaise"))), "sgst", Money.format(num(t.get("sgstPaise")))));
+                    "cgst", Money.format(num(t.get("cgstPaise"))), "sgst", Money.format(num(t.get("sgstPaise"))), "igst", Money.format(num(t.get("igstPaise")))));
+        }
         ctx.setVariable("taxBreakup", tax);
+        ctx.setVariable("igst", igst);
 
         long deposit = num(totals.get("depositHeldPaise"));
         ctx.setVariable("totals", Map.of(

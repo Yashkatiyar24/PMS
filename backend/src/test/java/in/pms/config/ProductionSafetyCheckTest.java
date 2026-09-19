@@ -23,7 +23,7 @@ class ProductionSafetyCheckTest {
     private static PmsProperties props(String secret, String devOtp, boolean cookieSecure, List<String> origins) {
         var auth = new PmsProperties.Auth(6, 10, 5, 15, 5, devOtp);
         return new PmsProperties("https://desk.example", secret, origins, cookieSecure, "Asia/Kolkata",
-                null, auth, null, null, null, null, null, null, null, null);
+                null, auth, null, null, null, null, null, null, null, null, null);
     }
 
     private static void check(PmsProperties props, String... properties) {

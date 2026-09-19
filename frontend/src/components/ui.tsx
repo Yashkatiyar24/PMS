@@ -37,23 +37,24 @@ export function Button({
   variant?: "primary" | "secondary" | "soft" | "danger" | "ghost"
   size?: "sm" | "md" | "lg"
 }) {
+  // The main action is an ink pill; blue is kept for what is selected, so the two never compete.
   const styles = {
-    primary: "bg-brand text-white shadow-sm hover:bg-brand-strong",
+    primary: "bg-ink text-bg shadow-sm hover:bg-ink/85",
     secondary: "bg-surface text-ink border border-line-strong hover:bg-surface-2",
     soft: "bg-brand-soft text-brand-ink hover:brightness-95",
-    danger: "bg-danger text-white hover:brightness-95",
+    danger: "bg-danger text-on-solid hover:brightness-95",
     ghost: "bg-transparent text-brand-ink hover:bg-brand-soft",
   }[variant]
   const sizes = {
-    sm: "min-h-[36px] px-3 py-1.5 text-sm rounded-lg",
-    md: "min-h-[44px] px-4 py-2.5 text-[15px] rounded-xl",
-    lg: "min-h-[52px] px-5 py-3 text-base rounded-2xl",
+    sm: "min-h-[36px] px-3.5 py-1.5 text-sm",
+    md: "min-h-[44px] px-5 py-2.5 text-[15px]",
+    lg: "min-h-[52px] px-6 py-3 text-base",
   }[size]
   return (
     <button
       {...props}
       className={clsx(
-        "inline-flex items-center justify-center gap-2 font-semibold transition-[background-color,transform,filter] duration-100",
+        "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-[background-color,transform,filter] duration-100",
         "disabled:opacity-45 disabled:pointer-events-none active:scale-[.985]",
         styles,
         sizes,
@@ -81,6 +82,17 @@ export function IconButton({ label, className, ...props }: React.ButtonHTMLAttri
 
 /* ---------------------------------------------------------------- layout */
 
+/** The house mark, in ink like the buttons. */
+export function Logo({ size = 36 }: { size?: number }) {
+  return (
+    <span aria-hidden style={{ width: size, height: size }} className="grid shrink-0 place-items-center rounded-xl bg-ink text-bg">
+      <svg width={size / 2} height={size / 2} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 11 12 4l9 7" /><path d="M5 10v10h14V10" /><path d="M10 20v-6h4v6" />
+      </svg>
+    </span>
+  )
+}
+
 export function PageHeader({
   title,
   subtitle,
@@ -103,7 +115,7 @@ export function PageHeader({
         </Link>
       )}
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-[22px] font-bold leading-tight tracking-tight">{title}</h1>
+        <h1 className="truncate text-2xl font-extrabold leading-tight tracking-tight">{title}</h1>
         {subtitle && <p className="mt-0.5 text-sm text-ink-soft">{subtitle}</p>}
         {children}
       </div>
@@ -168,8 +180,9 @@ export function StatTile({
   const t = TONE[tone]
   const body = (
     <>
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-xs font-semibold uppercase tracking-wide text-ink-soft">{label}</span>
+      <div className="flex items-start justify-between gap-2">
+        {/* Wraps rather than truncates: "Arriving tod…" hides the one word that matters, more so in Hindi. */}
+        <span className="min-w-0 pt-1 text-xs font-semibold uppercase leading-tight tracking-wide text-ink-soft">{label}</span>
         {Icon && (
           <span className={clsx("inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg", t.soft, t.text)}>
             <Icon size={15} aria-hidden />
@@ -302,7 +315,7 @@ export function Segmented<T extends string>({
   className?: string
 }) {
   return (
-    <div role="tablist" className={clsx("scroll-thin flex gap-1 overflow-x-auto rounded-xl bg-surface-2 p-1", className)}>
+    <div role="tablist" className={clsx("scroll-thin flex gap-1 overflow-x-auto rounded-full bg-surface-2 p-1", className)}>
       {items.map((item) => {
         const on = item.value === value
         return (
@@ -313,8 +326,8 @@ export function Segmented<T extends string>({
             aria-selected={on}
             onClick={() => onChange(item.value)}
             className={clsx(
-              "flex min-h-[38px] flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-sm font-semibold transition-colors",
-              on ? "bg-surface text-ink shadow-[var(--shadow-card)]" : "text-ink-soft hover:text-ink",
+              "flex min-h-[38px] flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold transition-colors",
+              on ? "bg-raised text-ink shadow-[var(--shadow-card)]" : "text-ink-soft hover:text-ink",
             )}
           >
             <span className="truncate">{item.label}</span>
@@ -530,7 +543,7 @@ export function Chip({ tone = "neutral", children, dot, className }: { tone?: To
   const t = TONE[tone]
   return (
     <span className={clsx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap", t.soft, t.text, className)}>
-      {dot && <span aria-hidden className={clsx("h-1.5 w-1.5 rounded-full", t.solid)} />}
+      {dot && <span aria-hidden className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", t.solid)} />}
       {children}
     </span>
   )

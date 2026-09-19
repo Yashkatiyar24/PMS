@@ -72,7 +72,7 @@ public class ReportService {
                 select
                   (select count(*) from rooms r
                      left join beds b on b.room_id = r.id and b.active
-                   where r.property_id = ? and r.active and r.status <> 'blocked') as sellable,
+                   where r.property_id = ? and r.active and r.status not in ('blocked', 'maintenance')) as sellable,
                   (select count(distinct coalesce(bu.bed_id, bu.room_id)) from booking_units bu
                      where bu.property_id = ? and bu.cancelled_at is null
                        and tstzrange(bu.arrive_at, bu.depart_at, '[)') && tstzrange(?, ?, '[)')) as occupied""")
@@ -105,6 +105,62 @@ public class ReportService {
         return out;
     }
 
+    /**
+     * The coming nights as booked right now: how full, how many room nights, and what they earn before tax.
+     *
+     * <p>ADR is revenue per night sold; RevPAR is revenue per night available, the one figure that moves with
+     * both price and occupancy. Revenue is each unit's booked rate, so an OTA stay (rate 0 until the desk fills
+     * it in) sells a night without earning one. Units blocked today count as not for sale for the whole window.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> forecast(LocalDate start, int days) {
+        UUID p = TenantContext.require();
+        ZoneId zone = zone();
+        LocalDate from = start == null ? LocalDate.now(zone) : start;
+        int span = Math.max(1, Math.min(90, days));
+        long units = jdbc.sql("select count(*) from rooms r left join beds b on b.room_id = r.id and b.active where r.property_id = ? and r.active and r.status not in ('blocked', 'maintenance')")
+                .param(p).query(Long.class).single();
+
+        List<Map<String, Object>> nights = new ArrayList<>();
+        long sold = 0, revenue = 0;
+        for (var row : jdbc.sql("""
+                with nights as (select generate_series(?::date, ?::date, interval '1 day')::date as night),
+                     stays as (
+                       select bu.rate_paise, (bu.arrive_at at time zone ?)::date as first_night,
+                              greatest((bu.depart_at at time zone ?)::date, (bu.arrive_at at time zone ?)::date + 1) as leaves
+                       from booking_units bu join bookings b on b.id = bu.booking_id
+                       where bu.property_id = ? and bu.cancelled_at is null and b.state in ('reserved', 'checked_in', 'checked_out'))
+                select n.night, count(s.first_night) as sold, coalesce(sum(s.rate_paise), 0) as revenue
+                from nights n left join stays s on s.first_night <= n.night and n.night < s.leaves
+                group by n.night order by n.night""")
+                .params(from, from.plusDays(span - 1), zone.getId(), zone.getId(), zone.getId(), p).query().listOfRows()) {
+            long nightSold = ((Number) row.get("sold")).longValue(), nightRevenue = ((Number) row.get("revenue")).longValue();
+            sold += nightSold;
+            revenue += nightRevenue;
+            Map<String, Object> night = new LinkedHashMap<>();
+            night.put("date", String.valueOf(row.get("night")));
+            night.put("sold", nightSold);
+            night.put("revenuePaise", nightRevenue);
+            night.put("occupancyPct", percent(nightSold, units));
+            nights.add(night);
+        }
+        long available = units * span;
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("from", from.toString());
+        out.put("to", from.plusDays(span - 1).toString());
+        out.put("units", units);
+        out.put("roomNights", sold);
+        out.put("occupancyPct", percent(sold, available));
+        out.put("adrPaise", sold == 0 ? 0 : Math.round((double) revenue / sold));
+        out.put("revparPaise", available == 0 ? 0 : Math.round((double) revenue / available));
+        out.put("revenuePaise", revenue);
+        out.put("nights", nights);
+        return out;
+    }
+
+    /** One decimal place: 22.2, not 22. */
+    private static double percent(long part, long whole) { return whole == 0 ? 0 : Math.round(part * 1000.0 / whole) / 10.0; }
+
     /** Month summary for the CA: taxable value and CGST/SGST by rate, so GSTR-1 can be filed from it (R3). */
     @Transactional(readOnly = true)
     public Map<String, Object> month(YearMonth month) {
@@ -114,11 +170,16 @@ public class ReportService {
         OffsetDateTime fromTs = from.atStartOfDay(zone).toOffsetDateTime();
         OffsetDateTime toTs = to.plusDays(1).atStartOfDay(zone).toOffsetDateTime();
 
+        // Bills, and restaurant sales paid at the counter (those are on no bill; room-posted ones are, as a line).
         var byRate = jdbc.sql("""
-                select tax_rate_bp, sum(unit_paise * qty) as taxable, sum(cgst_paise) as cgst, sum(sgst_paise) as sgst
-                from folio_lines where property_id = ? and line_date between ? and ?
-                  and kind in ('room_charge','day_use','extra','discount','forfeit','adjustment')
-                group by tax_rate_bp order by tax_rate_bp""").params(p, from, to).query().listOfRows();
+                select tax_rate_bp, sum(taxable) as taxable, sum(cgst) as cgst, sum(sgst) as sgst, sum(igst) as igst from (
+                  select tax_rate_bp, unit_paise * qty as taxable, cgst_paise as cgst, sgst_paise as sgst, igst_paise as igst
+                  from folio_lines where property_id = ? and line_date between ? and ?
+                    and kind in ('room_charge','day_use','extra','discount','forfeit','adjustment')
+                  union all
+                  select tax_rate_bp, taxable_paise, cgst_paise, sgst_paise, 0
+                  from pos_orders where property_id = ? and status = 'paid' and closed_at >= ? and closed_at < ?) lines
+                group by tax_rate_bp order by tax_rate_bp""").params(p, from, to, p, fromTs, toTs).query().listOfRows();
 
         var payments = jdbc.sql("""
                 select mode::text as mode,
@@ -138,7 +199,7 @@ public class ReportService {
                 .params(p, fromTs, toTs).query().listOfRows().get(0);
 
         long revenue = byRate.stream().mapToLong(r -> ((Number) r.get("taxable")).longValue()).sum();
-        long tax = byRate.stream().mapToLong(r -> ((Number) r.get("cgst")).longValue() + ((Number) r.get("sgst")).longValue()).sum();
+        long tax = byRate.stream().mapToLong(r -> ((Number) r.get("cgst")).longValue() + ((Number) r.get("sgst")).longValue() + ((Number) r.get("igst")).longValue()).sum();
         long units = jdbc.sql("select count(*) from rooms r left join beds b on b.room_id = r.id and b.active where r.property_id = ? and r.active").param(p).query(Long.class).single();
         long sellableNights = units * to.getDayOfMonth();
 

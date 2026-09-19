@@ -5,7 +5,8 @@
  *
  * A property is configured once, usually by us sitting next to the manager, so the screen favours getting
  * eighty rooms in quickly: room types carry the rate, and rooms are added as a number range. A dormitory
- * type sells beds, and its beds are created with each room.
+ * type sells beds, and its beds are created with each room. Tapping a room edits it (its building, floor and
+ * type) and, for a dormitory, its beds.
  */
 import { useState } from "react"
 import { BedDouble, Plus } from "lucide-react"
@@ -34,6 +35,9 @@ export default function RoomSetupPage() {
   const [range, setRange] = useState("")
   const [floor, setFloor] = useState(1)
   const [rangeTypeId, setRangeTypeId] = useState("")
+  const [building, setBuilding] = useState("")
+  const [editingRoom, setEditingRoom] = useState<Room | null>(null)
+  const [newBed, setNewBed] = useState("")
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
@@ -48,6 +52,19 @@ export default function RoomSetupPage() {
     }
   }
 
+  const saveRoom = (room: Room) =>
+    run(async () => {
+      await api(`/api/rooms/${room.id}`, { method: "PUT", body: { roomTypeId: room.roomTypeId, number: room.number, floor: room.floor, active: room.active, building: room.building } })
+      setEditingRoom(null)
+    })
+
+  /** Beds change the room on the server; the sheet shows the room it sends back. */
+  const bedAction = (action: () => Promise<Room>) =>
+    run(async () => {
+      setEditingRoom(await action())
+      setNewBed("")
+    })
+
   const saveType = (type: Partial<RoomType>) =>
     run(async () => {
       const body = {
@@ -59,6 +76,7 @@ export default function RoomSetupPage() {
         bedCount: type.bedCount ?? 0,
         sortOrder: type.sortOrder ?? 0,
         active: type.active ?? true,
+        amenities: type.amenities ?? [],
       }
       if (type.id) await api(`/api/room-types/${type.id}`, { method: "PUT", body })
       else await api("/api/room-types", { method: "POST", body })
@@ -67,7 +85,7 @@ export default function RoomSetupPage() {
 
   const addRooms = () =>
     run(async () => {
-      await api("/api/rooms/bulk", { method: "POST", body: { roomTypeId: typeId, range, floor } })
+      await api("/api/rooms/bulk", { method: "POST", body: { roomTypeId: typeId, range, floor, building } })
       setRange("")
       setAddingRooms(false)
     })
@@ -117,7 +135,10 @@ export default function RoomSetupPage() {
           <SectionLabel>{t("setup.rooms")}</SectionLabel>
           <div className="flex flex-wrap gap-1.5">
             {data.rooms.map((r) => (
-              <span key={r.id} className="rounded-lg border border-line bg-surface px-2 py-1 text-xs font-semibold tabular-nums">{r.number}</span>
+              <button key={r.id} type="button" onClick={() => setEditingRoom(r)}
+                className={`min-h-[44px] rounded-lg border border-line bg-surface px-3 text-xs font-semibold tabular-nums hover:bg-surface-2 ${r.active ? "" : "line-through opacity-60"}`}>
+                {r.building ? `${r.building} ` : ""}{r.number}
+              </button>
             ))}
           </div>
         </>
@@ -151,6 +172,9 @@ export default function RoomSetupPage() {
               <input type="checkbox" disabled={!!editing.id} checked={editing.dormitory ?? false} onChange={(e) => setEditing({ ...editing, dormitory: e.target.checked })} />
               <span>{t("setup.isDormitory")}</span>
             </label>
+            <Field label={t("setup.amenities")} hint={t("setup.amenitiesHint")}>
+              <input value={(editing.amenities ?? []).join(", ")} onChange={(e) => setEditing({ ...editing, amenities: e.target.value.split(",").map((a) => a.trimStart()) })} />
+            </Field>
             {editing.dormitory ? (
               <Field label={t("setup.bedCount")}>
                 <input type="number" min={1} value={editing.bedCount ?? 1} onChange={(e) => setEditing({ ...editing, bedCount: Number(e.target.value) })} />
@@ -186,7 +210,72 @@ export default function RoomSetupPage() {
               <input type="number" value={floor} onChange={(e) => setFloor(Number(e.target.value))} />
             </Field>
           </div>
+          <Field label={t("setup.building")} hint={t("setup.buildingHint")}>
+            <input value={building} onChange={(e) => setBuilding(e.target.value)} />
+          </Field>
         </div>
+      </Sheet>
+
+      <Sheet
+        open={editingRoom !== null}
+        onOpenChange={(o) => !o && setEditingRoom(null)}
+        title={editingRoom ? `${t("nav.rooms")} ${editingRoom.number}` : ""}
+        footer={
+          <>
+            <Button variant="secondary" className="flex-1" onClick={() => setEditingRoom(null)}>{t("action.cancel")}</Button>
+            <Button className="flex-1" disabled={busy || !editingRoom?.number.trim()} onClick={() => editingRoom && saveRoom(editingRoom)}>{t("action.save")}</Button>
+          </>
+        }
+      >
+        {editingRoom && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <Field label={t("setup.roomNumber")}>
+                <input value={editingRoom.number} onChange={(e) => setEditingRoom({ ...editingRoom, number: e.target.value })} />
+              </Field>
+              <Field label={t("setup.floorNumber")}>
+                <input type="number" value={editingRoom.floor} onChange={(e) => setEditingRoom({ ...editingRoom, floor: Number(e.target.value) })} />
+              </Field>
+            </div>
+            <Field label={t("setup.building")} hint={t("setup.buildingHint")}>
+              <input value={editingRoom.building} onChange={(e) => setEditingRoom({ ...editingRoom, building: e.target.value })} />
+            </Field>
+            <Field label={t("booking.roomType")}>
+              <select value={editingRoom.roomTypeId} onChange={(e) => setEditingRoom({ ...editingRoom, roomTypeId: e.target.value })}
+                disabled={data.types.find((ty) => ty.id === editingRoom.roomTypeId)?.dormitory}>
+                {data.types.filter((ty) => ty.dormitory === !!data.types.find((x) => x.id === editingRoom.roomTypeId)?.dormitory).map((type) => (
+                  <option key={type.id} value={type.id}>{type.name}</option>
+                ))}
+              </select>
+            </Field>
+            <label className="flex gap-3 text-sm">
+              <input type="checkbox" checked={editingRoom.active} onChange={(e) => setEditingRoom({ ...editingRoom, active: e.target.checked })} />
+              <span>{t("setup.roomInUse")}</span>
+            </label>
+            {editingRoom.beds.length > 0 && (
+              <>
+                <SectionLabel>{t("setup.beds")}</SectionLabel>
+                <div className="flex flex-wrap gap-1.5">
+                  {editingRoom.beds.map((bed) => (
+                    <button key={bed.id} type="button" disabled={busy}
+                      onClick={() => bedAction(() => api<Room>(`/api/beds/${bed.id}`, { method: "PATCH", body: { active: !bed.active } }))}
+                      className={`min-h-[44px] rounded-lg border border-line px-3 text-xs font-semibold tabular-nums hover:bg-surface-2 ${bed.active ? "bg-surface" : "bg-surface-2 line-through opacity-60"}`}
+                      title={bed.active ? t("setup.bedOff") : t("setup.bedOn")}>
+                      {bed.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input value={newBed} onChange={(e) => setNewBed(e.target.value)} placeholder={`${editingRoom.number}-${editingRoom.beds.length + 1}`} />
+                  <Button variant="secondary" disabled={busy}
+                    onClick={() => bedAction(() => api<Room>(`/api/rooms/${editingRoom.id}/beds`, { method: "POST", body: { label: newBed || null } }))}>
+                    <Plus size={16} aria-hidden /> {t("setup.addBed")}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </Sheet>
     </div>
   )

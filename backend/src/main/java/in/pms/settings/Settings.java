@@ -40,6 +40,7 @@ public final class Settings {
     public LocalTime noshowHour() { return time("noshow_hour"); }
     public String noshowPolicy() { return str("noshow_policy"); }
     public int noshowPartialPct() { return integer("noshow_partial_pct"); }
+    public int tentativeHoldHours() { return integer("tentative_hold_hours"); }
 
     public LocalTime businessDayStart() { return time("business_day_start"); }
     public String reportChannel() { return str("report_channel"); }
@@ -59,10 +60,20 @@ public final class Settings {
     public boolean selfRegistrationPhoto() { return bool("self_registration_photo"); }
     public Map<String, String> consentText() { return i18n("consent_text"); }
 
+    public boolean onlineBookingEnabled() { return bool("online_booking_enabled"); }
+    public int onlineBookingMaxNights() { return integer("online_booking_max_nights"); }
+    public int onlineBookingDaysAhead() { return integer("online_booking_days_ahead"); }
+    public String onlinePayment() { return str("online_payment"); }
+    public int onlinePaymentAdvancePct() { return integer("online_payment_advance_pct"); }
+    public int onlinePaymentHoldMinutes() { return integer("online_payment_hold_minutes"); }
+
     public boolean taxExempt() { return bool("tax_exempt"); }
     public boolean religiousPrecinct() { return bool("religious_precinct"); }
     public long exemptionThresholdPaise() { return longValue("exemption_threshold_paise"); }
     public boolean donationMode() { return bool("donation_mode") && bool("donation_mode_ca_confirmed"); }
+    public boolean ratesIncludeTax() { return bool("rates_include_tax"); }
+    public int restaurantTaxBp() { return integer("restaurant_tax_bp"); }
+    public boolean igstForInterstateB2b() { return bool("igst_for_interstate_b2b"); }
 
     public String receiptPrefix() { return str("receipt_prefix"); }
     public String receiptNumberFormat() { return str("receipt_number_format"); }
@@ -81,7 +92,10 @@ public final class Settings {
     public long depositDefaultPaise() { return longValue("deposit_default_paise"); }
 
     public boolean whatsappEnabled() { return bool("whatsapp_enabled"); }
+    /** The newer guest messages, sent only once their templates are approved. */
+    public boolean whatsappGuestUpdates() { return whatsappEnabled() && bool("whatsapp_guest_updates"); }
     public boolean pushEnabled() { return bool("push_enabled"); }
+    public int checkoutReminderMinutes() { return integer("checkout_reminder_minutes"); }
 
     public String supportAccessUntil() { return str("support_access_until"); }
     public int orgDataRetentionDays() { return integer("org_data_retention_days"); }

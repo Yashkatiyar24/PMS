@@ -93,6 +93,12 @@ pms:
     outbox-max-attempts: 5
   ops:
     team-alert-email: ${PMS_TEAM_ALERT_EMAIL:}
+  payments:
+    provider: ${PMS_PAYMENT_PROVIDER:none}     # none | console (development simulator) | razorpay
+    razorpay:
+      key-id: ${PMS_RAZORPAY_KEY_ID:}
+      key-secret: ${PMS_RAZORPAY_KEY_SECRET:}
+      webhook-secret: ${PMS_RAZORPAY_WEBHOOK_SECRET:}
 
 logging:
   level:

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:findrealestate.com)",
+      "Bash(grep -nE '^#{1,3} ' docs/PRD.md)",
+      "Bash(curl -s http://localhost:3000/login)",
+      "Bash(curl -s 'http://localhost:3000/_next/static/chunks/%5Broot-of-the-server%5D__1745t0e._.css')",
+      "Bash(grep -oE '\\(prefers-reduced-motion: no-preference|\\\\.rise|\\\\.emerge|\\\\.depth|\\\\.reveal|animation-timeline[^;]*|@keyframes \\(rise|emerge|depth|reveal\\)\\)[^}]{0,120}')",
+      "Bash(curl -s 'http://localhost:3000/_next/static/chunks/%5Broot-of-the-server%5D__1745t0e._.css' -o /private/tmp/claude-501/-Users-yashkatiyar-Desktop-PMS-PMS/9087c42e-a245-48f4-aba8-5776e227501a/scratchpad/served.css)",
+      "Bash(node -e ' *)",
+      "Bash(docker exec *)",
+      "Bash(docker restart *)",
+      "Bash(python3 -)",
+      "Bash(PMS_CHROMIUM=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" timeout 300 node feature-check.mjs)"
+    ]
+  }
+}

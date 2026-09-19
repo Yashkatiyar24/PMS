@@ -13,13 +13,17 @@ import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
 import { Avatar, Banner, Button, Chip, ChoiceChips, Field, ListCard, ListRow, Loading, Menu, PageHeader, Sheet, type MenuItem, type Tone } from "@/components/ui"
 
-type Member = { userId: string; name: string; phone: string; email: string | null; role: "owner" | "manager" | "staff"; active: boolean; hasPin: boolean }
-const ROLE_TONE: Record<Member["role"], Tone> = { owner: "violet", manager: "brand", staff: "teal" }
-const ROLES = ["staff", "manager", "owner"] as const
+const ROLES = ["receptionist", "housekeeping", "maintenance", "accountant", "manager", "admin", "owner", "staff"] as const
+type Member = { userId: string; name: string; phone: string; email: string | null; role: (typeof ROLES)[number]; active: boolean; hasPin: boolean }
+const ROLE_TONE: Record<Member["role"], Tone> = {
+  owner: "violet", admin: "violet", manager: "brand", staff: "teal", receptionist: "teal", housekeeping: "ok", maintenance: "warn", accountant: "info",
+}
+/** Roles that approve someone else's discount, refund, cancellation or credit note, and so have a PIN. */
+const APPROVERS: Member["role"][] = ["owner", "admin", "manager", "accountant"]
 
 export default function StaffPage() {
   const { t } = useI18n()
-  const { can, user } = useSession()
+  const { can, has, user } = useSession()
   const { data: members, reload } = useResource(() => api<Member[]>("/api/users"), [], t("error.generic"))
 
   const [error, setError] = useState("")
@@ -27,7 +31,7 @@ export default function StaffPage() {
   const [inviting, setInviting] = useState(false)
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
-  const [role, setRole] = useState<Member["role"]>("staff")
+  const [role, setRole] = useState<Member["role"]>("receptionist")
   const [pinFor, setPinFor] = useState<Member | null>(null)
   const [pin, setPin] = useState("")
   const [roleFor, setRoleFor] = useState<Member | null>(null)
@@ -48,13 +52,19 @@ export default function StaffPage() {
 
   if (!members) return <Loading />
 
+  const roleLabel = (r: string) => t(`role.${r}` as "role.owner")
+  // "staff" is the old name for a receptionist: kept for people who have it, not offered to new ones.
+  const grantable = ROLES.filter((r) => r !== "staff" && (can("OWNER") || !["owner", "admin"].includes(r)))
+
   const actionsFor = (m: Member): MenuItem[] => {
     if (!m.active) return []
     const me = m.userId === user?.id
+    // Only an owner changes an owner or an admin; an admin manages everyone else.
+    const manage = has("staff.manage") && !me && (can("OWNER") || !["owner", "admin"].includes(m.role))
     return [
-      ...(can("OWNER") && !me ? [{ label: t("setup.role"), icon: Shield, onSelect: () => setRoleFor(m) }] : []),
-      ...(m.role !== "staff" && (can("OWNER") || me) ? [{ label: t("setup.setPin"), icon: KeyRound, onSelect: () => { setPinFor(m); setPin("") } }] : []),
-      ...(can("OWNER") && !me ? [{ label: t("setup.deactivate"), icon: UserMinus, onSelect: () => setRemoving(m), danger: true, separator: true }] : []),
+      ...(manage ? [{ label: t("setup.role"), icon: Shield, onSelect: () => setRoleFor(m) }] : []),
+      ...(APPROVERS.includes(m.role) && (can("OWNER") || me) ? [{ label: t("setup.setPin"), icon: KeyRound, onSelect: () => { setPinFor(m); setPin("") } }] : []),
+      ...(manage ? [{ label: t("setup.deactivate"), icon: UserMinus, onSelect: () => setRemoving(m), danger: true, separator: true }] : []),
     ]
   }
 
@@ -64,7 +74,7 @@ export default function StaffPage() {
         title={t("setup.staff")}
         subtitle={`${members.filter((m) => m.active).length}`}
         back="/settings"
-        actions={can("OWNER") ? <Button size="sm" onClick={() => setInviting(true)}><UserPlus size={16} aria-hidden /> {t("setup.invite")}</Button> : undefined}
+        actions={has("staff.manage") ? <Button size="sm" onClick={() => setInviting(true)}><UserPlus size={16} aria-hidden /> {t("setup.invite")}</Button> : undefined}
       />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
 
@@ -79,7 +89,7 @@ export default function StaffPage() {
               subtitle={m.phone}
               right={
                 <span className="flex items-center gap-1.5">
-                  {!m.active ? <Chip tone="danger">{t("setup.deactivate")}</Chip> : <Chip tone={ROLE_TONE[m.role]}>{m.role}</Chip>}
+                  {!m.active ? <Chip tone="danger">{t("setup.deactivate")}</Chip> : <Chip tone={ROLE_TONE[m.role] ?? "neutral"}>{roleLabel(m.role)}</Chip>}
                   {m.hasPin && m.active && <KeyRound size={14} aria-label="PIN" className="text-ink-faint" />}
                   {items.length > 0 && <Menu items={items} />}
                 </span>
@@ -99,7 +109,7 @@ export default function StaffPage() {
         <div className="space-y-3">
           <Field label={t("setup.name")}><input value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
           <Field label={t("login.phone")}><input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" /></Field>
-          <Field label={t("setup.role")}><ChoiceChips value={role} onChange={setRole} options={ROLES.map((r) => ({ value: r, label: r }))} /></Field>
+          <Field label={t("setup.role")}><ChoiceChips value={role} onChange={setRole} options={grantable.map((r) => ({ value: r, label: roleLabel(r) }))} /></Field>
         </div>
       </Sheet>
 
@@ -108,7 +118,7 @@ export default function StaffPage() {
           <ChoiceChips
             value={roleFor.role}
             onChange={(r) => run(async () => { await api(`/api/users/${roleFor.userId}/role`, { method: "PATCH", body: { role: r } }); setRoleFor(null) })}
-            options={ROLES.map((r) => ({ value: r, label: r }))}
+            options={grantable.map((r) => ({ value: r, label: roleLabel(r) }))}
             disabled={busy}
           />
         )}

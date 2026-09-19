@@ -23,16 +23,16 @@ public class UserAdminController {
     @GetMapping @PreAuthorize("hasRole('MANAGER')")
     public List<UserAdminService.Member> members() { return users.members(); }
 
-    @PostMapping @PreAuthorize("hasRole('OWNER')")
+    @PostMapping @PreAuthorize("hasAuthority('PERM_staff.manage')")
     public UserAdminService.Member invite(@AuthenticationPrincipal CurrentUser u, @RequestBody UserAdminService.InviteInput in) { return users.invite(in, u); }
 
-    @PatchMapping("/{id}/role") @PreAuthorize("hasRole('OWNER')")
+    @PatchMapping("/{id}/role") @PreAuthorize("hasAuthority('PERM_staff.manage')")
     public UserAdminService.Member setRole(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id, @RequestBody RoleInput in) { return users.setRole(id, in.role(), u); }
 
-    @DeleteMapping("/{id}") @PreAuthorize("hasRole('OWNER')")
+    @DeleteMapping("/{id}") @PreAuthorize("hasAuthority('PERM_staff.manage')")
     public ResponseEntity<Void> deactivate(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id) { users.deactivate(id, u); return ResponseEntity.noContent().build(); }
 
-    @PostMapping("/{id}/pin") @PreAuthorize("hasRole('MANAGER')")
+    @PostMapping("/{id}/pin") @PreAuthorize("hasRole('LIMITED')") // yourself, or anyone if you are the owner (checked by the service)
     public ResponseEntity<Void> setPin(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id, @RequestBody PinInput in) { users.setPin(id, in.pin(), u); return ResponseEntity.noContent().build(); }
 
     @PostMapping("/me/password") @PreAuthorize("hasRole('USER')")

@@ -146,12 +146,14 @@ class ReportsAndJobsTest {
 
     @Test @Order(5)
     void policeRegisterUsesTheConfiguredColumns() {
-        var register = asDesk(() -> reports.policeRegister(LocalDate.now().minusDays(1), LocalDate.now()));
+        // The property's date, not the server's: just after midnight in India it is still yesterday in UTC.
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
+        var register = asDesk(() -> reports.policeRegister(today.minusDays(1), today));
         assertThat((List<String>) register.get("columns")).contains("serial", "name", "arrival");
         assertThat((List<?>) register.get("rows")).isNotEmpty();
 
         asDesk(() -> settings.update(Map.of("register_template", List.of("serial", "name", "phone")), SettingDef.Role.MANAGER, owner));
-        var narrower = asDesk(() -> reports.policeRegister(LocalDate.now().minusDays(1), LocalDate.now()));
+        var narrower = asDesk(() -> reports.policeRegister(today.minusDays(1), today));
         assertThat((List<String>) narrower.get("columns")).containsExactly("serial", "name", "phone");
     }
 

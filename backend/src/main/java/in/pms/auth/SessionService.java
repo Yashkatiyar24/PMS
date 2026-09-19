@@ -75,13 +75,16 @@ public class SessionService {
                 select pu.property_id, p.name, pu.role::text as role
                 from property_users pu join properties p on p.id = pu.property_id
                 where pu.user_id = ? and pu.active and p.active order by p.name""")
-                .param(userId).query((rs, i) -> new CurrentUser.Membership(rs.getObject("property_id", UUID.class), rs.getString("name"), CurrentUser.Role.parse(rs.getString("role"))))
+                .param(userId).query((rs, i) -> new CurrentUser.Membership(rs.getObject("property_id", UUID.class), rs.getString("name"),
+                        Permissions.rank(rs.getString("role")), rs.getString("role")))
                 .list();
 
         UUID selected = (UUID) r.get("current_property_id");
-        CurrentUser.Role role = memberships.stream().filter(m -> m.propertyId().equals(selected)).map(CurrentUser.Membership::role).findFirst().orElse(null);
-        UUID current = role == null ? null : selected; // membership may have been removed since the session was created
-        return Optional.of(new CurrentUser(userId, (String) r.get("name"), Boolean.TRUE.equals(r.get("is_super_admin")), sessionId, current, role, memberships));
+        var membership = memberships.stream().filter(m -> m.propertyId().equals(selected)).findFirst();
+        UUID current = membership.isEmpty() ? null : selected; // membership may have been removed since the session was created
+        String position = membership.map(CurrentUser.Membership::position).orElse(null);
+        return Optional.of(new CurrentUser(userId, (String) r.get("name"), Boolean.TRUE.equals(r.get("is_super_admin")), sessionId, current,
+                membership.map(CurrentUser.Membership::role).orElse(null), memberships, position, position == null ? Set.of() : Permissions.of(position)));
     }
 
     /** Switch the working property; refused unless the user is a member. */

@@ -18,10 +18,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f2f4f8" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e1117" },
-  ],
+  themeColor: "#ffffff",
 }
 
 /**
@@ -31,8 +28,8 @@ export const viewport: Viewport = {
 const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter" })
 const devanagari = Noto_Sans_Devanagari({ subsets: ["devanagari", "latin"], display: "swap", variable: "--font-devanagari" })
 
-/** Applies the remembered theme before the first paint, so a dark-mode phone never flashes white. */
-const THEME_BOOT = `try{var t=localStorage.getItem("pms.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;var s=localStorage.getItem("pms.textSize");if(s==="large")document.documentElement.dataset.text=s}catch(e){}`
+/** Applies the theme before the first paint: light, unless someone chose dark or "follow the device" in the menu. */
+const THEME_BOOT = `try{var t=localStorage.getItem("pms.theme");if(t!=="dark"&&t!=="system")t="light";if(t!=="system")document.documentElement.dataset.theme=t;var s=localStorage.getItem("pms.textSize");if(s==="large")document.documentElement.dataset.text=s}catch(e){}`
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
