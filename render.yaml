@@ -11,8 +11,9 @@ services:
     rootDir: backend
     dockerfilePath: ./Dockerfile
     region: singapore
-    # ponytail: one instance; the scheduled jobs (reports, outbox, purge) assume a single runner.
-    plan: starter
+    # ponytail: free plan sleeps after 15 idle minutes and scheduled jobs pause with it; keep it awake with an
+    # external ping to /api/health every 10 minutes, or move to starter.
+    plan: free
     numInstances: 1
     healthCheckPath: /actuator/health/readiness
     envVars:
@@ -51,7 +52,7 @@ services:
         value: "4"
 
       - key: PMS_STORAGE_PROVIDER
-        value: s3 # Render's disk is wiped on every deploy; ID photos and receipts must live in R2/S3
+        value: s3 # Render's disk is wiped on every deploy; ID photos and receipts live in Supabase Storage / R2
       - key: PMS_S3_ENDPOINT
         sync: false
       - key: PMS_S3_BUCKET
@@ -61,16 +62,10 @@ services:
       - key: PMS_S3_SECRET_KEY
         sync: false
       - key: PMS_S3_REGION
-        value: auto
+        sync: false # Supabase: the project's region, e.g. ap-south-1; R2: auto
 
       - key: PMS_SMS_PROVIDER
-        value: msg91
-      - key: PMS_MSG91_AUTH_KEY
-        sync: false
-      - key: PMS_MSG91_SENDER_ID
-        sync: false
-      - key: PMS_MSG91_OTP_TEMPLATE_ID
-        sync: false
+        value: "off" # phone codes refused until MSG91 (paid, needs DLT) is set up; email and property-code login work
       - key: PMS_EMAIL_PROVIDER
         value: brevo
       - key: PMS_EMAIL_FROM

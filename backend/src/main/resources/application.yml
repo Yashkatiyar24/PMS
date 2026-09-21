@@ -82,7 +82,7 @@ pms:
       secret-key: ${PMS_S3_SECRET_KEY:}
       path-style: ${PMS_S3_PATH_STYLE:true}
   sms:
-    provider: ${PMS_SMS_PROVIDER:console}      # console | msg91
+    provider: ${PMS_SMS_PROVIDER:console}      # console | msg91 | off (phone codes refused)
     msg91:
       auth-key: ${PMS_MSG91_AUTH_KEY:}
       sender-id: ${PMS_MSG91_SENDER_ID:}

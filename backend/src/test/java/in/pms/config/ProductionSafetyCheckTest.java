@@ -37,6 +37,7 @@ class ProductionSafetyCheckTest {
     void theConsoleSmsProviderIsRefusedBecauseItLogsEveryLoginCode() {
         assertThatThrownBy(() -> check(with(new PmsProperties.Sms("console", null), null, null))).hasMessageContaining("PMS_SMS_PROVIDER");
         check(with(new PmsProperties.Sms("msg91", null), null, null));
+        check(with(new PmsProperties.Sms("off", null), null, null));
     }
 
     @Test

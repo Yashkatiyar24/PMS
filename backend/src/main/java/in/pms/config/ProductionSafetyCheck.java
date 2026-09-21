@@ -65,7 +65,7 @@ public class ProductionSafetyCheck {
         if (props.appUrl() == null || props.appUrl().contains("localhost"))
             problems.add("PMS_APP_URL still points at localhost; QR codes, booking links and emails would send people there.");
         if (props.sms() != null && "console".equals(props.sms().provider()))
-            problems.add("PMS_SMS_PROVIDER is console: login codes are written to the log and never sent. Use msg91.");
+            problems.add("PMS_SMS_PROVIDER is console: login codes are written to the log and never sent. Use msg91, or off to refuse phone codes until SMS is set up.");
         if (props.email() != null && "console".equals(props.email().provider()))
             problems.add("PMS_EMAIL_PROVIDER is console: login codes and reports are written to the log and never sent. Use brevo.");
         if (props.db() != null && (weakDatabasePassword(props.db().app()) || weakDatabasePassword(props.db().admin())))

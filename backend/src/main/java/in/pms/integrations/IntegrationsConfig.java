@@ -38,6 +38,8 @@ public class IntegrationsConfig {
         return switch (p.sms().provider()) {
             case "msg91" -> new Msg91SmsProvider(p.sms().msg91());
             case "console" -> new ConsoleSmsProvider();
+            // No SMS account yet: phone codes are refused up front (OtpService), never logged.
+            case "off" -> (phone, code) -> { throw new IllegalStateException("SMS is switched off (PMS_SMS_PROVIDER=off)"); };
             default -> throw new IllegalArgumentException("Unknown sms provider " + p.sms().provider());
         };
     }
