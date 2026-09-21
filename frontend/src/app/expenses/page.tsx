@@ -11,7 +11,8 @@ import { compressImage } from "@/lib/image"
 import { useResource } from "@/lib/use-resource"
 import { formatDate, rupees, toPaise } from "@/lib/format"
 import { useI18n } from "@/i18n"
-import { Avatar, Banner, Button, Card, Chip, ChoiceChips, Empty, Field, IconButton, ListCard, ListRow, Loading, PageHeader, Sheet } from "@/components/ui"
+import { Avatar, Banner, Button, Card, Chip, ChoiceChips, Empty, Field, IconButton, KV, ListCard, ListRow, Loading, PageHeader, Sheet } from "@/components/ui"
+import { SplitPage } from "@/components/SplitPage"
 
 const CATEGORIES = ["utilities", "maintenance", "salaries", "cleaning", "supplies", "food", "marketing", "other"] as const
 const MODES = ["cash", "upi", "card", "bank", "cheque"] as const
@@ -63,7 +64,7 @@ export default function ExpensesPage() {
       setForm({ ...form, amount: "", vendor: "", description: "" })
     })
 
-  const openBill = (e: Expense) => run(async () => { const { url } = await api<{ url: string }>(`/api/expenses/${e.id}/receipt-url`); window.open(url, "_blank") })
+  const openBill = (e: Expense) => run(async () => { const { url } = await api<{ url: string }>(`/api/expenses/${e.id}/receipt-url`); window.open(url, "_blank", "noopener,noreferrer") })
   const label = (c: string) => t(`expense.${c}` as "expense.other")
   const monthName = new Intl.DateTimeFormat(language === "hi" ? "hi-IN" : "en-IN", { month: "long", year: "numeric" }).format(month)
   const shift = (n: number) => setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1))
@@ -74,43 +75,46 @@ export default function ExpensesPage() {
         actions={<Button size="sm" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> {t("action.add")}</Button>} />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
 
-      <Card className="p-5">
-        <div className="flex items-center justify-between gap-2">
-          <IconButton label="‹" onClick={() => shift(-1)}><ChevronLeft size={20} aria-hidden /></IconButton>
-          <p className="text-sm font-semibold text-ink-soft">{monthName}</p>
-          <IconButton label="›" onClick={() => shift(1)}><ChevronRight size={20} aria-hidden /></IconButton>
-        </div>
-        {!data ? (loadError ? <Banner tone="danger">{loadError}</Banner> : <Loading rows={1} />) : (
-          <>
-            <p className="mt-1 text-center text-[40px] font-extrabold leading-none tabular-nums tracking-tight">{rupees(data.totalPaise)}</p>
-            <ul className="mt-3 flex flex-wrap justify-center gap-1.5">
-              {Object.entries(data.byCategory).filter(([, v]) => v > 0).map(([c, v]) => (
-                <li key={c} className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-semibold">{label(c)} {rupees(v)}</li>
-              ))}
-            </ul>
-          </>
-        )}
-      </Card>
-
-      {data && (data.expenses.length === 0 ? <Empty icon={ReceiptIndianRupee} /> : (
-        <ListCard>
-          {data.expenses.map((e) => (
-            <ListRow
-              key={e.id}
-              onClick={e.voidedAt ? undefined : () => { setVoiding(e); setReason("") }}
-              leading={<Avatar icon={ReceiptIndianRupee} tone={e.voidedAt ? "neutral" : "warn"} size={38} />}
-              title={<span className={e.voidedAt ? "line-through opacity-60" : ""}>{e.vendor || e.description || label(e.category)}</span>}
-              subtitle={[formatDate(e.spentOn), label(e.category), e.paymentMode.toUpperCase(), e.voidReason].filter(Boolean).join(" · ")}
-              right={
-                <span className="flex items-center gap-1.5">
-                  {e.hasReceipt && <IconButton label={t("expense.bill")} onClick={(ev) => { ev.stopPropagation(); void openBill(e) }}><FileText size={18} aria-hidden /></IconButton>}
-                  <Chip tone={e.voidedAt ? "neutral" : "warn"}>{rupees(e.amountPaise)}</Chip>
-                </span>
-              }
-            />
-          ))}
-        </ListCard>
-      ))}
+      {/* The month is a filter, so on a phone it stays above the list; a laptop keeps it beside the list. */}
+      <SplitPage asideFirst aside={
+        <Card className="p-5">
+          <div className="flex items-center justify-between gap-2">
+            <IconButton label="‹" onClick={() => shift(-1)}><ChevronLeft size={20} aria-hidden /></IconButton>
+            <p className="min-w-0 truncate text-sm font-semibold text-ink-soft">{monthName}</p>
+            <IconButton label="›" onClick={() => shift(1)}><ChevronRight size={20} aria-hidden /></IconButton>
+          </div>
+          {!data ? (loadError ? <Banner tone="danger">{loadError}</Banner> : <Loading rows={1} />) : (
+            <>
+              <p className="mt-1 text-center text-[40px] font-extrabold leading-none tabular-nums tracking-tight">{rupees(data.totalPaise)}</p>
+              <dl className="mt-3 divide-y divide-line">
+                {Object.entries(data.byCategory).filter(([, v]) => v > 0).map(([c, v]) => (
+                  <KV key={c} label={label(c)} value={rupees(v)} />
+                ))}
+              </dl>
+            </>
+          )}
+        </Card>
+      }>
+        {data && (data.expenses.length === 0 ? <Empty icon={ReceiptIndianRupee} /> : (
+          <ListCard>
+            {data.expenses.map((e) => (
+              <ListRow
+                key={e.id}
+                onClick={e.voidedAt ? undefined : () => { setVoiding(e); setReason("") }}
+                leading={<Avatar icon={ReceiptIndianRupee} tone={e.voidedAt ? "neutral" : "warn"} size={38} />}
+                title={<span className={e.voidedAt ? "line-through opacity-60" : ""}>{e.vendor || e.description || label(e.category)}</span>}
+                subtitle={[formatDate(e.spentOn), label(e.category), e.paymentMode.toUpperCase(), e.voidReason].filter(Boolean).join(" · ")}
+                right={
+                  <span className="flex items-center gap-1.5">
+                    {e.hasReceipt && <IconButton label={t("expense.bill")} onClick={(ev) => { ev.stopPropagation(); void openBill(e) }}><FileText size={18} aria-hidden /></IconButton>}
+                    <Chip tone={e.voidedAt ? "neutral" : "warn"}>{rupees(e.amountPaise)}</Chip>
+                  </span>
+                }
+              />
+            ))}
+          </ListCard>
+        ))}
+      </SplitPage>
 
       <Sheet open={adding} onOpenChange={setAdding} title={t("expense.add")}
         footer={<Button size="lg" className="w-full" disabled={busy || toPaise(form.amount) <= 0 || !form.spentOn} onClick={save}>{t("action.save")}</Button>}>
@@ -119,11 +123,11 @@ export default function ExpensesPage() {
             <Field label="₹"><input inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0" autoFocus className="text-xl font-bold" /></Field>
             <Field label={t("res.col.dates")}><input type="date" value={form.spentOn} onChange={(e) => setForm({ ...form, spentOn: e.target.value })} /></Field>
           </div>
-          <Field label={t("stay.category")}>
+          <Field group label={t("stay.category")}>
             <ChoiceChips value={form.category} onChange={(v) => setForm({ ...form, category: v })} options={CATEGORIES.map((c) => ({ value: c, label: label(c) }))} />
           </Field>
           <Field label={t("expense.vendor")}><input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} /></Field>
-          <Field label={t("checkin.mode")}>
+          <Field group label={t("checkin.mode")}>
             <ChoiceChips value={form.paymentMode} onChange={(v) => setForm({ ...form, paymentMode: v })} options={MODES.map((m) => ({ value: m, label: m.toUpperCase() }))} />
           </Field>
           <Field label={t("common.details")}><input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>

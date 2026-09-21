@@ -1,6 +1,7 @@
 package in.pms.selfreg;
 
 import in.pms.auth.CurrentUser;
+import in.pms.guests.GuestService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -28,9 +29,11 @@ public class SelfRegistrationController {
     @GetMapping("/{id}")
     public SelfRegistration get(@PathVariable UUID id) { return service.get(id); }
 
+    /** The body, when present, is the desk's corrected copy of the details; an empty body keeps the guest's own words. */
     @PostMapping("/{id}/apply")
-    public Map<String, UUID> apply(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id) {
-        return Map.of("guestId", service.apply(id, u.id()));
+    public Map<String, UUID> apply(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id,
+                                   @RequestBody(required = false) GuestService.GuestInput corrected) {
+        return Map.of("guestId", service.apply(id, corrected, u.id()));
     }
 
     @PostMapping("/{id}/revoke")

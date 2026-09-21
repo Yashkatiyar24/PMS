@@ -250,7 +250,7 @@ export default function RoomsPage() {
                           {(people ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                       </Field>
-                      <Field label={t("rooms.priority")}>
+                      <Field group label={t("rooms.priority")}>
                         <ChoiceChips value={a.priority} onChange={(v) => setAssign({ ...a, priority: v })}
                           options={(["low", "normal", "high"] as const).map((p) => ({ value: p, label: t(`priority.${p}`) }))} />
                       </Field>

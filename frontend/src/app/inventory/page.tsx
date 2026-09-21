@@ -12,7 +12,8 @@ import { useResource } from "@/lib/use-resource"
 import { formatDateTime } from "@/lib/format"
 import type { Room } from "@/lib/types"
 import { useI18n } from "@/i18n"
-import { Avatar, Banner, Button, Chip, ChoiceChips, Empty, Field, ListCard, ListRow, Loading, PageHeader, SectionLabel, Segmented, Sheet } from "@/components/ui"
+import { Avatar, Banner, Button, Card, Chip, ChoiceChips, Empty, Field, KV, ListCard, ListRow, Loading, PageHeader, SectionLabel, Segmented, Sheet } from "@/components/ui"
+import { SplitPage } from "@/components/SplitPage"
 
 const CATEGORIES = ["cleaning", "linen", "toiletries", "food", "maintenance", "stationery"] as const
 type Item = { id: string; name: string; category: (typeof CATEGORIES)[number]; unit: string; lowStockThreshold: number; active: boolean; onHand: number; atLaundry: number; low: boolean }
@@ -92,32 +93,41 @@ export default function InventoryPage() {
         actions={<Button size="sm" onClick={() => setEditing({ category: "cleaning", unit: "pcs", lowStockThreshold: 0 })}><Plus size={16} aria-hidden /> {t("action.add")}</Button>} />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
 
-      <Segmented value={filter} onChange={setFilter} items={[
-        { value: "all", label: t("common.all"), count: data.items.length, tone: "brand" },
-        { value: "low", label: t("stock.low"), count: lowCount, tone: "danger" },
-      ]} />
+      <SplitPage aside={
+        <Card title={t("booking.summary")}>
+          <dl className="divide-y divide-line">
+            <KV label={t("common.all")} value={data.items.length} />
+            <KV label={t("stock.low")} value={lowCount} tone={lowCount > 0 ? "danger" : undefined} />
+          </dl>
+        </Card>
+      }>
+        <Segmented value={filter} onChange={setFilter} items={[
+          { value: "all", label: t("common.all"), count: data.items.length, tone: "brand" },
+          { value: "low", label: t("stock.low"), count: lowCount, tone: "danger" },
+        ]} />
 
-      {shown.length === 0 ? <Empty icon={Boxes} /> : CATEGORIES.filter((c) => shown.some((i) => i.category === c)).map((c) => (
-        <section key={c}>
-          <SectionLabel>{cat(c)}</SectionLabel>
-          <ListCard>
-            {shown.filter((i) => i.category === c).map((item) => (
-              <ListRow key={item.id} onClick={() => openItem(item)}
-                leading={<Avatar icon={item.low ? AlertTriangle : Boxes} tone={item.low ? "danger" : item.active ? "teal" : "neutral"} size={38} />}
-                title={<span className={item.active ? "" : "line-through opacity-60"}>{item.name}</span>}
-                subtitle={item.category === "linen" && Number(item.atLaundry) > 0 ? t("stock.atLaundry", { n: n(item.atLaundry) }) : item.lowStockThreshold > 0 ? t("stock.lowLine", { n: n(item.lowStockThreshold) }) : undefined}
-                right={<Chip tone={item.low ? "danger" : "ok"}>{n(item.onHand)} {item.unit}</Chip>} />
-            ))}
-          </ListCard>
-        </section>
-      ))}
+        {shown.length === 0 ? <Empty icon={Boxes} /> : CATEGORIES.filter((c) => shown.some((i) => i.category === c)).map((c) => (
+          <section key={c}>
+            <SectionLabel>{cat(c)}</SectionLabel>
+            <ListCard>
+              {shown.filter((i) => i.category === c).map((item) => (
+                <ListRow key={item.id} onClick={() => openItem(item)}
+                  leading={<Avatar icon={item.low ? AlertTriangle : Boxes} tone={item.low ? "danger" : item.active ? "teal" : "neutral"} size={38} />}
+                  title={<span className={item.active ? "" : "line-through opacity-60"}>{item.name}</span>}
+                  subtitle={item.category === "linen" && Number(item.atLaundry) > 0 ? t("stock.atLaundry", { n: n(item.atLaundry) }) : item.lowStockThreshold > 0 ? t("stock.lowLine", { n: n(item.lowStockThreshold) }) : undefined}
+                  right={<Chip tone={item.low ? "danger" : "ok"}>{n(item.onHand)} {item.unit}</Chip>} />
+              ))}
+            </ListCard>
+          </section>
+        ))}
+      </SplitPage>
 
       <Sheet open={!!editing} onOpenChange={(o) => !o && setEditing(null)} title={editing?.id ? t("stock.editItem") : t("stock.addItem")}
         footer={<Button size="lg" className="w-full" disabled={busy || !editing?.name?.trim()} onClick={saveItem}>{t("action.save")}</Button>}>
         {editing && (
           <div className="space-y-3">
             <Field label={t("setup.name")}><input value={editing.name ?? ""} onChange={(e) => setEditing({ ...editing, name: e.target.value })} autoFocus /></Field>
-            <Field label={t("stay.category")}>
+            <Field group label={t("stay.category")}>
               <ChoiceChips value={editing.category ?? "cleaning"} onChange={(v) => setEditing({ ...editing, category: v })} options={CATEGORIES.map((c) => ({ value: c, label: cat(c) }))} />
             </Field>
             <div className="grid grid-cols-2 gap-2">

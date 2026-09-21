@@ -89,6 +89,9 @@ public class SelfRegistrationService {
         RANDOM.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         OffsetDateTime expires = OffsetDateTime.now().plusMinutes(s.selfRegistrationMinutes());
+        // A foreign key is checked without Row Level Security, so the booking is confirmed to be this property's here.
+        if (bookingId != null && jdbc.sql("select count(*) from bookings where id = ? and property_id = ?").params(bookingId, TenantContext.require()).query(Integer.class).single() == 0)
+            throw new in.pms.common.NotFoundException("Booking");
 
         UUID id = jdbc.sql("""
                 insert into guest_registrations(property_id, booking_id, token_hash, expires_at, created_by)
@@ -122,20 +125,27 @@ public class SelfRegistrationService {
         return get(id);
     }
 
+    /** Apply a submission exactly as the guest typed it. */
+    @Transactional
+    public UUID apply(UUID id, UUID userId) { return apply(id, null, userId); }
+
     /**
      * Copy a submission onto a real guest record, which is the first moment anything the guest typed leaves
      * the quarantine of {@code guest_registrations}. Runs the same validation as the desk's own form, so a
      * full Aadhaar number is refused here exactly as it is there.
+     *
+     * @param corrected the desk's version of the details when it fixed something on screen before saving;
+     *                  null keeps the guest's own words. The guest's ID photo comes along either way.
      */
     @Transactional
-    public UUID apply(UUID id, UUID userId) {
+    public UUID apply(UUID id, GuestService.GuestInput corrected, UUID userId) {
         SelfRegistration reg = get(id);
         if (reg.submitted() == null) throw new BadRequestException("The guest has not filled the form yet");
         if ("applied".equals(reg.state())) throw new BadRequestException("These details have already been saved");
 
         var in = reg.submitted();
-        var input = new GuestService.GuestInput(in.name(), in.phone(), in.city(), in.address(), in.nationality(),
-                in.idType(), in.idLast4(), in.passportNo(), null, null, "");
+        var input = corrected != null ? corrected : new GuestService.GuestInput(in.name(), in.phone(), in.city(),
+                in.address(), in.nationality(), in.idType(), in.idLast4(), in.passportNo(), null, null, "");
         UUID guestId = guests.create(input, userId).id();
 
         String photoKey = jdbc.sql("select id_photo_key from guest_registrations where id = ? and property_id = ?")
@@ -210,6 +220,7 @@ public class SelfRegistrationService {
     @Transactional
     public void storePhoto(Resolved link, InputStream data, long length, String contentType) {
         Settings s = settings.current();
+        if (!"open".equals(link.state())) throw new ForbiddenException("This form has already been sent");
         if (!s.selfRegistrationPhoto()) throw new ForbiddenException("This property does not ask guests for an ID photo");
         if (!Set.of("image/jpeg", "image/png", "image/webp").contains(contentType))
             throw new BadRequestException("The photo must be a JPEG, PNG or WebP image");
@@ -218,9 +229,12 @@ public class SelfRegistrationService {
 
         String ext = switch (contentType) { case "image/png" -> "png"; case "image/webp" -> "webp"; default -> "jpg"; };
         String key = TenantContext.require() + "/id-photos/self-" + link.id() + "-" + UUID.randomUUID() + "." + ext;
-        storage.put(key, data, length, contentType);
+        String previous = jdbc.sql("select id_photo_key from guest_registrations where id = ? and property_id = ?")
+                .params(link.id(), TenantContext.require()).query(String.class).optional().orElse(null);
+        storage.put(key, in.pms.files.Uploads.checked(data, contentType), length, contentType);
         jdbc.sql("update guest_registrations set id_photo_key = ? where id = ? and property_id = ?")
                 .params(key, link.id(), TenantContext.require()).update();
+        if (previous != null) storage.delete(previous); // a retake replaces the photo; the first one is not kept
     }
 
     // ---------- Validation ----------

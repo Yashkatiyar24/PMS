@@ -8,14 +8,17 @@ import type { NextRequest } from "next/server"
  */
 // "/g/" is the guest's own self-registration form, reached by scanning a QR at the desk. Whoever opens it
 // has no account and never will, so it must never be bounced to a login screen.
-const PUBLIC_PATHS = ["/login", "/g/", "/book/", "/manifest.webmanifest", "/sw.js"]
+const PUBLIC_PATHS = ["/login", "/g/", "/book/"]
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next()
+  // A file (hero.jpg, an icon) is not a screen: it carries no data and must load on the login page itself.
+  if (/\.\w+$/.test(pathname)) return NextResponse.next()
 
   if (!request.cookies.has("pms_session")) {
-    const login = new URL("/login", request.url)
+    // Someone bounced here came to sign in, not to read the landing page: open the form for them.
+    const login = new URL("/login?signin=1", request.url)
     return NextResponse.redirect(login)
   }
   return NextResponse.next()

@@ -30,7 +30,7 @@ export default function TodayPage() {
   const { user, has } = useSession()
   const router = useRouter()
   const desk = !user || has("reservations.view")
-  // The platform admin works in no dharamshala: their home is the list of them.
+  // The platform admin works in no property of their own: their home is the list of them.
   const platform = !!user?.superAdmin && !user.propertyId
   useEffect(() => { if (!desk) router.replace(platform ? "/admin" : "/rooms") }, [desk, platform, router])
   return desk ? <Dashboard /> : <Loading />
@@ -340,10 +340,14 @@ function ForecastCard({ start }: { start: string }) {
                 ))}
               </ol>
             </div>
-            <table className="sr-only">
+            {/* The same numbers as a table for a screen reader. The wrapper carries sr-only: a table ignores the 1px
+                height and would silently add its full height of scroll space below the page. */}
+            <div className="sr-only">
+            <table>
               <caption>{t("dash.nightly")}</caption>
               <tbody>{f.nights.map((n) => <tr key={n.date}><th>{formatDate(n.date)}</th><td>{n.occupancyPct}%</td><td>{n.sold}</td></tr>)}</tbody>
             </table>
+            </div>
           </figure>
         </>
       )}

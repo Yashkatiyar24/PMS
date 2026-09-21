@@ -8,11 +8,12 @@
 import { useState } from "react"
 import { Percent, Plus } from "lucide-react"
 import { api, ApiError } from "@/lib/api"
-import { formatDate, rupees, toPaise } from "@/lib/format"
+import { dayKey, formatDate, rupees, toPaise } from "@/lib/format"
 import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
-import { Banner, Button, Chip, Disclosure, Empty, Field, KV, Loading, PageHeader, Sheet } from "@/components/ui"
+import { Banner, Button, Card, Chip, Disclosure, Empty, Field, KV, Loading, PageHeader, Sheet } from "@/components/ui"
+import { SplitPage } from "@/components/SplitPage"
 
 type Slab = { uptoPaise: number | null; bp: number }
 type TaxRule = { id: string; effectiveFrom: string; rules: { slabs: Slab[]; note: string | null } }
@@ -46,12 +47,30 @@ export default function TaxSetupPage() {
 
   const describe = (slab: Slab) => (slab.uptoPaise === null ? t("setup.above") : `${t("setup.slabUpto")} ${rupees(slab.uptoPaise)}`)
   const summary = (rule: TaxRule) => rule.rules.slabs.map((s) => `${s.bp / 100}%`).join(" / ")
+  // The rule charges are taxed by today: the latest one whose date has arrived. Future-dated rules wait.
+  const today = dayKey(new Date())
+  const current = rules.filter((r) => r.effectiveFrom.slice(0, 10) <= today).sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))[0]
 
   return (
     <div className="space-y-4">
       <PageHeader title={t("setup.tax")} back="/settings" actions={can("OWNER") ? <Button size="sm" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> {t("action.add")}</Button> : undefined} />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
 
+      <SplitPage
+        aside={
+          <Card title={t("setup.effectiveFrom")} action={current && <Chip tone="ok" dot>{formatDate(current.effectiveFrom)}</Chip>}>
+            {current ? (
+              <dl className="divide-y divide-line">
+                {current.rules.slabs.map((slab, i) => (
+                  <KV key={i} label={describe(slab)} value={`${slab.bp / 100}%`} />
+                ))}
+              </dl>
+            ) : (
+              <p className="text-sm text-ink-soft">{t("common.none")}</p>
+            )}
+          </Card>
+        }
+      >
       {rules.length === 0 ? (
         <Empty icon={Percent} />
       ) : (
@@ -72,6 +91,7 @@ export default function TaxSetupPage() {
           ))}
         </div>
       )}
+      </SplitPage>
 
       <Sheet open={adding} onOpenChange={setAdding} title={t("action.add")} description={t("setup.tax")}
         footer={<Button size="lg" className="w-full" disabled={busy || !effectiveFrom} onClick={add}>{t("action.save")}</Button>}>

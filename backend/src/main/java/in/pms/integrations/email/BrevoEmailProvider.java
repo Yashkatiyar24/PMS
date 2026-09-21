@@ -16,7 +16,7 @@ public class BrevoEmailProvider implements EmailProvider {
         this.http = RestClient.builder().baseUrl("https://api.brevo.com/v3").defaultHeader("api-key", apiKey).build();
         // "Name <addr>" or "addr"
         int lt = from.indexOf('<');
-        this.fromName = lt > 0 ? from.substring(0, lt).trim() : "PMS";
+        this.fromName = lt > 0 ? from.substring(0, lt).trim() : "Padav";
         this.fromEmail = lt > 0 ? from.substring(lt + 1, from.indexOf('>')).trim() : from.trim();
     }
 

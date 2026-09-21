@@ -34,7 +34,7 @@ public class SessionService {
     @Transactional("adminTx")
     public NewSession create(UUID userId, String deviceName) { return create(userId, deviceName, null); }
 
-    /** As above, working in {@code propertyId} from the start: the dharamshala whose code they signed in with. */
+    /** As above, working in {@code propertyId} from the start: the property whose code they signed in with. */
     @Transactional("adminTx")
     public NewSession create(UUID userId, String deviceName, UUID propertyId) {
         byte[] bytes = new byte[32];
@@ -60,14 +60,18 @@ public class SessionService {
         return days.stream().mapToInt(Integer::intValue).min().orElse(30);
     }
 
-    /** Resolve a cookie token to a principal, or empty if unknown, expired or revoked. Touches last_seen_at. */
+    /** A session nobody has used for this long is over, however long it was valid for: a lost phone stops working. */
+    static final int IDLE_DAYS = 14;
+    private static final String LIVE = "s.revoked_at is null and s.expires_at > now() and s.last_seen_at > now() - interval '" + IDLE_DAYS + " days'";
+
+    /** Resolve a cookie token to a principal, or empty if unknown, expired, idle too long or revoked. Touches last_seen_at. */
     @Transactional("adminTx")
     public Optional<CurrentUser> resolve(String token) {
         if (token == null || token.length() < 20) return Optional.empty();
         var row = adminJdbc.sql("""
-                select s.id as session_id, s.current_property_id, u.id as user_id, u.name, u.is_super_admin
+                select s.id as session_id, s.current_property_id, u.id as user_id, u.name, u.is_super_admin, u.must_change_password
                 from sessions s join users u on u.id = s.user_id
-                where s.token_hash = ? and s.revoked_at is null and s.expires_at > now() and u.active""")
+                where s.token_hash = ? and """ + " " + LIVE + " and u.active")
                 .param(sha256(token)).query().listOfRows().stream().findFirst();
         if (row.isEmpty()) return Optional.empty();
         var r = row.get();
@@ -89,8 +93,13 @@ public class SessionService {
         String position = membership.map(CurrentUser.Membership::position).orElse(null);
         Set<String> permissions = position == null ? Set.of()
                 : Permissions.of(position, adminJdbc.sql("select unnest(modules) from properties where id = ?").param(current).query(String.class).list());
+        // The subscription state travels with the principal, so the billing gate and the app's banner never disagree.
+        String billing = current == null ? null : adminJdbc.sql(
+                "select o.billing_status::text from properties p join organisations o on o.id = p.org_id where p.id = ?")
+                .param(current).query(String.class).optional().orElse(null);
         return Optional.of(new CurrentUser(userId, (String) r.get("name"), Boolean.TRUE.equals(r.get("is_super_admin")), sessionId, current,
-                membership.map(CurrentUser.Membership::role).orElse(null), memberships, position, permissions));
+                membership.map(CurrentUser.Membership::role).orElse(null), memberships, position, permissions, billing,
+                Boolean.TRUE.equals(r.get("must_change_password"))));
     }
 
     /** Switch the working property; refused unless the user is a member. */
@@ -111,11 +120,17 @@ public class SessionService {
         adminJdbc.sql("update sessions set revoked_at = now() where user_id = ? and revoked_at is null").param(userId).update();
     }
 
+    /** Only the sessions working in {@code propertyId}: one property removing someone must not sign them out of another. */
+    @Transactional("adminTx")
+    public void revokeAt(UUID userId, UUID propertyId) {
+        adminJdbc.sql("update sessions set revoked_at = now() where user_id = ? and current_property_id = ? and revoked_at is null").params(userId, propertyId).update();
+    }
+
     public record SessionView(UUID id, String deviceName, OffsetDateTime createdAt, OffsetDateTime lastSeenAt, boolean current) {}
 
     @Transactional(value = "adminTx", readOnly = true)
     public List<SessionView> list(CurrentUser user) {
-        return adminJdbc.sql("select id, device_name, created_at, last_seen_at from sessions where user_id = ? and revoked_at is null and expires_at > now() order by last_seen_at desc")
+        return adminJdbc.sql("select s.id, s.device_name, s.created_at, s.last_seen_at from sessions s where s.user_id = ? and " + LIVE + " order by s.last_seen_at desc")
                 .param(user.id()).query((rs, i) -> new SessionView(rs.getObject("id", UUID.class), rs.getString("device_name"),
                         rs.getObject("created_at", OffsetDateTime.class), rs.getObject("last_seen_at", OffsetDateTime.class), rs.getObject("id", UUID.class).equals(user.sessionId())))
                 .list();

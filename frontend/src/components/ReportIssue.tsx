@@ -48,7 +48,7 @@ export function ReportIssue({ open, onOpenChange, roomId, roomNumber, onDone }: 
         {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
         <Field label={t("maint.issue")}><input value={issue} onChange={(e) => setIssue(e.target.value)} placeholder={t("maint.issueHint")} autoFocus /></Field>
         <Field label={t("common.details")}><textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
-        <Field label={t("rooms.priority")}>
+        <Field group label={t("rooms.priority")}>
           <ChoiceChips value={priority} onChange={setPriority} options={PRIORITIES.map((p) => ({ value: p, label: t(`priority.${p}`) }))} />
         </Field>
         {roomId && (

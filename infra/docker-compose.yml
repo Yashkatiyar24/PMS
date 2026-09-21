@@ -1,12 +1,12 @@
-# Local Postgres for development. Production uses the same image with a volume and a backup job.
+# Local Postgres for development only. It listens on this machine alone and asks for a password; production
+# runs a managed Postgres or its own hardened instance with backups (see infra/.env.example for what the API needs).
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16.15
     environment:
       POSTGRES_DB: pms
       POSTGRES_PASSWORD: postgres
-      POSTGRES_HOST_AUTH_METHOD: trust
-    ports: ["5432:5432"]
+    ports: ["127.0.0.1:5432:5432"]
     volumes: ["pgdata:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d pms"]

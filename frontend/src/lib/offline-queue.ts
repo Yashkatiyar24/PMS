@@ -8,6 +8,10 @@
  *
  * Anything the server rejects for a real reason (the bed was taken meanwhile) moves to "needs attention"
  * rather than being dropped, so the desk always finds out.
+ *
+ * Every entry is stamped with who queued it and at which property, and is only listed and replayed for that
+ * same person at that same property. A phone handed to a colleague, or switched to another property, never
+ * sends someone else's check-ins under the new session.
  */
 const DB_NAME = "pms-offline"
 const DB_VERSION = 1
@@ -20,6 +24,9 @@ export type QueuedRequest = {
   method: string
   body: unknown
   queuedAt: string
+  /** Who queued it, and where; set by enqueue from the current session. */
+  userId?: string
+  propertyId?: string | null
   /** Set when the server rejected it; the entry moves to the failed store for the desk to resolve. */
   error?: string
 }
@@ -48,9 +55,20 @@ async function withStore<T>(store: string, mode: IDBTransactionMode, body: (s: I
   })
 }
 
-export const enqueue = (entry: QueuedRequest) => withStore<void>(QUEUE, "readwrite", (s) => s.put(entry))
-export const pending = () => withStore<QueuedRequest[]>(QUEUE, "readonly", (s) => s.getAll())
-export const failed = () => withStore<QueuedRequest[]>(FAILED, "readonly", (s) => s.getAll())
+export type QueueOwner = { userId: string; propertyId: string | null }
+let currentOwner: QueueOwner | null = null
+
+/** The session provider tells the queue who is signed in; nothing is queued, listed or sent for nobody. */
+export const setQueueOwner = (owner: QueueOwner | null) => { currentOwner = owner }
+
+const mine = (e: QueuedRequest) => !!currentOwner && e.userId === currentOwner.userId && (e.propertyId ?? null) === currentOwner.propertyId
+
+export const enqueue = (entry: QueuedRequest) => {
+  if (!currentOwner) return Promise.reject(new Error("no-session"))
+  return withStore<void>(QUEUE, "readwrite", (s) => s.put({ ...entry, userId: currentOwner!.userId, propertyId: currentOwner!.propertyId }))
+}
+export const pending = async () => (await withStore<QueuedRequest[]>(QUEUE, "readonly", (s) => s.getAll())).filter(mine)
+export const failed = async () => (await withStore<QueuedRequest[]>(FAILED, "readonly", (s) => s.getAll())).filter(mine)
 export const remove = (clientUuid: string) => withStore<void>(QUEUE, "readwrite", (s) => s.delete(clientUuid))
 export const clearFailed = (clientUuid: string) => withStore<void>(FAILED, "readwrite", (s) => s.delete(clientUuid))
 

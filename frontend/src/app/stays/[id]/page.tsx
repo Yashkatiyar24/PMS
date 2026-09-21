@@ -174,14 +174,14 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
   const issueInvoice = () =>
     run(async () => {
       const receipt = await api<Receipt>(`/api/folios/${booking!.folioId}/receipts/invoice`, { method: "POST" })
-      window.open(`${API_BASE}/api/receipts/${receipt.id}/html`, "_blank")
+      window.open(`${API_BASE}/api/receipts/${receipt.id}/html`, "_blank", "noopener,noreferrer")
     })
 
   /** A receipt for money just received: not a tax invoice, which comes at checkout. */
   const paymentReceipt = (paise: number) =>
     run(async () => {
       const receipt = await api<Receipt>(`/api/folios/${booking!.folioId}/receipts/provisional?amountPaise=${paise}`, { method: "POST" })
-      window.open(`${API_BASE}/api/receipts/${receipt.id}/html`, "_blank")
+      window.open(`${API_BASE}/api/receipts/${receipt.id}/html`, "_blank", "noopener,noreferrer")
     })
 
   const giveDiscount = () =>
@@ -208,7 +208,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
         method: "POST", body: { amountPaise: toPaise(amount), reason, approverId: user?.id, pin: approvalPin },
       })
       setAmount(""); setReason(""); setNoteFor(null)
-      window.open(`${API_BASE}/api/receipts/${note.id}/html`, "_blank")
+      window.open(`${API_BASE}/api/receipts/${note.id}/html`, "_blank", "noopener,noreferrer")
     })
 
   const saveDetails = () =>
@@ -494,7 +494,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
           <Field label={t("stay.payment")}>
             <input inputMode="decimal" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder="0" autoFocus className="text-2xl font-bold" />
           </Field>
-          <Field label={t("checkin.mode")}>
+          <Field group label={t("checkin.mode")}>
             <ChoiceChips value={payMode} onChange={setPayMode} options={MODES.map((m) => ({ value: m, label: m.toUpperCase() }))} />
           </Field>
         </div>
@@ -503,7 +503,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
       <Sheet open={panel === "extra"} onOpenChange={(o) => !o && setPanel(null)} title={t("stay.addExtra")}
         footer={<Button size="lg" className="w-full" disabled={busy || !extraText || toPaise(extraAmount) <= 0} onClick={addExtra}>{t("action.add")}</Button>}>
         <div className="space-y-3">
-          <Field label={t("stay.category")}>
+          <Field group label={t("stay.category")}>
             <ChoiceChips value={extraCategory} onChange={setExtraCategory} options={CHARGE_CATEGORIES.map((c) => ({ value: c, label: t(`category.${c}`) }))} />
           </Field>
           <div className="grid grid-cols-[1fr_72px_110px] gap-2">
@@ -558,7 +558,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
         <div className="space-y-3">
           <Field label="₹"><input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" autoFocus className="text-2xl font-bold" /></Field>
           {panel === "refund" && (
-            <Field label={t("checkin.mode")}><ChoiceChips value={payMode} onChange={setPayMode} options={MODES.map((m) => ({ value: m, label: m.toUpperCase() }))} /></Field>
+            <Field group label={t("checkin.mode")}><ChoiceChips value={payMode} onChange={setPayMode} options={MODES.map((m) => ({ value: m, label: m.toUpperCase() }))} /></Field>
           )}
           <Field label={t("common.reason")}><input value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
           {pin(panel === "discount" ? "discount.apply" : panel === "refund" ? "refund" : "invoice.edit") && <PinField value={approvalPin} onChange={setApprovalPin} />}

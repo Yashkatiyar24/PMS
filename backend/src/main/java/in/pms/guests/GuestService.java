@@ -112,7 +112,7 @@ public class GuestService {
         find(id);
         String ext = switch (contentType) { case "image/png" -> "png"; case "image/webp" -> "webp"; default -> "jpg"; };
         String key = TenantContext.require() + "/guest-photos/" + id + "-" + UUID.randomUUID() + "." + ext;
-        storage.put(key, data, length, contentType);
+        storage.put(key, in.pms.files.Uploads.checked(data, contentType), length, contentType);
         jdbc.sql("update guests set photo_key = ?, updated_at = now() where id = ? and property_id = ?").params(key, id, TenantContext.require()).update();
         audit.record("guests", id.toString(), "photo", null, java.util.Map.of("hasPhoto", true), userId);
         return find(id);
@@ -169,7 +169,7 @@ public class GuestService {
         Guest before = find(id);
         String ext = switch (contentType) { case "image/png" -> "png"; case "image/webp" -> "webp"; default -> "jpg"; };
         String key = TenantContext.require() + "/id-photos/" + id + "-" + UUID.randomUUID() + "." + ext;
-        storage.put(key, data, length, contentType);
+        storage.put(key, in.pms.files.Uploads.checked(data, contentType), length, contentType);
         jdbc.sql("update guests set id_photo_key = ?, id_photo_purged_at = null, updated_at = now() where id = ? and property_id = ?").params(key, id, TenantContext.require()).update();
         audit.record("guests", id.toString(), "id_photo", java.util.Map.of("hadPhoto", before.hasIdPhoto()), java.util.Map.of("hadPhoto", true), userId);
         return find(id);
@@ -194,6 +194,8 @@ public class GuestService {
 
     private GuestInput validate(GuestInput in) {
         if (in.name() == null || in.name().isBlank()) throw new BadRequestException("Name is required");
+        if (in.name().length() > 120 || nz(in.city()).length() > 120 || nz(in.address()).length() > 500 || nz(in.notes()).length() > 2000)
+            throw new BadRequestException("That text is too long");
         String phone = in.phone() == null ? "" : in.phone().replaceAll("\\D", "");
         if (phone.startsWith("91") && phone.length() == 12) phone = phone.substring(2);
         if (!phone.isEmpty() && phone.length() != 10) throw new BadRequestException("Phone must be 10 digits");

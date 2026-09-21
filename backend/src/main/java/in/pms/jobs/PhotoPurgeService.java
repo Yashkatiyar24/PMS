@@ -52,4 +52,18 @@ public class PhotoPurgeService {
         if (!due.isEmpty()) log.info("Purged {} ID photos", due.size());
         return due.size();
     }
+
+    /** ID photos on self-registration links past retention, whether or not the desk ever applied them. */
+    @Transactional
+    public int purgeRegistrations(int retentionDays) {
+        var due = jdbc.sql("""
+                select id, id_photo_key from guest_registrations
+                where property_id = ? and id_photo_key is not null and expires_at < now() - make_interval(days => ?)""")
+                .params(TenantContext.require(), retentionDays).query().listOfRows();
+        for (var row : due) {
+            storage.delete((String) row.get("id_photo_key"));
+            jdbc.sql("update guest_registrations set id_photo_key = null where id = ? and property_id = ?").params(row.get("id"), TenantContext.require()).update();
+        }
+        return due.size();
+    }
 }

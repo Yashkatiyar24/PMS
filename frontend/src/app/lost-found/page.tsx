@@ -8,7 +8,8 @@ import { useResource } from "@/lib/use-resource"
 import { formatDate } from "@/lib/format"
 import type { Room } from "@/lib/types"
 import { useI18n } from "@/i18n"
-import { Avatar, Banner, Button, Chip, ChoiceChips, Empty, Field, ListCard, ListRow, Loading, PageHeader, Sheet, type Tone } from "@/components/ui"
+import { Avatar, Banner, Button, Card, Chip, ChoiceChips, Empty, Field, KV, ListCard, ListRow, Loading, PageHeader, Sheet, type Tone } from "@/components/ui"
+import { SplitPage } from "@/components/SplitPage"
 
 type Item = { id: string; roomId: string | null; roomNumber: string | null; description: string; foundAt: string; foundByName: string | null; status: "held" | "returned" | "disposed"; returnedTo: string | null; notes: string }
 const TONE: Record<Item["status"], Tone> = { held: "warn", returned: "ok", disposed: "neutral" }
@@ -55,20 +56,31 @@ export default function LostFoundPage() {
         actions={<Button size="sm" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> {t("action.add")}</Button>} />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
 
-      {data.items.length === 0 ? <Empty icon={PackageSearch} /> : (
-        <ListCard>
-          {data.items.map((item) => (
-            <ListRow
-              key={item.id}
-              onClick={() => { setOpenItem(item); setStatus(item.status); setReturnedTo(item.returnedTo ?? "") }}
-              leading={<Avatar icon={PackageSearch} tone={TONE[item.status]} size={38} />}
-              title={item.description}
-              subtitle={[item.roomNumber, formatDate(item.foundAt), item.foundByName].filter(Boolean).join(" · ")}
-              right={<Chip tone={TONE[item.status]} dot>{label(item.status)}</Chip>}
-            />
-          ))}
-        </ListCard>
-      )}
+      <SplitPage aside={
+        <Card title={t("dash.col.status")}>
+          <dl className="divide-y divide-line">
+            {(["held", "returned", "disposed"] as const).map((s) => {
+              const n = data.items.filter((i) => i.status === s).length
+              return <KV key={s} label={label(s)} value={n} tone={n > 0 ? TONE[s] : undefined} />
+            })}
+          </dl>
+        </Card>
+      }>
+        {data.items.length === 0 ? <Empty icon={PackageSearch} /> : (
+          <ListCard>
+            {data.items.map((item) => (
+              <ListRow
+                key={item.id}
+                onClick={() => { setOpenItem(item); setStatus(item.status); setReturnedTo(item.returnedTo ?? "") }}
+                leading={<Avatar icon={PackageSearch} tone={TONE[item.status]} size={38} />}
+                title={item.description}
+                subtitle={[item.roomNumber, formatDate(item.foundAt), item.foundByName].filter(Boolean).join(" · ")}
+                right={<Chip tone={TONE[item.status]} dot>{label(item.status)}</Chip>}
+              />
+            ))}
+          </ListCard>
+        )}
+      </SplitPage>
 
       <Sheet open={adding} onOpenChange={setAdding} title={t("lost.add")}
         footer={<Button size="lg" className="w-full" disabled={busy || !description.trim()}

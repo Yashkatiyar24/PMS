@@ -83,7 +83,7 @@ public class ExpenseService {
         get(id);
         String ext = switch (contentType) { case "image/png" -> "png"; case "image/webp" -> "webp"; case "application/pdf" -> "pdf"; default -> "jpg"; };
         String key = TenantContext.require() + "/expense-bills/" + id + "-" + UUID.randomUUID() + "." + ext;
-        storage.put(key, data, length, contentType);
+        storage.put(key, in.pms.files.Uploads.checked(data, contentType), length, contentType);
         jdbc.sql("update expenses set receipt_key = ? where id = ? and property_id = ?").params(key, id, TenantContext.require()).update();
         audit.record("expenses", id.toString(), "receipt", null, null, userId);
         return get(id);

@@ -15,7 +15,8 @@ import { rupees, toPaise } from "@/lib/format"
 import type { Room, RoomType } from "@/lib/types"
 import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
-import { Avatar, Banner, Button, Chip, Empty, Field, ListCard, ListRow, Loading, Menu, PageHeader, SectionLabel, Sheet } from "@/components/ui"
+import { Avatar, Banner, Button, Card, Chip, Empty, Field, ListCard, ListRow, Loading, Menu, PageHeader, SectionLabel, Sheet } from "@/components/ui"
+import { SplitPage } from "@/components/SplitPage"
 
 export default function RoomSetupPage() {
   const { t } = useI18n()
@@ -112,6 +113,21 @@ export default function RoomSetupPage() {
       />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
 
+      <SplitPage
+        aside={data.rooms.length > 0 && (
+          <Card title={t("setup.rooms")}>
+            {/* Eighty rooms make a tall column; on a laptop the chips scroll inside the card so the list beside them stays in reach. */}
+            <div className="scroll-thin flex flex-wrap gap-1.5 lg:max-h-[60vh] lg:overflow-y-auto">
+              {data.rooms.map((r) => (
+                <button key={r.id} type="button" onClick={() => setEditingRoom(r)}
+                  className={`min-h-[44px] rounded-lg border border-line bg-surface px-3 text-xs font-semibold tabular-nums hover:bg-surface-2 ${r.active ? "" : "line-through opacity-60"}`}>
+                  {r.building ? `${r.building} ` : ""}{r.number}
+                </button>
+              ))}
+            </div>
+          </Card>
+        )}
+      >
       {data.types.length === 0 ? (
         <Empty icon={BedDouble} action={<Button variant="soft" size="sm" onClick={() => setEditing({ maxOccupancy: 2, dormitory: false })}>{t("setup.addRoomType")}</Button>} />
       ) : (
@@ -129,20 +145,7 @@ export default function RoomSetupPage() {
           ))}
         </ListCard>
       )}
-
-      {data.rooms.length > 0 && (
-        <>
-          <SectionLabel>{t("setup.rooms")}</SectionLabel>
-          <div className="flex flex-wrap gap-1.5">
-            {data.rooms.map((r) => (
-              <button key={r.id} type="button" onClick={() => setEditingRoom(r)}
-                className={`min-h-[44px] rounded-lg border border-line bg-surface px-3 text-xs font-semibold tabular-nums hover:bg-surface-2 ${r.active ? "" : "line-through opacity-60"}`}>
-                {r.building ? `${r.building} ` : ""}{r.number}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      </SplitPage>
 
       <Sheet
         open={editing !== null}

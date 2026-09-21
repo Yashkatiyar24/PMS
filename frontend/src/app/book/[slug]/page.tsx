@@ -77,7 +77,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
       await action()
     } catch (e) {
       if (e instanceof PublicApiError && e.status === 404) setMissing(true)
-      else setError(e instanceof Error ? e.message : t("error.generic"))
+      else setError(e instanceof PublicApiError ? e.message : t("error.generic"))
     } finally {
       setBusy(false)
     }
@@ -106,8 +106,10 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
       setDone(await verifyPayment(slug, { orderId: result.orderId, paymentId: result.paymentId, signature: result.signature }))
       return
     }
-    if (result.kind === "failed") await reportPaymentFailure(slug, checkout.orderId, result.reason)
-    setPayError(result.kind === "failed" ? result.reason : t("book.payClosed"))
+    // The gateway's own words when it gave any, else ours; the desk reads this in the booking's notes.
+    const why = result.kind === "failed" ? result.reason ?? t("book.paymentFailed") : null
+    if (why) await reportPaymentFailure(slug, checkout.orderId, why)
+    setPayError(why ?? t("book.payClosed"))
   }
 
   const payAgain = () => run(async () => { if (lastOrder) await pay(await retryPayment(slug, lastOrder)) })
@@ -117,7 +119,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
       const checkout = simulating!
       setSimulating(null)
       const r = await simulatePayment(slug, checkout.orderId, succeed)
-      await settle(checkout, succeed ? { kind: "paid", ...r } : { kind: "failed", reason: "Declined in the simulator" })
+      await settle(checkout, succeed ? { kind: "paid", ...r } : { kind: "failed", reason: t("book.testDeclined") })
     })
 
   function choose(offer: Offer) {
@@ -159,6 +161,10 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
               {(page.address || page.city) && <span className="inline-flex items-center gap-1.5"><MapPin size={15} aria-hidden /> {[page.address, page.city].filter(Boolean).join(", ")}</span>}
               <span className="inline-flex items-center gap-1.5"><CalendarDays size={15} aria-hidden /> {t("book.checkin", { time: page.checkinTime })}</span>
             </p>
+            {page.photoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={page.photoUrl} alt={page.name} className="rise mx-auto mt-6 aspect-[16/9] w-full max-w-2xl rounded-3xl object-cover shadow-[var(--shadow-pop)]" />
+            )}
           </section>
         )}
       </div>

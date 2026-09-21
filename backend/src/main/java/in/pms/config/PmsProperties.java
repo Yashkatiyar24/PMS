@@ -8,6 +8,7 @@ import java.util.List;
 @ConfigurationProperties(prefix = "pms")
 public record PmsProperties(
         String appUrl,
+        String apiUrl,            // where a browser reaches this API; equals appUrl behind the app's /api rewrite
         String sessionSecret,
         List<String> allowedOrigins,
         boolean cookieSecure,
@@ -24,6 +25,9 @@ public record PmsProperties(
         Ops ops,
         Payments payments
 ) {
+    /** Never the secrets: a record's default toString would print every key and password into any log line. */
+    @Override public String toString() { return "PmsProperties[appUrl=" + appUrl + ", apiUrl=" + apiUrl + ", allowedOrigins=" + allowedOrigins + ", secrets redacted]"; }
+
     public record Db(Pool app, Pool admin) {}
     public record Pool(String url, String username, String password, int maxPoolSize) {}
     public record Auth(int otpLength, int otpTtlMinutes, int otpMaxSendsPerWindow, int otpWindowMinutes, int otpMaxVerifyAttempts, String devOtp) {}

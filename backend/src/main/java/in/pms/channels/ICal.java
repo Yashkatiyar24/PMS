@@ -47,7 +47,7 @@ public final class ICal {
         StringBuilder out = new StringBuilder();
         line(out, "BEGIN:VCALENDAR");
         line(out, "VERSION:2.0");
-        line(out, "PRODID:-//Dharamshala PMS//Calendar sync//EN");
+        line(out, "PRODID:-//Padav//Calendar sync//EN");
         line(out, "CALSCALE:GREGORIAN");
         line(out, "METHOD:PUBLISH");
         line(out, "X-WR-CALNAME:" + escape(name));

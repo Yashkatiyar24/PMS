@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -56,10 +57,21 @@ public class BookingController {
     }
 
     @PostMapping("/check-in") @PreAuthorize("hasAuthority('PERM_checkin')")
-    public Booking checkIn(@AuthenticationPrincipal CurrentUser u, @RequestBody BookingService.CheckInRequest in) { return bookings.checkIn(in, u.id()); }
+    public Booking checkIn(@AuthenticationPrincipal CurrentUser u, @RequestBody BookingService.CheckInRequest in) {
+        requireRateAuthority(u, in.units());
+        return bookings.checkIn(in, u.id());
+    }
 
     @PostMapping("/reserve") @PreAuthorize("hasAuthority('PERM_reservations.create')")
-    public Booking reserve(@AuthenticationPrincipal CurrentUser u, @RequestBody BookingService.ReservationRequest in) { return bookings.reserve(in, u.id()); }
+    public Booking reserve(@AuthenticationPrincipal CurrentUser u, @RequestBody BookingService.ReservationRequest in) {
+        requireRateAuthority(u, in.units());
+        return bookings.reserve(in, u.id());
+    }
+
+    /** A rate typed by the desk instead of the room type's is a discount by another name, and needs that authority. */
+    private void requireRateAuthority(CurrentUser u, List<BookingService.UnitRequest> units) {
+        if (units != null && units.stream().anyMatch(x -> x.ratePaise() != null)) approvals.require(u, Permissions.DISCOUNT, null, null);
+    }
 
     @PostMapping("/{id}/arrive") @PreAuthorize("hasAuthority('PERM_checkin')")
     public Booking arrive(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id) { return bookings.arrive(id, u.id()); }

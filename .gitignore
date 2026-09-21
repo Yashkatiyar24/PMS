@@ -14,3 +14,8 @@ backend/storage
 # misc
 .DS_Store
 *.log
+# local scratch
+assets/
+data/
+projects/
+.jetro/

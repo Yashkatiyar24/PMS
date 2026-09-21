@@ -3,7 +3,7 @@
 /**
  * Who works here (PRD U1, U2). One login per person, because a shared login makes the audit log meaningless.
  * Inviting costs a name and a mobile number; the person gets a first password, shown once, and signs in with the
- * dharamshala's code, their number and that password, which they then change.
+ * property's code, their number and that password, which they then change.
  * Removing access signs them out everywhere within a minute.
  */
 import { useState } from "react"
@@ -12,8 +12,9 @@ import { api, ApiError } from "@/lib/api"
 import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
-import { Avatar, Banner, Button, Chip, ChoiceChips, Field, KV, ListCard, ListRow, Loading, Menu, PageHeader, Sheet, type MenuItem, type Tone } from "@/components/ui"
+import { Avatar, Banner, Button, Card, Chip, ChoiceChips, Field, ListCard, ListRow, Loading, Menu, PageHeader, Sheet, type MenuItem, type Tone } from "@/components/ui"
 import { Credentials } from "@/components/Credentials"
+import { SplitPage } from "@/components/SplitPage"
 
 const ROLES = ["receptionist", "housekeeping", "maintenance", "accountant", "manager", "admin", "owner", "staff"] as const
 type Member = { userId: string; name: string; phone: string; email: string | null; role: (typeof ROLES)[number]; active: boolean; hasPin: boolean }
@@ -84,13 +85,15 @@ export default function StaffPage() {
         actions={has("staff.manage") ? <Button size="sm" onClick={() => setInviting(true)}><UserPlus size={16} aria-hidden /> {t("setup.invite")}</Button> : undefined}
       />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
-      {property && (
-        <dl className="rounded-xl bg-surface-2 px-3 py-1">
-          <KV label={t("setup.code")} value={<span className="font-mono text-base font-bold tracking-wider">{property.code}</span>} />
-          <p className="pb-1.5 text-xs text-ink-faint">{t("setup.codeHint")}</p>
-        </dl>
-      )}
-
+      <SplitPage
+        aside={property && (
+          <Card title={t("setup.code")}>
+            <p className="min-w-0 truncate font-mono text-2xl font-bold tracking-wider">{property.code}</p>
+            <p className="mt-1.5 text-xs text-ink-faint">{t("setup.codeHint")}</p>
+          </Card>
+        )}
+        asideFirst
+      >
       <ListCard>
         {members.map((m) => {
           const items = actionsFor(m)
@@ -98,12 +101,12 @@ export default function StaffPage() {
             <ListRow
               key={m.userId}
               leading={<Avatar name={m.name} tone={m.active ? ROLE_TONE[m.role] : "neutral"} />}
-              title={<span className={m.active ? "" : "line-through opacity-60"}>{m.name}{m.userId === user?.id && <span className="ml-1.5 text-xs font-normal text-ink-faint">(you)</span>}</span>}
+              title={<span className={m.active ? "" : "line-through opacity-60"}>{m.name}{m.userId === user?.id && <span className="ml-1.5 text-xs font-normal text-ink-faint">{t("staff.you")}</span>}</span>}
               subtitle={m.phone}
               right={
                 <span className="flex items-center gap-1.5">
                   {!m.active ? <Chip tone="danger">{t("setup.deactivate")}</Chip> : <Chip tone={ROLE_TONE[m.role] ?? "neutral"}>{roleLabel(m.role)}</Chip>}
-                  {m.hasPin && m.active && <KeyRound size={14} aria-label="PIN" className="text-ink-faint" />}
+                  {m.hasPin && m.active && <KeyRound size={14} aria-label={t("staff.pinSet")} className="text-ink-faint" />}
                   {items.length > 0 && <Menu items={items} />}
                 </span>
               }
@@ -111,6 +114,7 @@ export default function StaffPage() {
           )
         })}
       </ListCard>
+      </SplitPage>
 
       <Sheet open={inviting} onOpenChange={setInviting} title={t("setup.invite")}
         footer={
@@ -126,7 +130,7 @@ export default function StaffPage() {
         <div className="space-y-3">
           <Field label={t("setup.name")}><input value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
           <Field label={t("login.phone")}><input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" /></Field>
-          <Field label={t("setup.role")}><ChoiceChips value={role} onChange={setRole} options={grantable.map((r) => ({ value: r, label: roleLabel(r) }))} /></Field>
+          <Field group label={t("setup.role")}><ChoiceChips value={role} onChange={setRole} options={grantable.map((r) => ({ value: r, label: roleLabel(r) }))} /></Field>
         </div>
       </Sheet>
 

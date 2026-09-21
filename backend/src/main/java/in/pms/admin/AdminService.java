@@ -5,14 +5,18 @@ import in.pms.auth.CurrentUser;
 import in.pms.auth.OtpService;
 import in.pms.auth.PasswordService;
 import in.pms.auth.Permissions;
+import in.pms.auth.SessionService;
 import in.pms.common.BadRequestException;
 import in.pms.common.ForbiddenException;
 import in.pms.common.NotFoundException;
+import in.pms.integrations.storage.StorageProvider;
+import in.pms.property.PropertyService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -32,42 +36,159 @@ public class AdminService {
     private final JdbcClient admin;
     private final PasswordService passwords;
     private final AuditService audit;
+    private final StorageProvider storage;
+    private final SessionService sessions;
 
-    public AdminService(@Qualifier("adminJdbc") JdbcClient admin, PasswordService passwords, AuditService audit) {
-        this.admin = admin; this.passwords = passwords; this.audit = audit;
+    public AdminService(@Qualifier("adminJdbc") JdbcClient admin, PasswordService passwords, AuditService audit, StorageProvider storage, SessionService sessions) {
+        this.admin = admin; this.passwords = passwords; this.audit = audit; this.storage = storage; this.sessions = sessions;
     }
 
     public record PropertyHealth(
-            UUID propertyId, String propertyName, String city,
+            UUID propertyId, String propertyName, String city, String state, String phone,
             UUID orgId, String orgName, String plan, String billingStatus,
-            boolean active, int rooms, int bookingsLast30Days, OffsetDateTime lastActivityAt,
+            boolean active, int rooms, int users, int stayingNow, int bookingsLast30Days, OffsetDateTime lastActivityAt,
             int openFolios, long outstandingPaise, int outboxPending, boolean supportAccess,
-            String code, List<String> modules) {}
+            String code, List<String> modules, OffsetDateTime createdAt, String ownerName, String ownerPhone, String photoUrl, String notes) {}
+
+    /** Someone who works at a property: a name and a role the owner gave us. Nothing about any guest. */
+    public record Member(UUID userId, String name, String phone, String role, boolean active) {}
+    /** A password the platform just set for someone, shown once; the desk signs in with their code, phone and this. */
+    public record NewPassword(String name, String phone, String password) {}
+    public record Plan(String code, String name, int maxRooms, long monthlyPaise) {}
+
+    /** One property's health in numbers. The first owner is the person to call about it. */
+    private static final String HEALTH_SQL = """
+            select p.id, p.name, p.city, p.state, p.phone, p.active, p.created_at, o.id as org_id, o.name as org_name,
+                   coalesce(o.plan_code, 'none') as plan, o.billing_status::text as billing_status,
+                   (select count(*) from rooms r where r.property_id = p.id and r.active) as rooms,
+                   (select count(*) from property_users pu where pu.property_id = p.id and pu.active) as users,
+                   (select count(*) from bookings b where b.property_id = p.id and b.state = 'checked_in') as staying_now,
+                   (select count(*) from bookings b where b.property_id = p.id and b.created_at > now() - interval '30 days') as recent_bookings,
+                   (select max(b.created_at) from bookings b where b.property_id = p.id) as last_activity,
+                   (select count(*) from folios f where f.property_id = p.id and f.status = 'open') as open_folios,
+                   (select coalesce(sum(f.total_paise + f.deposit_held_paise - f.paid_paise), 0) from folios f
+                      where f.property_id = p.id and f.status = 'open') as outstanding,
+                   (select count(*) from outbox ob where ob.property_id = p.id and ob.status = 'pending') as outbox_pending,
+                   coalesce(p.settings->>'support_access_until', '') as support_until, p.code, p.modules, p.photo_key, p.platform_notes,
+                   own.name as owner_name, own.phone as owner_phone
+            from properties p
+            join organisations o on o.id = p.org_id
+            left join lateral (select u.name, u.phone from property_users pu join users u on u.id = pu.user_id
+                               where pu.property_id = p.id and pu.role = 'owner' and pu.active
+                               order by pu.created_at limit 1) own on true
+            """;
 
     /** Every property with enough numbers to spot one that has gone quiet. No guest data. */
     @Transactional(value = "adminTx", readOnly = true)
     public List<PropertyHealth> properties() {
+        return admin.sql(HEALTH_SQL + " order by o.name, p.name").query(this::health).list();
+    }
+
+    @Transactional(value = "adminTx", readOnly = true)
+    public PropertyHealth property(UUID id) {
+        return admin.sql(HEALTH_SQL + " where p.id = ?").param(id).query(this::health).optional()
+                .orElseThrow(() -> new NotFoundException("Property"));
+    }
+
+    private PropertyHealth health(java.sql.ResultSet rs, int i) throws java.sql.SQLException {
+        return new PropertyHealth(
+                rs.getObject("id", UUID.class), rs.getString("name"), rs.getString("city"), rs.getString("state"), rs.getString("phone"),
+                rs.getObject("org_id", UUID.class), rs.getString("org_name"), rs.getString("plan"),
+                rs.getString("billing_status"), rs.getBoolean("active"), rs.getInt("rooms"), rs.getInt("users"), rs.getInt("staying_now"),
+                rs.getInt("recent_bookings"), rs.getObject("last_activity", OffsetDateTime.class),
+                rs.getInt("open_folios"), rs.getLong("outstanding"), rs.getInt("outbox_pending"),
+                supportAccessOpen(rs.getString("support_until")),
+                rs.getString("code"), List.of((String[]) rs.getArray("modules").getArray()),
+                rs.getObject("created_at", OffsetDateTime.class), rs.getString("owner_name"), rs.getString("owner_phone"),
+                PropertyService.photoUrl(storage, rs.getString("photo_key")), rs.getString("platform_notes"));
+    }
+
+    /**
+     * Switch a property off or on. Off, its staff no longer find it among their properties and its booking page
+     * answers "not available"; every row of its data stays exactly where it is.
+     */
+    @Transactional("adminTx")
+    public PropertyHealth setActive(UUID propertyId, boolean active, CurrentUser actor) {
+        int changed = admin.sql("update properties set active = ?, updated_at = now() where id = ?").params(active, propertyId).update();
+        if (changed == 0) throw new NotFoundException("Property");
+        audit.recordPlatform(propertyId, "properties", propertyId.toString(), "active", null, Map.of("active", active), actor.id());
+        return property(propertyId);
+    }
+
+    /** The platform team's own notes on a property. Never shown to the property. */
+    @Transactional("adminTx")
+    public PropertyHealth setNotes(UUID propertyId, String notes, CurrentUser actor) {
+        String clean = notes == null ? null : notes.strip();
+        if (clean != null && clean.length() > 4000) throw new BadRequestException("Notes are limited to 4000 characters");
+        if (clean != null && clean.isEmpty()) clean = null;
+        int changed = admin.sql("update properties set platform_notes = ?, updated_at = now() where id = ?").params(clean, propertyId).update();
+        if (changed == 0) throw new NotFoundException("Property");
+        audit.recordPlatform(propertyId, "properties", propertyId.toString(), "notes", null, Map.of("length", clean == null ? 0 : clean.length()), actor.id());
+        return property(propertyId);
+    }
+
+    /**
+     * A new password for someone at a property, for the owner who rings up locked out. Only for a person who works
+     * at that property, never for a platform admin, and logged against the property so the owner can see it happened.
+     */
+    @Transactional("adminTx")
+    public NewPassword resetPassword(UUID propertyId, UUID userId, CurrentUser actor) {
+        var row = admin.sql("""
+                select u.name, u.phone, u.is_super_admin from users u join property_users pu on pu.user_id = u.id
+                where pu.property_id = ? and u.id = ?""").params(propertyId, userId).query().listOfRows().stream().findFirst()
+                .orElseThrow(() -> new NotFoundException("That person does not work at this property"));
+        if (Boolean.TRUE.equals(row.get("is_super_admin"))) throw new ForbiddenException("A platform admin's password cannot be reset here");
+        String password = passwords.generate();
+        admin.sql("update users set password_hash = ?, must_change_password = true, updated_at = now() where id = ?").params(passwords.hash(password), userId).update();
+        sessions.revokeAll(userId); // whoever held the old password, or a session opened with it, is out
+        audit.recordPlatform(propertyId, "users", userId.toString(), "password_reset", null, null, actor.id());
+        return new NewPassword((String) row.get("name"), (String) row.get("phone"), password);
+    }
+
+    /** The platform setting a property's photograph, e.g. at onboarding. The owner can change it from their own settings. */
+    @Transactional("adminTx")
+    public PropertyHealth storePhoto(UUID propertyId, InputStream data, long length, String contentType, CurrentUser actor) {
+        String old = photoKey(propertyId);
+        String key = PropertyService.photoKey(propertyId, length, contentType);
+        storage.put(key, in.pms.files.Uploads.checked(data, contentType), length, contentType);
+        admin.sql("update properties set photo_key = ?, updated_at = now() where id = ?").params(key, propertyId).update();
+        if (old != null) storage.delete(old);
+        audit.recordPlatform(propertyId, "properties", propertyId.toString(), "photo", null, Map.of("hasPhoto", true), actor.id());
+        return property(propertyId);
+    }
+
+    @Transactional("adminTx")
+    public PropertyHealth removePhoto(UUID propertyId, CurrentUser actor) {
+        String old = photoKey(propertyId);
+        admin.sql("update properties set photo_key = null, updated_at = now() where id = ?").param(propertyId).update();
+        if (old != null) storage.delete(old);
+        audit.recordPlatform(propertyId, "properties", propertyId.toString(), "photo", null, Map.of("hasPhoto", false), actor.id());
+        return property(propertyId);
+    }
+
+    private String photoKey(UUID propertyId) {
+        var row = admin.sql("select photo_key from properties where id = ?").param(propertyId).query().listOfRows().stream().findFirst()
+                .orElseThrow(() -> new NotFoundException("Property"));
+        return (String) row.get("photo_key");
+    }
+
+    /** Who runs and works at a property, owners first. */
+    @Transactional(value = "adminTx", readOnly = true)
+    public List<Member> team(UUID propertyId) {
         return admin.sql("""
-                select p.id, p.name, p.city, p.active, o.id as org_id, o.name as org_name,
-                       coalesce(o.plan_code, 'none') as plan, o.billing_status::text as billing_status,
-                       (select count(*) from rooms r where r.property_id = p.id and r.active) as rooms,
-                       (select count(*) from bookings b where b.property_id = p.id and b.created_at > now() - interval '30 days') as recent_bookings,
-                       (select max(b.created_at) from bookings b where b.property_id = p.id) as last_activity,
-                       (select count(*) from folios f where f.property_id = p.id and f.status = 'open') as open_folios,
-                       (select coalesce(sum(f.total_paise + f.deposit_held_paise - f.paid_paise), 0) from folios f
-                          where f.property_id = p.id and f.status = 'open') as outstanding,
-                       (select count(*) from outbox ob where ob.property_id = p.id and ob.status = 'pending') as outbox_pending,
-                       coalesce(p.settings->>'support_access_until', '') as support_until, p.code, p.modules
-                from properties p join organisations o on o.id = p.org_id
-                order by o.name, p.name""")
-                .query((rs, i) -> new PropertyHealth(
-                        rs.getObject("id", UUID.class), rs.getString("name"), rs.getString("city"),
-                        rs.getObject("org_id", UUID.class), rs.getString("org_name"), rs.getString("plan"),
-                        rs.getString("billing_status"), rs.getBoolean("active"), rs.getInt("rooms"),
-                        rs.getInt("recent_bookings"), rs.getObject("last_activity", OffsetDateTime.class),
-                        rs.getInt("open_folios"), rs.getLong("outstanding"), rs.getInt("outbox_pending"),
-                        supportAccessOpen(rs.getString("support_until")),
-                        rs.getString("code"), List.of((String[]) rs.getArray("modules").getArray())))
+                select u.id, u.name, u.phone, pu.role::text as role, pu.active
+                from property_users pu join users u on u.id = pu.user_id
+                where pu.property_id = ?
+                order by pu.role <> 'owner', pu.active desc, u.name""")
+                .param(propertyId)
+                .query((rs, i) -> new Member(rs.getObject("id", UUID.class), rs.getString("name"), rs.getString("phone"), rs.getString("role"), rs.getBoolean("active")))
+                .list();
+    }
+
+    @Transactional(value = "adminTx", readOnly = true)
+    public List<Plan> plans() {
+        return admin.sql("select code, name, max_rooms, monthly_paise from plans where active order by monthly_paise")
+                .query((rs, i) -> new Plan(rs.getString("code"), rs.getString("name"), rs.getInt("max_rooms"), rs.getLong("monthly_paise")))
                 .list();
     }
 
@@ -105,7 +226,7 @@ public class AdminService {
                 : (UUID) existing.getFirst().get("id");
         // Someone who already signs in somewhere keeps the password they have.
         String password = existing.isEmpty() || !Boolean.TRUE.equals(existing.getFirst().get("has_password")) ? passwords.generate() : null;
-        if (password != null) admin.sql("update users set password_hash = ?, updated_at = now() where id = ?").params(passwords.hash(password), ownerId).update();
+        if (password != null) admin.sql("update users set password_hash = ?, must_change_password = true, updated_at = now() where id = ?").params(passwords.hash(password), ownerId).update();
         admin.sql("""
                 insert into property_users(property_id, user_id, role) values (?, ?, 'owner')
                 on conflict (property_id, user_id) do update set role = 'owner', active = true""")

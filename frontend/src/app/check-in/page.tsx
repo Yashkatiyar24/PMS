@@ -20,17 +20,11 @@ import { rupees, toPaise, unitName } from "@/lib/format"
 import { OFF_SALE, type Booking, type Guest, type Room, type RoomType } from "@/lib/types"
 import { useI18n } from "@/i18n"
 import { Banner, Button, Card, Chip, ChoiceChips, Disclosure, Field, Loading, PageHeader, Stepper } from "@/components/ui"
-import { SelfRegistrationQr, type Submission } from "@/components/SelfRegistrationQr"
+import { SelfRegistrationQr, type Registration, type Submission } from "@/components/SelfRegistrationQr"
 
 type Settings = Record<string, unknown>
 
-const ID_TYPES = [
-  { value: "aadhaar", label: "Aadhaar" },
-  { value: "voter", label: "Voter ID" },
-  { value: "dl", label: "Driving licence" },
-  { value: "passport", label: "Passport" },
-  { value: "other", label: "Other" },
-]
+const ID_TYPES = ["aadhaar", "voter", "dl", "passport", "other"] as const
 
 /** Numbered section header: the desk reads the screen top to bottom, in this order. */
 function Step({ n, title, done }: { n: number; title: string; done?: boolean }) {
@@ -85,6 +79,8 @@ export default function CheckInPage() {
   const [idLast4, setIdLast4] = useState("")
   const [photo, setPhoto] = useState<Blob | null>(null)
   const [skipReason, setSkipReason] = useState("")
+  // The guest filled the form on their own phone: which link it was, and whether an ID photo came with it.
+  const [registration, setRegistration] = useState<Pick<Registration, "id" | "hasIdPhoto"> | null>(null)
 
   const [adults, setAdults] = useState(1)
   const [children, setChildren] = useState(0)
@@ -171,25 +167,45 @@ export default function CheckInPage() {
 
   const photoRequired = Boolean(settings?.id_photo_required)
   const consentRequired = Boolean(settings?.consent_required)
-  const canSubmit = !!name.trim() && !!unitKey && (!consentRequired || consent) && (!photoRequired || !!photo || !!skipReason.trim())
+  const guestPhoto = Boolean(registration?.hasIdPhoto)
+  // What still stands between the desk and the receipt, in the order the screen asks. Shown beside the button,
+  // because a greyed-out button with no reason reads as broken.
+  const missing = !name.trim() ? t("checkin.need.name")
+    : !unitKey ? t("checkin.need.room")
+    : consentRequired && !consent ? t("checkin.need.consent")
+    : photoRequired && !photo && !guestPhoto && !skipReason.trim() ? t("checkin.need.photo")
+    : ""
+  const canSubmit = !missing
 
   async function submit() {
     setBusy(true)
     setError("")
     const [roomId, bedId] = unitKey.split(":")
     const clientUuid = newClientUuid()
+    const newGuest = { name: name.trim(), phone, city, address, nationality: "IN", idType, idLast4, notes: "" }
     try {
+      let guest = guestId
+      // Details the guest typed on their own phone become the guest record, their ID photo included, with whatever
+      // the desk corrected on screen. Remembered, so a check-in the server refuses is not applied twice on retry.
+      // Offline, the plain path below still queues the check-in; only the guest's photo is left behind.
+      if (!guest && registration) {
+        try {
+          guest = (await api<{ guestId: string }>(`/api/registrations/${registration.id}/apply`, { method: "POST", body: newGuest })).guestId
+          setGuestId(guest)
+        } catch (e) {
+          if (!(e instanceof TypeError)) throw e
+        }
+      }
       // A photo needs a guest row to hang on, so an existing guest gets theirs uploaded first.
-      const uploadedFor = guestId
-      if (photo && uploadedFor) await upload(`/api/guests/${uploadedFor}/id-photo`, photo, "id.jpg")
+      if (photo && guest) await upload(`/api/guests/${guest}/id-photo`, photo, "id.jpg")
 
       const booking = await api<Booking>("/api/bookings/check-in", {
         method: "POST",
         clientUuid,
         queueWhenOffline: true,
         body: {
-          guestId,
-          newGuest: guestId ? null : { name: name.trim(), phone, city, address, nationality: "IN", idType, idLast4, notes: "" },
+          guestId: guest,
+          newGuest: guest ? null : newGuest,
           units: [{ roomId, bedId: bedId || null, ratePaise: null }],
           nights,
           adults,
@@ -199,7 +215,7 @@ export default function CheckInPage() {
           notes: "",
           consent,
           whatsappOptIn: optIn,
-          idPhotoSkippedReason: photo ? null : skipReason.trim() || null,
+          idPhotoSkippedReason: photo || guestPhoto ? null : skipReason.trim() || null,
           advancePaise: toPaise(advance),
           advanceMode: mode,
           depositPaise: toPaise(deposit),
@@ -207,7 +223,7 @@ export default function CheckInPage() {
       })
 
       // A new guest only gets an id once the server replies, so their photo is uploaded now.
-      if (photo && !uploadedFor) await upload(`/api/guests/${booking.guestId}/id-photo`, photo, "id.jpg")
+      if (photo && !guest) await upload(`/api/guests/${booking.guestId}/id-photo`, photo, "id.jpg")
 
       const seconds = Math.round((Date.now() - (started.current ?? Date.now())) / 1000)
       router.push(`/stays/${booking.id}?checkedIn=${seconds}`)
@@ -224,8 +240,8 @@ export default function CheckInPage() {
     }
   }
 
-  /** The guest pressed send on their own phone: their answers fill this form for the desk to read back. */
-  const applySelfRegistration = useCallback((sub: Submission) => {
+  /** The guest pressed save on their own phone: their answers fill this form for the desk to read back. */
+  const applySelfRegistration = useCallback((sub: Submission, reg: Registration) => {
     setName(sub.name)
     if (sub.phone) setPhone(sub.phone)
     setCity(sub.city ?? "")
@@ -237,6 +253,7 @@ export default function CheckInPage() {
     setConsent(sub.consent)
     setOptIn(sub.whatsappOptIn)
     setGuestId(null)
+    setRegistration({ id: reg.id, hasIdPhoto: reg.hasIdPhoto })
     setNotice(t("selfreg.received", { name: sub.name }))
   }, [t])
 
@@ -246,14 +263,36 @@ export default function CheckInPage() {
   const total = chosenRate * nights
   const shown = Math.max(opened, unitKey ? 3 : name.trim() ? 2 : 1)
 
+  // The total, the one button that matters, and why it is waiting. Pinned under the thumb on a phone; a card
+  // beside the form on a laptop.
+  const totalBlock = (
+    <div className="min-w-0 flex-1">
+      <p className="text-xs text-ink-soft">{t("checkin.total")}</p>
+      <p className="text-lg font-bold tabular-nums leading-tight">{rupees(total)} <span className="whitespace-nowrap text-xs font-normal text-ink-soft">{chosenRate > 0 && `${rupees(chosenRate)} × ${nights}`}</span></p>
+    </div>
+  )
+  const hint = missing && <p className="text-xs font-medium text-warn">{missing}</p>
+  const submitButton = (
+    <Button size="lg" className="min-w-[45%] lg:w-full" disabled={!canSubmit || busy} onClick={submit}>
+      <Check size={20} aria-hidden /> {t("checkin.submit")}
+    </Button>
+  )
+
   return (
-    <div className="space-y-4 pb-24">
+    <div className="space-y-4 pb-24 lg:pb-0">
       <PageHeader title={t("action.checkIn")} back="/" />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
       {notice && <Banner tone="info" onClose={() => setNotice("")}>{notice}</Banner>}
 
-      {Boolean(settings.self_registration_enabled) && <SelfRegistrationQr onReceived={applySelfRegistration} />}
+      {/* A phone reads top to bottom: the QR handover, then the steps, with the total pinned below. A laptop has
+          room for the handover and the total to sit beside the form, so the desk sees the code and the form at once. */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-6">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1">
+          {Boolean(settings.self_registration_enabled) && <SelfRegistrationQr onReceived={applySelfRegistration} />}
+          <Card className="hidden space-y-2 lg:block">{totalBlock}{hint}{submitButton}</Card>
+        </aside>
 
+        <div className="space-y-4 lg:col-start-1 lg:row-start-1">
       {/* 1 · Guest */}
       <Card>
         <Step n={1} title={t("checkin.guest")} done={!!name.trim()} />
@@ -282,7 +321,7 @@ export default function CheckInPage() {
             <Field label={t("checkin.name")}>
               <input value={name} onChange={(e) => { setName(e.target.value); if (e.target.value.trim()) reach(2) }} autoComplete="name" />
             </Field>
-            {guestId && <Chip tone="ok" className="mb-3">{t("checkin.guest")} ✓</Chip>}
+            {guestId && <Chip tone="ok" className="mb-3">{t("checkin.guest")}</Chip>}
           </div>
           <Field label={t("checkin.city")}>
             <input value={city} onChange={(e) => setCity(e.target.value)} />
@@ -292,12 +331,12 @@ export default function CheckInPage() {
 
       <Disclosure
         title={t("checkin.moreDetails")}
-        summary={[ID_TYPES.find((i) => i.value === idType)?.label, idLast4 && `••${idLast4}`, photo && `${Math.round(photo.size / 1024)} KB ✓`].filter(Boolean).join(" · ") || undefined}
+        summary={[idType && t(`id.${idType}` as "id.aadhaar"), idLast4 && `••${idLast4}`, photo ? `${Math.round(photo.size / 1024)} KB` : guestPhoto && t("selfreg.photoReceived")].filter(Boolean).join(" · ") || undefined}
         defaultOpen={photoRequired}
       >
         <div className="space-y-3">
-          <Field label={t("checkin.idType")}>
-            <ChoiceChips value={idType} onChange={setIdType} options={ID_TYPES} />
+          <Field group label={t("checkin.idType")}>
+            <ChoiceChips value={idType} onChange={setIdType} options={ID_TYPES.map((value) => ({ value, label: t(`id.${value}` as "id.aadhaar") }))} />
           </Field>
           <div className="grid grid-cols-2 gap-2">
             <Field label={t("checkin.idLast4")} hint={t("checkin.idLast4Hint")}>
@@ -308,13 +347,13 @@ export default function CheckInPage() {
             </Field>
           </div>
           <input ref={fileInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files?.[0] && pickPhoto(e.target.files[0])} />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" onClick={() => fileInput.current?.click()}>
               <Camera size={18} aria-hidden /> {t("checkin.takePhoto")}
             </Button>
-            {photo && <Chip tone="ok">{Math.round(photo.size / 1024)} KB ✓</Chip>}
+            {photo ? <Chip tone="ok">{Math.round(photo.size / 1024)} KB</Chip> : guestPhoto && <Chip tone="ok">{t("selfreg.photoReceived")}</Chip>}
           </div>
-          {photoRequired && !photo && (
+          {photoRequired && !photo && !guestPhoto && (
             <Field label={t("checkin.skipReason")}>
               <input value={skipReason} onChange={(e) => setSkipReason(e.target.value)} />
             </Field>
@@ -335,7 +374,7 @@ export default function CheckInPage() {
             <Stepper label={t("checkin.nights")} value={nights} min={1} onChange={setNights} />
           </div>
 
-          <Field label={t("booking.roomType")}>
+          <Field group label={t("booking.roomType")}>
             <ChoiceChips
               value={activeType}
               onChange={(v) => { setTypeName(v); setUnitKey("") }}
@@ -343,7 +382,7 @@ export default function CheckInPage() {
             />
           </Field>
 
-          <Field label={t("checkin.pickRoom")}>
+          <Field group label={t("checkin.pickRoom")}>
             {units.length === 0 ? (
               <p className="text-sm text-ink-soft">{t("today.noneFree")}</p>
             ) : (
@@ -385,7 +424,7 @@ export default function CheckInPage() {
               <input inputMode="decimal" value={deposit} onChange={(e) => setDeposit(e.target.value)} placeholder="0" />
             </Field>
           </div>
-          <Field label={t("checkin.mode")}>
+          <Field group label={t("checkin.mode")}>
             <ChoiceChips value={mode} onChange={setMode} options={paymentModes.map((m) => ({ value: m, label: m.toUpperCase() }))} />
           </Field>
           {consentRequired && (
@@ -401,17 +440,14 @@ export default function CheckInPage() {
         </div>
       </Card>
       )}
+        </div>
+      </div>
 
-      {/* Sticky total + submit: always within thumb reach. */}
-      <div className="fixed inset-x-0 bottom-[58px] z-10 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-60">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 md:px-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-ink-soft">{t("checkin.total")}</p>
-            <p className="text-lg font-bold tabular-nums leading-tight">{rupees(total)} <span className="text-xs font-normal text-ink-soft">{chosenRate > 0 && `${rupees(chosenRate)} × ${nights}`}</span></p>
-          </div>
-          <Button size="lg" className="min-w-[45%]" disabled={!canSubmit || busy} onClick={submit}>
-            <Check size={20} aria-hidden /> {t("checkin.submit")}
-          </Button>
+      {/* Sticky total + submit: always within thumb reach. A laptop shows the same summary beside the form instead. */}
+      <div className="fixed inset-x-0 bottom-[58px] z-10 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-60 lg:hidden">
+        <div className="mx-auto max-w-3xl md:px-4">
+          {hint && <div className="mb-1.5">{hint}</div>}
+          <div className="flex items-center gap-3">{totalBlock}{submitButton}</div>
         </div>
       </div>
     </div>

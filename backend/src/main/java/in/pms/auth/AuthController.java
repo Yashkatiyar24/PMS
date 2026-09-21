@@ -2,6 +2,7 @@ package in.pms.auth;
 
 import in.pms.common.BadRequestException;
 import in.pms.common.ForbiddenException;
+import in.pms.common.PublicRateLimiter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
@@ -27,29 +28,40 @@ public class AuthController {
     private final SessionService sessions;
     private final PasswordService passwords;
     private final JdbcClient adminJdbc;
-    /** Wrong passwords per account: ten in a rolling quarter of an hour, then that account waits. */
+    private final PublicRateLimiter limiter;
+    private static final String TOO_MANY = "Too many attempts; please wait a few minutes";
+    /**
+     * Wrong passwords per account and address: ten in a rolling quarter of an hour, then that pair waits. Keyed
+     * on both so that someone who knows a property's code and a staff phone cannot lock the desk out from
+     * afar with ten bad guesses.
+     */
     private final Lockout wrong = new Lockout(10, Duration.ofMinutes(15));
-    /** ...and per connection, so trying one password against many accounts runs out too. */
+    /** ...per address, so trying one password against many accounts runs out too... */
     private final Lockout wrongFrom = new Lockout(50, Duration.ofMinutes(15));
+    /** ...and per account from anywhere, the backstop against guessing spread over many addresses. */
+    private final Lockout wrongAccount = new Lockout(100, Duration.ofMinutes(15));
 
-    public AuthController(OtpService otp, SessionService sessions, PasswordService passwords, @Qualifier("adminJdbc") JdbcClient adminJdbc) {
-        this.otp = otp; this.sessions = sessions; this.passwords = passwords; this.adminJdbc = adminJdbc;
+    public AuthController(OtpService otp, SessionService sessions, PasswordService passwords, @Qualifier("adminJdbc") JdbcClient adminJdbc, PublicRateLimiter limiter) {
+        this.otp = otp; this.sessions = sessions; this.passwords = passwords; this.adminJdbc = adminJdbc; this.limiter = limiter;
     }
 
     public record TargetRequest(@NotBlank String target) {}
     public record VerifyRequest(@NotBlank String target, @NotBlank String code, String deviceName) {}
-    /** Either the dharamshala's code and a mobile number, or an email (the platform admin, an owner on a laptop). */
+    /** Either the property's code and a mobile number, or an email (the platform admin, an owner on a laptop). */
     public record LoginRequest(String email, String code, String phone, @NotBlank String password, String deviceName) {}
     public record SwitchRequest(UUID propertyId) {}
 
+    /** Open to anyone, so each address gets a small allowance: codes cost money to send and are worth guessing. */
     @PostMapping("/otp/send")
-    public Map<String, String> sendOtp(@RequestBody @jakarta.validation.Valid TargetRequest r) {
+    public Map<String, String> sendOtp(@RequestBody @jakarta.validation.Valid TargetRequest r, HttpServletRequest req) {
+        if (!limiter.allow("otp-send:" + req.getRemoteAddr(), 10)) throw new ForbiddenException(TOO_MANY);
         otp.send(r.target());
         return Map.of("status", "sent");
     }
 
     @PostMapping("/otp/verify")
-    public Map<String, Object> verifyOtp(@RequestBody @jakarta.validation.Valid VerifyRequest r, HttpServletResponse res) {
+    public Map<String, Object> verifyOtp(@RequestBody @jakarta.validation.Valid VerifyRequest r, HttpServletRequest req, HttpServletResponse res) {
+        if (!limiter.allow("otp-verify:" + req.getRemoteAddr(), 20)) throw new ForbiddenException(TOO_MANY);
         UUID userId = otp.verify(r.target(), r.code());
         return login(userId, r.deviceName(), res);
     }
@@ -63,9 +75,10 @@ public class AuthController {
         String email = byCode ? null : r.email() == null ? "" : r.email().trim().toLowerCase();
         String account = byCode ? code + ":" + phone : email;
         String from = req.getRemoteAddr();
-        if (wrong.locked(account) || wrongFrom.locked(from)) throw new ForbiddenException("Too many attempts; please wait a few minutes");
+        String pair = account + "|" + from;
+        if (wrong.locked(pair) || wrongFrom.locked(from) || wrongAccount.locked(account)) throw new ForbiddenException(TOO_MANY);
 
-        // Someone deactivated in this dharamshala, or working only elsewhere, is not found here.
+        // Someone deactivated at this property, or working only elsewhere, is not found here.
         var row = (byCode
                 ? adminJdbc.sql("""
                         select u.id, u.password_hash, p.id as property_id
@@ -79,11 +92,13 @@ public class AuthController {
         String hash = row.map(m -> (String) m.get("password_hash")).orElse("{bcrypt}$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5XG1tE1dcKgTtqBfDDqjBqzs5eXfy");
         boolean ok = passwords.matches(r.password(), hash) && row.isPresent();
         if (!ok) {
-            wrong.fail(account);
+            wrong.fail(pair);
             wrongFrom.fail(from);
-            throw new BadRequestException(byCode ? "Wrong dharamshala code, mobile number or password" : "Wrong email or password");
+            wrongAccount.fail(account);
+            throw new BadRequestException(byCode ? "Wrong property code, mobile number or password" : "Wrong email or password");
         }
-        wrong.clear(account);
+        wrong.clear(pair);
+        wrongAccount.clear(account);
         return login((UUID) row.get().get("id"), r.deviceName(), (UUID) row.get().get("property_id"), res);
     }
 

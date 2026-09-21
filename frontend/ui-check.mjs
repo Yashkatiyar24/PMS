@@ -51,7 +51,7 @@ page.on("pageerror", (e) => errors.push(String(e)))
 try {
   // 1. Login screen
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle" })
-  check("the login screen renders", await page.getByRole("heading", { name: /धर्मशाला|Dharamshala/ }).isVisible())
+  check("the login screen renders", await page.getByRole("heading", { level: 1, name: /प्रॉपर्टी|Property/ }).first().isVisible())
   check("it opens in Hindi by default", (await page.locator("html").getAttribute("lang")) === "hi")
 
   // 2. Language toggle
@@ -60,10 +60,11 @@ try {
 
   // 3. Sign in with email and password. The chooser is a segmented control (role=tab), not a button:
   // it replaced the old "Use email and password" button in the redesign.
+  await page.getByRole("button", { name: /Sign in/i }).first().click()
   await page.getByRole("tab", { name: /Email/ }).click()
   await page.getByLabel("Email").fill("manager@pms.local")
   await page.getByLabel("Password").fill("password123")
-  await page.getByRole("button", { name: "Sign in", exact: true }).click()
+  await page.getByRole("dialog").getByRole("button", { name: "Sign in", exact: true }).click()
   await page.waitForURL(`${BASE}/`, { timeout: 15000 })
   check("signing in lands on the today screen", page.url().endsWith("/"))
   await page.waitForSelector("text=/Staying now|Arriving today/", { timeout: 15000 })

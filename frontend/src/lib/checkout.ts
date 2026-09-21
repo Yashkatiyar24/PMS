@@ -13,7 +13,7 @@ declare global {
 
 export type CheckoutResult =
   | { kind: "paid"; orderId: string; paymentId: string; signature: string }
-  | { kind: "failed"; reason: string }
+  | { kind: "failed"; reason: string | null } // the gateway's own words when it gave any; the page has the translation
   | { kind: "closed" }
 
 let loading: Promise<void> | null = null
@@ -24,7 +24,7 @@ function load(): Promise<void> {
     const script = document.createElement("script")
     script.src = "https://checkout.razorpay.com/v1/checkout.js"
     script.onload = () => resolve()
-    script.onerror = () => { loading = null; reject(new Error("The payment page could not be opened")) }
+    script.onerror = () => { loading = null; reject(new Error("checkout-unavailable")) }
     document.head.appendChild(script)
   })
   return loading
@@ -49,7 +49,7 @@ export async function openRazorpay(checkout: Checkout, prefill: { name: string; 
       handler: (r: RazorpayResponse) => done({ kind: "paid", orderId: r.razorpay_order_id, paymentId: r.razorpay_payment_id, signature: r.razorpay_signature }),
       modal: { ondismiss: () => done(lastFailure ? { kind: "failed", reason: lastFailure } : { kind: "closed" }) },
     })
-    rzp.on("payment.failed", (r) => { lastFailure = r.error?.description ?? "Payment failed" })
+    rzp.on("payment.failed", (r) => { lastFailure = r.error?.description ?? null })
     rzp.open()
   })
 }

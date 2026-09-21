@@ -16,7 +16,7 @@ import java.util.UUID;
 /**
  * Seeds the pilot property for development when {@code pms.seed.enabled=true}. Idempotent.
  * Logins: owner@pms.local / manager@pms.local / staff@pms.local with password "password123";
- * phones 9000000001..3 for OTP, or dharamshala code SRD1001 + phone + password; approval PIN 1234.
+ * phones 9000000001..3 for OTP, or property code SRD1001 + phone + password; approval PIN 1234.
  */
 @Component
 @ConditionalOnProperty(name = "pms.seed.enabled", havingValue = "true")

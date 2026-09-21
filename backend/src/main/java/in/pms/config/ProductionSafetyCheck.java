@@ -35,6 +35,11 @@ public class ProductionSafetyCheck {
 
     private static boolean blank(String s) { return s == null || s.isBlank(); }
 
+    /** The values V2 created the roles with, or anything short enough to guess. */
+    private static boolean weakDatabasePassword(PmsProperties.Pool pool) {
+        return pool == null || blank(pool.password()) || pool.password().length() < 16 || pool.password().equals(pool.username());
+    }
+
     @PostConstruct
     public void verify() {
         List<String> profiles = List.of(env.getActiveProfiles());
@@ -56,6 +61,16 @@ public class ProductionSafetyCheck {
                 || props.allowedOrigins().stream().anyMatch(o -> o.contains("localhost") || o.equals("*")))
             problems.add("PMS_ALLOWED_ORIGINS is empty, a wildcard, or still points at localhost. "
                     + "List the origins the desk app is actually served from.");
+
+        if (props.appUrl() == null || props.appUrl().contains("localhost"))
+            problems.add("PMS_APP_URL still points at localhost; QR codes, booking links and emails would send people there.");
+        if (props.sms() != null && "console".equals(props.sms().provider()))
+            problems.add("PMS_SMS_PROVIDER is console: login codes are written to the log and never sent. Use msg91.");
+        if (props.email() != null && "console".equals(props.email().provider()))
+            problems.add("PMS_EMAIL_PROVIDER is console: login codes and reports are written to the log and never sent. Use brevo.");
+        if (props.db() != null && (weakDatabasePassword(props.db().app()) || weakDatabasePassword(props.db().admin())))
+            problems.add("PMS_DB_APP_PASSWORD or PMS_DB_ADMIN_PASSWORD is unset, shorter than 16 characters, or still the value the roles "
+                    + "were created with. The admin role reads every property; set both to long random values (see infra/.env.example).");
 
         if (props.payments() != null && "console".equals(props.payments().provider()))
             problems.add("PMS_PAYMENT_PROVIDER is console, a simulator that accepts payments nobody made. "

@@ -45,7 +45,7 @@ export default function GuestProfilePage({ params }: { params: Promise<{ id: str
   }
 
   /** Opens a signed link that expires in minutes; the server records the look. */
-  const view = (path: string) => run(async () => { const { url } = await api<{ url: string }>(path); window.open(url, "_blank") })
+  const view = (path: string) => run(async () => { const { url } = await api<{ url: string }>(path); window.open(url, "_blank", "noopener,noreferrer") })
 
   if (!data) return loadError ? <Banner tone="danger">{loadError}</Banner> : <Loading />
   const g = data.guest

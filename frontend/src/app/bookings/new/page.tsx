@@ -14,11 +14,11 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { CalendarCheck } from "lucide-react"
 import { clsx } from "clsx"
 import { api, ApiError, newClientUuid } from "@/lib/api"
-import { rupees, toPaise, unitName } from "@/lib/format"
+import { formatDate, rupees, toPaise, unitName } from "@/lib/format"
 import { DESK_SOURCES, OFF_SALE, type Booking, type FreeUnit, type Guest, type Room, type RoomType } from "@/lib/types"
 import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
-import { Banner, Button, Card, Chip, ChoiceChips, Disclosure, Field, Loading, PageHeader, Stepper } from "@/components/ui"
+import { Banner, Button, Card, Chip, ChoiceChips, Disclosure, Field, KV, Loading, PageHeader, Stepper } from "@/components/ui"
 
 type Settings = Record<string, unknown>
 type Source = (typeof DESK_SOURCES)[number]
@@ -114,7 +114,16 @@ export default function NewBookingPage() {
   const type = data?.types.find((x) => x.id === roomTypeId)
   const groupFree = free ?? []
   const groupTotal = groupFree.filter((f) => groupKeys.includes(`${f.roomId}:${f.bedId ?? ""}`)).reduce((sum, f) => sum + f.ratePaise, 0) * nights
-  const canSubmit = !!name.trim() && datesOk && (!consentRequired || consent) && (!group || (groupKeys.length > 0 && !!groupName.trim()))
+  const total = group ? groupTotal : datesOk && type ? nights * type.baseRatePaise : 0
+  // What still stands between the desk and the confirmation, in the order the screen asks. Shown beside the
+  // button, because a greyed-out button with no reason reads as broken.
+  const missing = !name.trim() ? t("checkin.need.name")
+    : !datesOk ? t("booking.need.dates")
+    : group && groupKeys.length === 0 ? t("booking.need.units")
+    : group && !groupName.trim() ? t("booking.need.groupName")
+    : consentRequired && !consent ? t("checkin.need.consent")
+    : ""
+  const canSubmit = !missing
 
   async function submit() {
     setBusy(true)
@@ -168,6 +177,10 @@ export default function NewBookingPage() {
       <PageHeader title={t("booking.new")} back="/bookings" />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
 
+      {/* A phone reads the form top to bottom and finds the summary and the button at the end. A laptop keeps the
+          summary in view beside the form, so the total and what is still missing are always in sight. */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-6">
+      <div className="min-w-0 space-y-4">
       <Card title={t("checkin.guest")}>
         <div className="space-y-3">
           <Field label={t("checkin.phoneLookup")} hint={t("checkin.phoneHint")}>
@@ -193,8 +206,8 @@ export default function NewBookingPage() {
               <input value={city} onChange={(e) => setCity(e.target.value)} />
             </Field>
           </div>
-          {guestId && <Chip tone="ok">{t("checkin.guest")} ✓</Chip>}
-          <Field label={t("booking.source")}>
+          {guestId && <Chip tone="ok">{t("checkin.guest")}</Chip>}
+          <Field group label={t("booking.source")}>
             <ChoiceChips value={source} onChange={setSource} options={DESK_SOURCES.map((s) => ({ value: s, label: t(`source.${s}`) }))} />
           </Field>
           {(source === "corporate" || source === "travel_agent" || group) && (
@@ -224,7 +237,7 @@ export default function NewBookingPage() {
             </Field>
           </div>
           {!group && (
-            <Field label={t("booking.roomType")}>
+            <Field group label={t("booking.roomType")}>
               <ChoiceChips
                 value={roomTypeId}
                 onChange={(v) => { setChosenTypeId(v); setUnitKey("") }}
@@ -314,9 +327,31 @@ export default function NewBookingPage() {
         </div>
       </Card>
 
-      <Button size="lg" className="w-full" disabled={!canSubmit || busy} onClick={submit}>
-        <CalendarCheck size={20} aria-hidden /> {t("booking.create")}
-      </Button>
+      </div>
+
+      <aside className="lg:sticky lg:top-24">
+        <Card title={t("booking.summary")}>
+          <dl className="divide-y divide-line">
+            <KV label={t("checkin.guest")} value={name.trim() || "—"} />
+            <KV label={t("booking.dates")} value={datesOk ? `${formatDate(arrive)} → ${formatDate(depart)}` : "—"} />
+            <KV label={t("checkin.nights")} value={datesOk ? (nights === 1 ? t("book.oneNight") : t("book.nights", { n: nights })) : "—"} />
+            <KV
+              label={t("booking.roomType")}
+              value={group
+                ? (groupKeys.length > 0 ? t("booking.selected", { n: groupKeys.length }) : "—")
+                : [type?.name, unitKey ? units.find((u) => u.key === unitKey)?.label : null].filter(Boolean).join(" · ") || "—"}
+            />
+            <KV label={`${t("checkin.adults")} · ${t("checkin.children")}`} value={`${adults} · ${children}`} />
+            {toPaise(advance) > 0 && <KV label={t("checkin.advance")} value={rupees(toPaise(advance))} />}
+            <KV label={t("stay.total")} value={rupees(total)} strong />
+          </dl>
+          {missing && <p className="mt-3 text-xs font-medium text-warn">{missing}</p>}
+          <Button size="lg" className="mt-3 w-full" disabled={!canSubmit || busy} onClick={submit}>
+            <CalendarCheck size={20} aria-hidden /> {t("booking.create")}
+          </Button>
+        </Card>
+      </aside>
+      </div>
     </div>
   )
 }

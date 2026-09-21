@@ -5,10 +5,12 @@
  * for future charges, and leaving it empty is the normal case for a trust that is not registered.
  */
 import { useState } from "react"
-import { api, ApiError } from "@/lib/api"
+import { api, ApiError, upload } from "@/lib/api"
 import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
 import { Banner, Button, Card, Disclosure, Field, Loading, PageHeader } from "@/components/ui"
+import { PropertyPhoto } from "@/components/PropertyPhoto"
+import { SplitPage } from "@/components/SplitPage"
 
 type Property = {
   id: string
@@ -23,11 +25,16 @@ type Property = {
   reg12a: string | null
   reg80g: string | null
   timezone: string
+  /** A short-lived link to the property's photograph, or null when it has none. Changed on its own, not with Save. */
+  photoUrl: string | null
 }
+
+/** The fields Save sends; the photo travels separately and must not make the form look edited. */
+const withoutPhoto = (p: Property): Property => ({ ...p, photoUrl: null })
 
 export default function PropertySetupPage() {
   const { t } = useI18n()
-  const { data: loaded } = useResource(() => api<Property>("/api/property"), [], t("error.generic"))
+  const { data: loaded, set: setLoaded } = useResource(() => api<Property>("/api/property"), [], t("error.generic"))
   const [edited, setEdited] = useState<Property | null>(null)
   const property = edited ?? loaded
   const [error, setError] = useState("")
@@ -43,7 +50,22 @@ export default function PropertySetupPage() {
       setSaved(false)
     },
   })
-  const dirty = edited !== null && JSON.stringify(edited) !== JSON.stringify(loaded)
+  const dirty = edited !== null && loaded !== null && JSON.stringify(withoutPhoto(edited)) !== JSON.stringify(withoutPhoto(loaded))
+
+  /** The photo is saved the moment it is chosen; the text fields keep whatever is half-typed. */
+  async function photo(action: () => Promise<Property>) {
+    setBusy(true)
+    setError("")
+    try {
+      const saved = await action()
+      setLoaded(() => saved)
+      setEdited((current) => (current ? { ...current, photoUrl: saved.photoUrl } : null))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : t("error.generic"))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function save() {
     setBusy(true)
@@ -62,8 +84,18 @@ export default function PropertySetupPage() {
     <div className="space-y-4">
       <PageHeader title={t("setup.property")} back="/settings" actions={<Button size="sm" disabled={busy || !dirty} onClick={save}>{t("action.save")}</Button>} />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
-      {saved && <Banner tone="ok" onClose={() => setSaved(false)}>{t("settings.savedAt")} ✓</Banner>}
+      {saved && <Banner tone="ok" onClose={() => setSaved(false)}>{t("settings.savedAt")}</Banner>}
 
+      <SplitPage
+        aside={
+          <PropertyPhoto
+            url={property.photoUrl}
+            busy={busy}
+            onUpload={(blob) => photo(() => upload<Property>("/api/property/photo", blob, "photo.jpg"))}
+            onRemove={() => photo(() => api<Property>("/api/property/photo", { method: "DELETE" }))}
+          />
+        }
+      >
       <Card>
         <div className="space-y-3">
           <Field label={t("setup.name")}><input {...field("name")} /></Field>
@@ -91,7 +123,9 @@ export default function PropertySetupPage() {
         </div>
       </Disclosure>
 
-      <Button size="lg" className="w-full" disabled={busy || !dirty} onClick={save}>{t("action.save")}</Button>
+      {/* Under the thumb on a phone; a laptop already has the Save in the header. */}
+      <Button size="lg" className="w-full md:hidden" disabled={busy || !dirty} onClick={save}>{t("action.save")}</Button>
+      </SplitPage>
     </div>
   )
 }

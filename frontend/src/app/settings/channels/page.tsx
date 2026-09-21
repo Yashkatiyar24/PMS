@@ -15,6 +15,7 @@ import { useResource } from "@/lib/use-resource"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { useI18n } from "@/i18n"
 import { Avatar, Banner, Button, Card, Chip, ChoiceChips, Empty, Field, ListCard, ListRow, Loading, Menu, PageHeader, SectionLabel, Sheet } from "@/components/ui"
+import { SplitPage } from "@/components/SplitPage"
 
 type ChannelLink = { id: string; roomId: string; roomNumber: string; channel: string; exportToken: string; importUrl: string | null; lastSyncedAt: string | null; lastError: string | null; conflicts: number }
 type Conflict = { id: string; channel: string; roomNumber: string; arriveOn: string; departOn: string; summary: string; conflict: string }
@@ -66,29 +67,33 @@ export default function ChannelsPage() {
       <PageHeader title={t("channels.title")} subtitle={t("channels.subtitle")} back="/settings" />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
 
-      {/* The property's own booking page */}
-      <Card title={t("channels.page")}
-        action={<Chip tone={data.onlineBookingEnabled ? "ok" : "warn"} dot>{data.onlineBookingEnabled ? t("channels.on") : t("channels.off")}</Chip>}>
-        {pageUrl ? (
-          <div className="space-y-3">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input readOnly value={pageUrl} aria-label={t("channels.page")} className="font-mono text-sm" onFocus={(e) => e.target.select()} />
-              <div className="flex shrink-0 gap-2">
-                <Button variant="secondary" onClick={() => copy("page", pageUrl)}><Copy size={16} aria-hidden /> {copied === "page" ? t("channels.copied") : t("channels.copy")}</Button>
-                <a href={pageUrl} target="_blank" rel="noreferrer"><Button variant="secondary"><ExternalLink size={16} aria-hidden /> {t("channels.open")}</Button></a>
+      <SplitPage
+        aside={
+          /* The property's own booking page: beside the calendars on a laptop, above them on a phone */
+          <Card title={t("channels.page")}
+            action={<Chip tone={data.onlineBookingEnabled ? "ok" : "warn"} dot>{data.onlineBookingEnabled ? t("channels.on") : t("channels.off")}</Chip>}>
+            {pageUrl ? (
+              <div className="space-y-3">
+                <div className="flex min-w-0 flex-col gap-2">
+                  <input readOnly value={pageUrl} aria-label={t("channels.page")} className="min-w-0 font-mono text-sm" onFocus={(e) => e.target.select()} />
+                  <div className="flex shrink-0 gap-2">
+                    <Button variant="secondary" className="flex-1" onClick={() => copy("page", pageUrl)}><Copy size={16} aria-hidden /> {copied === "page" ? t("channels.copied") : t("channels.copy")}</Button>
+                    <a href={pageUrl} target="_blank" rel="noreferrer" className="flex-1"><Button variant="secondary" className="w-full"><ExternalLink size={16} aria-hidden /> {t("channels.open")}</Button></a>
+                  </div>
+                </div>
+                <p className="text-sm text-ink-soft">
+                  {data.onlineBookingEnabled ? t("channels.pageOn") : <>{t("channels.pageOff")} <Link href="/settings" className="font-semibold text-brand-ink underline">{t("settings.title")}</Link></>}
+                </p>
               </div>
-            </div>
-            <p className="text-sm text-ink-soft">
-              {data.onlineBookingEnabled ? t("channels.pageOn") : <>{t("channels.pageOff")} <Link href="/settings" className="font-semibold text-brand-ink underline">{t("settings.title")}</Link></>}
-            </p>
-          </div>
-        ) : (
-          <Button disabled={busy === "page"} onClick={() => run("page", async () => { await api("/api/channels/booking-page", { method: "POST" }); reload() })}>
-            <Link2 size={18} aria-hidden /> {t("channels.createPage")}
-          </Button>
-        )}
-      </Card>
-
+            ) : (
+              <Button disabled={busy === "page"} onClick={() => run("page", async () => { await api("/api/channels/booking-page", { method: "POST" }); reload() })}>
+                <Link2 size={18} aria-hidden /> {t("channels.createPage")}
+              </Button>
+            )}
+          </Card>
+        }
+        asideFirst
+      >
       {/* Double bookings come first: they are what needs doing today */}
       {data.conflicts.length > 0 && (
         <section className="space-y-2">
@@ -149,6 +154,7 @@ export default function ChannelsPage() {
         )}
         <p className="px-1 text-xs text-ink-faint">{t("channels.dormNote")}</p>
       </section>
+      </SplitPage>
 
       <LinkSheet
         open={adding || !!editing}

@@ -1,6 +1,6 @@
-# Dharamshala PMS
+# Padav
 
-A multi-tenant property management system for dharamshalas and small hotels in India. Version 1 replaces the
+A multi-tenant property management system for small and mid-sized hotels, guest houses and dharamshalas in India. Version 1 replaces the
 paper guest register, the receipt book and the month-end ledger, on a phone, over a bad network, in Hindi.
 
 The requirements are in [`docs/PRD.md`](docs/PRD.md); the build steps that shaped this repository are in

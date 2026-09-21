@@ -7,9 +7,11 @@
  * have used the app before, and is standing in a queue — so it asks the fewest questions the register needs,
  * in their own language, one screen, with a single button at the end.
  *
- * Nothing here is behind a login: the random token in the URL is the whole credential. Submitting stores
- * what was typed for the desk to look at; it does not create a guest, a booking or a charge on its own.
+ * Nothing here is behind a login: the random token in the URL is the whole credential. Saving stores what
+ * was typed for the desk to look at; it does not create a guest, a booking or a charge on its own. The desk
+ * completes the check-in, which is why the button says save and not submit.
  */
+import { compressImage } from "@/lib/image"
 import { use, useCallback, useEffect, useState } from "react"
 import { Camera, Check, Plus, X } from "lucide-react"
 import { getForm, PublicApiError, submitForm, uploadPhoto } from "@/lib/public-api"
@@ -30,7 +32,7 @@ type Member = { name: string; adult: boolean }
 const TEXT = {
   hi: {
     title: "अपनी जानकारी भरें",
-    lead: "यह जानकारी अतिथि रजिस्टर के लिए है। भरने के बाद रिसेप्शन पर बताएं।",
+    lead: "यह जानकारी अतिथि रजिस्टर के लिए है। सेव करके रिसेप्शन पर बताएं।",
     name: "पूरा नाम", city: "शहर या गाँव", address: "पता", phone: "मोबाइल नंबर",
     nationality: "राष्ट्रीयता", indian: "भारतीय", foreign: "विदेशी", passport: "पासपोर्ट नंबर",
     idType: "पहचान पत्र", idLast4: "पहचान पत्र के आखिरी 4 अंक",
@@ -39,15 +41,15 @@ const TEXT = {
     adults: "बड़े", children: "बच्चे", members: "साथ के लोग", memberName: "नाम",
     addMember: "और जोड़ें", remove: "हटाएं",
     whatsapp: "मुझे व्हाट्सएप पर रसीद भेजें",
-    submit: "भेजें", sending: "भेजा जा रहा है…",
-    doneTitle: "धन्यवाद", doneBody: "आपकी जानकारी रिसेप्शन तक पहुँच गई है। अब वहाँ जाएँ।",
+    submit: "सेव करें", sending: "सेव हो रहा है…",
+    doneTitle: "सेव हो गया", doneBody: "आपकी जानकारी रिसेप्शन तक पहुँच गई है। चेक-इन वहीं पूरा होगा।",
     expired: "यह लिंक अब काम नहीं करता। रिसेप्शन से नया QR कोड मांगें।",
     failed: "कुछ गड़बड़ हुई। फिर कोशिश करें।",
     required: "कृपया नाम भरें",
   },
   en: {
     title: "Fill in your details",
-    lead: "These details are for the guest register. Tell the desk when you are done.",
+    lead: "These details are for the guest register. Save them and tell the desk.",
     name: "Full name", city: "City or village", address: "Address", phone: "Mobile number",
     nationality: "Nationality", indian: "Indian", foreign: "Foreign", passport: "Passport number",
     idType: "ID type", idLast4: "Last 4 digits of ID",
@@ -56,8 +58,8 @@ const TEXT = {
     adults: "Adults", children: "Children", members: "People with you", memberName: "Name",
     addMember: "Add another", remove: "Remove",
     whatsapp: "Send me the receipt on WhatsApp",
-    submit: "Send", sending: "Sending…",
-    doneTitle: "Thank you", doneBody: "Your details have reached the desk. Please go there now.",
+    submit: "Save", sending: "Saving…",
+    doneTitle: "Saved", doneBody: "The desk has your details and will complete your check-in there.",
     expired: "This link no longer works. Please ask the desk for a new QR code.",
     failed: "Something went wrong. Please try again.",
     required: "Please fill in your name",
@@ -117,7 +119,8 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
       if (!file) return
       setError(null)
       try {
-        await uploadPhoto(token, file)
+        // Re-encoded on the phone: small enough to send, and without the camera's location and device tags.
+        await uploadPhoto(token, await compressImage(file, 300))
         setPhotoSent(true)
       } catch (e) {
         setError(e instanceof PublicApiError ? e.message : t.failed)
@@ -252,7 +255,8 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
       </Card>
 
       <Card className="space-y-3">
-        <div className="grid grid-cols-2 gap-2">
+        {/* Two steppers do not fit side by side on a 360px phone; the + button fell off the right edge. */}
+        <div className="grid gap-2 sm:grid-cols-2">
           <Stepper label={t.adults} value={adults} min={1} onChange={setAdults} />
           <Stepper label={t.children} value={children} onChange={setChildren} />
         </div>
@@ -304,9 +308,12 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
       </Card>
 
       <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 p-4 backdrop-blur" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
-        <Button size="lg" className="mx-auto w-full max-w-lg" disabled={!canSend} onClick={send}>
-          <Check size={20} aria-hidden /> {busy ? t.sending : t.submit}
-        </Button>
+        {/* The button is inline-flex, so it is this wrapper that keeps it under the form on a screen wider than a phone. */}
+        <div className="mx-auto max-w-lg">
+          <Button size="lg" className="w-full" disabled={!canSend} onClick={send}>
+            <Check size={20} aria-hidden /> {busy ? t.sending : t.submit}
+          </Button>
+        </div>
       </div>
     </main>
   )

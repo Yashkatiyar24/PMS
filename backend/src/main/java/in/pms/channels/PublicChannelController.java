@@ -8,7 +8,7 @@ import in.pms.payments.PaymentService;
 import in.pms.settings.SettingsService;
 import in.pms.common.ForbiddenException;
 import in.pms.common.NotFoundException;
-import in.pms.selfreg.PublicRateLimiter;
+import in.pms.common.PublicRateLimiter;
 import in.pms.tenant.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;

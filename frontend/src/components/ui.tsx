@@ -93,6 +93,29 @@ export function Logo({ size = 36 }: { size?: number }) {
   )
 }
 
+/**
+ * The product's own wordmark. It is painted as a mask rather than shown as a picture, so it takes the colour
+ * of whatever it sits in: ink on the page, white on the dark footer, and the right one in dark mode, from a
+ * single file. Give it a height; the width follows the letters' own proportions.
+ */
+export function Wordmark({ className, label, decorative }: { className?: string; label?: string; decorative?: boolean }) {
+  return (
+    <span
+      role={decorative ? undefined : "img"}
+      aria-hidden={decorative || undefined}
+      aria-label={decorative ? undefined : label ?? "Padav"}
+      className={clsx("inline-block shrink-0 bg-current", className)}
+      style={{
+        aspectRatio: "1126 / 186",
+        maskImage: "url(/padav-wordmark.png)", WebkitMaskImage: "url(/padav-wordmark.png)",
+        maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat",
+        maskSize: "contain", WebkitMaskSize: "contain",
+        maskPosition: "center", WebkitMaskPosition: "center",
+      }}
+    />
+  )
+}
+
 export function PageHeader({
   title,
   subtitle,
@@ -213,6 +236,7 @@ export function ListRow({
   right,
   chevron = !!href,
   className,
+  wrap,
 }: {
   href?: string
   onClick?: () => void
@@ -222,13 +246,15 @@ export function ListRow({
   right?: React.ReactNode
   chevron?: boolean
   className?: string
+  /** Let a row that carries several facts run to a second line rather than cut one of them off. */
+  wrap?: boolean
 }) {
   const inner = (
     <>
       {leading && <div className="shrink-0">{leading}</div>}
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold leading-snug">{title}</p>
-        {subtitle && <p className="truncate text-sm text-ink-soft">{subtitle}</p>}
+        <p className={clsx("font-semibold leading-snug", !wrap && "truncate")}>{title}</p>
+        {subtitle && <p className={clsx("text-sm text-ink-soft", wrap ? "leading-snug" : "truncate")}>{subtitle}</p>}
       </div>
       {right && <div className="shrink-0 text-right">{right}</div>}
       {chevron && <ChevronRight size={18} aria-hidden className="shrink-0 text-ink-faint" />}
@@ -308,14 +334,17 @@ export function Segmented<T extends string>({
   onChange,
   items,
   className,
+  fit = true,
 }: {
   value: T
   onChange: (value: T) => void
   items: { value: T; label: React.ReactNode; count?: number; tone?: Tone }[]
   className?: string
+  /** On a laptop, size to the labels (equal tabs) instead of stretching across the column. A form's own control may want the stretch. */
+  fit?: boolean
 }) {
   return (
-    <div role="tablist" className={clsx("scroll-thin flex gap-1 overflow-x-auto rounded-full bg-surface-2 p-1", className)}>
+    <div role="tablist" className={clsx("scroll-thin flex gap-1 overflow-x-auto rounded-full bg-surface-2 p-1", fit && "md:w-fit", className)}>
       {items.map((item) => {
         const on = item.value === value
         return (
@@ -327,6 +356,7 @@ export function Segmented<T extends string>({
             onClick={() => onChange(item.value)}
             className={clsx(
               "flex min-h-[38px] flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold transition-colors",
+              fit && "md:min-w-28 md:flex-none md:px-4",
               on ? "bg-raised text-ink shadow-[var(--shadow-card)]" : "text-ink-soft hover:text-ink",
             )}
           >
@@ -354,6 +384,7 @@ export function Sheet({
   children,
   footer,
   wide,
+  hero,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -362,6 +393,8 @@ export function Sheet({
   children: React.ReactNode
   footer?: React.ReactNode
   wide?: boolean
+  /** The landing page's own dialog: a display-sized title, a lead under it and room around the form. */
+  hero?: boolean
 }) {
   const { t } = useI18n()
   return (
@@ -373,15 +406,15 @@ export function Sheet({
             "anim-sheet fixed z-50 flex max-h-[92dvh] flex-col bg-surface text-ink shadow-[var(--shadow-pop)] outline-none",
             "inset-x-0 bottom-0 rounded-t-3xl",
             "sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl",
-            wide ? "sm:max-w-2xl" : "sm:max-w-md",
+            hero ? "sm:max-w-3xl" : wide ? "sm:max-w-2xl" : "sm:max-w-md",
           )}
         >
           <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-line-strong sm:hidden" aria-hidden />
-          <div className="flex items-start gap-2 px-5 pb-2 pt-3">
+          <div className={clsx("flex items-start gap-2", hero ? "px-6 pb-1 pt-7 md:px-12 md:pt-12" : "px-5 pb-2 pt-3")}>
             <div className="min-w-0 flex-1">
-              <Dialog.Title className="text-lg font-bold leading-tight">{title}</Dialog.Title>
+              <Dialog.Title className={hero ? "text-[32px] font-extrabold leading-[1.05] tracking-tight md:text-[44px]" : "text-lg font-bold leading-tight"}>{title}</Dialog.Title>
               {description ? (
-                <Dialog.Description className="mt-0.5 text-sm text-ink-soft">{description}</Dialog.Description>
+                <Dialog.Description className={hero ? "mt-3 text-[15px] text-ink md:text-lg" : "mt-0.5 text-sm text-ink-soft"}>{description}</Dialog.Description>
               ) : (
                 <Dialog.Description className="sr-only">{title}</Dialog.Description>
               )}
@@ -392,7 +425,7 @@ export function Sheet({
               </IconButton>
             </Dialog.Close>
           </div>
-          <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-5 pb-4">{children}</div>
+          <div className={clsx("scroll-thin min-h-0 flex-1 overflow-y-auto", hero ? "px-6 pb-8 md:px-12 md:pb-12" : "px-5 pb-4")}>{children}</div>
           {footer && <div className="flex gap-2 border-t border-line px-5 py-3 pb-[max(12px,env(safe-area-inset-bottom))]">{footer}</div>}
         </Dialog.Content>
       </Dialog.Portal>
@@ -468,20 +501,27 @@ export function Field({
   error,
   children,
   className,
+  group,
 }: {
   label: string
   hint?: string
   error?: string
   children: React.ReactNode
   className?: string
+  /**
+   * Set when the child is a row of chips or buttons rather than one input. A <label> would adopt the first
+   * button as its control, so a tap on the caption would press it and its accessible name would swallow the row.
+   */
+  group?: boolean
 }) {
+  const Tag: "div" | "label" = group ? "div" : "label"
   return (
-    <label className={clsx("block", className)}>
+    <Tag role={group ? "group" : undefined} aria-label={group ? label : undefined} className={clsx("block", className)}>
       <span className="mb-1.5 block text-[13px] font-semibold text-ink-soft">{label}</span>
       {children}
       {hint && !error && <span className="mt-1 block text-xs text-ink-faint">{hint}</span>}
       {error && <span className="mt-1 block text-xs font-medium text-danger">{error}</span>}
-    </label>
+    </Tag>
   )
 }
 
@@ -539,10 +579,10 @@ export function Stepper({ label, value, min = 0, max = 99, onChange }: { label: 
 /* ---------------------------------------------------------------- status */
 
 /** Status never relies on colour alone: every chip carries a word too (PRD accessibility). */
-export function Chip({ tone = "neutral", children, dot, className }: { tone?: Tone; children: React.ReactNode; dot?: boolean; className?: string }) {
+export function Chip({ tone = "neutral", children, dot, className, title }: { tone?: Tone; children: React.ReactNode; dot?: boolean; className?: string; title?: string }) {
   const t = TONE[tone]
   return (
-    <span className={clsx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap", t.soft, t.text, className)}>
+    <span title={title} className={clsx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap", t.soft, t.text, className)}>
       {dot && <span aria-hidden className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", t.solid)} />}
       {children}
     </span>

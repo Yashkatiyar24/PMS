@@ -19,6 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -114,7 +115,7 @@ class AuthFlowTest {
     void otpLoginByPhoneWorksAndWrongCodeCountsAnAttempt() throws Exception {
         mvc.perform(post("/api/auth/otp/send").contentType(MediaType.APPLICATION_JSON).content("{\"target\":\"" + phone + "\"}")).andExpect(status().isOk());
         mvc.perform(post("/api/auth/otp/verify").contentType(MediaType.APPLICATION_JSON).content("{\"target\":\"" + phone + "\",\"code\":\"000000\"}"))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error", is("Wrong code")));
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error", is("Wrong or expired code")));
         mvc.perform(post("/api/auth/otp/verify").contentType(MediaType.APPLICATION_JSON).content("{\"target\":\"+91 " + phone + "\",\"code\":\"424242\"}"))
                 .andExpect(status().isOk()).andExpect(header().string("Set-Cookie", containsString("pms_session=")));
     }
@@ -164,6 +165,53 @@ class AuthFlowTest {
                         .header("Origin", "http://evil.example")
                         .header("Access-Control-Request-Method", "POST"))
                 .andExpect(status().isForbidden());
+    }
+
+    /** A password someone else chose opens only the door to replace it. */
+    @Test
+    void aHandedPasswordMustBeReplacedBeforeAnythingElse() throws Exception {
+        new TransactionTemplate(adminTx).executeWithoutResult(tx -> admin.sql("update users set must_change_password = true where id = ?").param(user).update());
+        try {
+            Cookie c = loginByPassword();
+            mvc.perform(get("/api/auth/me").cookie(c)).andExpect(status().isOk()).andExpect(jsonPath("$.mustChangePassword", is(true)));
+            mvc.perform(post("/api/auth/switch-property").cookie(c).header("X-Requested-With", "pms").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"propertyId\":\"" + propA + "\"}")).andExpect(status().isNoContent());
+            mvc.perform(get("/api/rooms").cookie(c)).andExpect(status().isForbidden()).andExpect(jsonPath("$.code", is("password_change_required")));
+            mvc.perform(post("/api/users/me/password").cookie(c).header("X-Requested-With", "pms").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"currentPassword\":\"secret-pass\",\"password\":\"a-much-better-one-9\"}")).andExpect(status().is2xxSuccessful());
+            mvc.perform(get("/api/auth/me").cookie(c)).andExpect(status().isOk()).andExpect(jsonPath("$.mustChangePassword", is(false)));
+            mvc.perform(get("/api/rooms").cookie(c)).andExpect(status().isOk());
+        } finally {
+            new TransactionTemplate(adminTx).executeWithoutResult(tx ->
+                    admin.sql("update users set must_change_password = false, password_hash = ? where id = ?").params(passwords.hash("secret-pass"), user).update());
+        }
+    }
+
+    /** The code endpoints answer a stranger's number exactly as they answer a registered one. */
+    @Test
+    void otpAnswersDoNotRevealWhetherANumberIsRegistered() throws Exception {
+        String stranger = "9333333333";
+        try {
+            mvc.perform(post("/api/auth/otp/send").contentType(MediaType.APPLICATION_JSON).content("{\"target\":\"" + stranger + "\"}")).andExpect(status().isOk());
+            String unknown = mvc.perform(post("/api/auth/otp/verify").contentType(MediaType.APPLICATION_JSON).content("{\"target\":\"" + stranger + "\",\"code\":\"000000\"}"))
+                    .andExpect(status().isBadRequest()).andReturn().getResponse().getContentAsString();
+            mvc.perform(post("/api/auth/otp/send").contentType(MediaType.APPLICATION_JSON).content("{\"target\":\"" + phone + "\"}")).andExpect(status().isOk());
+            String known = mvc.perform(post("/api/auth/otp/verify").contentType(MediaType.APPLICATION_JSON).content("{\"target\":\"" + phone + "\",\"code\":\"000000\"}"))
+                    .andExpect(status().isBadRequest()).andReturn().getResponse().getContentAsString();
+            assertThat(unknown).isEqualTo(known);
+        } finally {
+            new TransactionTemplate(adminTx).executeWithoutResult(tx -> admin.sql("delete from otp_codes where target = ?").param(stranger).update());
+        }
+    }
+
+    /** However long a session was valid for, two weeks without use ends it: a lost phone stops working. */
+    @Test
+    void aSessionIdleForTwoWeeksIsOver() throws Exception {
+        Cookie c = loginByPassword();
+        mvc.perform(get("/api/auth/me").cookie(c)).andExpect(status().isOk());
+        new TransactionTemplate(adminTx).executeWithoutResult(tx ->
+                admin.sql("update sessions set last_seen_at = now() - interval '15 days' where user_id = ? and revoked_at is null").param(user).update());
+        mvc.perform(get("/api/auth/me").cookie(c)).andExpect(status().isUnauthorized());
     }
 
     @Test

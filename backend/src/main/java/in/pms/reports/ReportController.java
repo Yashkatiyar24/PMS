@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
@@ -74,7 +75,7 @@ public class ReportController {
     public Map<String, Object> daily(@RequestParam(required = false) LocalDate date) { return reports.daily(date); }
 
     /** Send the evening report now, for the desk or for testing; the job's idempotency key still applies. */
-    @PostMapping("/daily/send") @PreAuthorize("hasRole('MANAGER')")
+    @PostMapping("/daily/send") @PreAuthorize("hasRole('MANAGER')") @Transactional
     public Map<String, Object> sendDaily(@RequestParam(required = false) LocalDate date) {
         UUID id = TenantContext.require();
         var row = jdbc.sql("select name, timezone from properties where id = ?").param(id).query().listOfRows().get(0);
@@ -146,7 +147,11 @@ public class ReportController {
     }
 
     private static String str(Object o) { return o == null ? "" : String.valueOf(o); }
-    private static String quote(String s) { return s.contains(",") || s.contains("\"") ? '"' + s.replace("\"", "\"\"") + '"' : s; }
+    /** Always quoted; a cell that would read as a formula in a spreadsheet (=, +, -, @, tab) is prefixed so it stays text. */
+    private static String quote(String s) {
+        String cell = !s.isEmpty() && "=+-@\t\r".indexOf(s.charAt(0)) >= 0 ? "'" + s : s;
+        return '"' + cell.replace("\"", "\"\"") + '"';
+    }
 
     private static ResponseEntity<byte[]> csvResponse(String csv, String filename) {
         byte[] bytes = ("﻿" + csv).getBytes(StandardCharsets.UTF_8); // BOM so Excel reads Hindi correctly

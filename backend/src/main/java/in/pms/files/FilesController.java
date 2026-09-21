@@ -28,6 +28,9 @@ public class FilesController {
         String key = req.getRequestURI().substring("/api/files/".length());
         if (key.contains("..") || !signer.verify(key, exp, sig)) throw new ForbiddenException("Link expired or invalid");
         MediaType type = key.endsWith(".pdf") ? MediaType.APPLICATION_PDF : key.endsWith(".png") ? MediaType.IMAGE_PNG : key.endsWith(".webp") ? MediaType.parseMediaType("image/webp") : MediaType.IMAGE_JPEG;
-        return ResponseEntity.ok().contentType(type).cacheControl(CacheControl.noStore()).body(new InputStreamResource(storage.get(key)));
+        var response = ResponseEntity.ok().contentType(type).cacheControl(CacheControl.noStore());
+        // A PDF is a document someone uploaded, and PDF viewers run script: it is saved, not shown on our origin.
+        if (key.endsWith(".pdf")) response = response.header("Content-Disposition", "attachment; filename=\"" + key.substring(key.lastIndexOf('/') + 1) + "\"");
+        return response.body(new InputStreamResource(storage.get(key)));
     }
 }

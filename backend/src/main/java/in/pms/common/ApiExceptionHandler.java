@@ -30,8 +30,15 @@ public class ApiExceptionHandler {
     @ExceptionHandler({ForbiddenException.class, AccessDeniedException.class})
     ResponseEntity<ApiError> forbidden(RuntimeException e) { return body(HttpStatus.FORBIDDEN, e.getMessage()); }
 
-    @ExceptionHandler({BadRequestException.class, IllegalArgumentException.class})
-    ResponseEntity<ApiError> badRequest(RuntimeException e) { return body(HttpStatus.BAD_REQUEST, e.getMessage()); }
+    @ExceptionHandler(BadRequestException.class)
+    ResponseEntity<ApiError> badRequest(BadRequestException e) { return body(HttpStatus.BAD_REQUEST, e.getMessage()); }
+
+    /** Thrown by libraries as much as by us, with messages written for developers; the client gets a fixed one. */
+    @ExceptionHandler(IllegalArgumentException.class)
+    ResponseEntity<ApiError> illegalArgument(IllegalArgumentException e) {
+        log.warn("Invalid request: {}", e.getMessage());
+        return body(HttpStatus.BAD_REQUEST, "Invalid request");
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ApiError> invalid(MethodArgumentNotValidException e) {
@@ -50,8 +57,18 @@ public class ApiExceptionHandler {
         if (msg.contains("positive_stay")) return body(HttpStatus.BAD_REQUEST, "Departure must be after arrival");
         if (msg.contains("rooms_property_id_number_key")) return body(HttpStatus.CONFLICT, "A room with that number already exists");
         if (msg.contains("booking_units_room")) return body(HttpStatus.BAD_REQUEST, "That room or bed is not part of this property");
-        log.warn("Data integrity violation: {}", msg);
+        // The constraint's name says what went wrong; the driver's message would also carry the values, e.g. a phone number.
+        log.warn("Data integrity violation: {}", constraintOf(e));
         return body(HttpStatus.CONFLICT, "The change conflicts with existing data");
+    }
+
+    // The driver is runtime-scope on purpose (idiomatic Spring Boot: code talks to java.sql, not to org.postgresql),
+    // so its exception class is not available here. The SQLState says what kind of violation it was (23505
+    // unique, 23503 foreign key, 23514 check) without repeating the driver's message, which would carry the value.
+    private static String constraintOf(DataIntegrityViolationException e) {
+        Throwable cause = e.getMostSpecificCause();
+        return cause instanceof java.sql.SQLException se && se.getSQLState() != null
+                ? "sqlstate:" + se.getSQLState() : cause.getClass().getSimpleName();
     }
 
     @ExceptionHandler(Exception.class)

@@ -96,7 +96,7 @@ export default function ReportsPage() {
         }
       />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
-      {sent && <Banner tone="ok" onClose={() => setSent(false)}>{t("action.sendNow")} ✓</Banner>}
+      {sent && <Banner tone="ok" onClose={() => setSent(false)}>{t("action.sendNow")}</Banner>}
 
       {/* Headline: today's money. */}
       <Card className="p-5">

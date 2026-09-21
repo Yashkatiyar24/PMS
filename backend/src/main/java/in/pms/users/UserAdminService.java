@@ -50,7 +50,7 @@ public class UserAdminService {
 
     /**
      * Creates the user if the phone is new, then adds the membership. Idempotent for an existing member. Someone new
-     * gets a first password to sign in with the dharamshala's code; someone who already has one keeps it.
+     * gets a first password to sign in with the property's code; someone who already has one keeps it.
      */
     @Transactional("adminTx")
     public Invited invite(InviteInput in, CurrentUser actor) {
@@ -71,7 +71,7 @@ public class UserAdminService {
                 on conflict (property_id, user_id) do update set role = excluded.role, active = true""")
                 .params(property, userId, role).update();
         audit.recordPlatform(property, "property_users", userId.toString(), "invite", null, Map.of("role", role, "phone", mask(phone)), actor.id());
-        // Only a person this dharamshala alone knows gets a password from it: an existing account that works
+        // Only a person this property alone knows gets a password from it: an existing account that works
         // anywhere else is not this owner's to open.
         boolean passwordless = admin.sql("select password_hash is null and not is_super_admin from users where id = ?").param(userId).query(Boolean.class).single();
         String password = passwordless && !worksElsewhere(userId, property) ? issuePassword(userId) : null;
@@ -101,9 +101,10 @@ public class UserAdminService {
         return admin.sql("select exists (select 1 from property_users where user_id = ? and property_id <> ?)").params(userId, property).query(Boolean.class).single();
     }
 
+    /** Issued by someone else, so it must be replaced before the account does anything else. */
     private String issuePassword(UUID userId) {
         String password = passwords.generate();
-        admin.sql("update users set password_hash = ?, updated_at = now() where id = ?").params(passwords.hash(password), userId).update();
+        admin.sql("update users set password_hash = ?, must_change_password = true, updated_at = now() where id = ?").params(passwords.hash(password), userId).update();
         return password;
     }
 
@@ -117,14 +118,14 @@ public class UserAdminService {
         return member(userId);
     }
 
-    /** Removes access to this property and revokes every session so the person is logged out within a minute. */
+    /** Removes access to this property; sessions working here end, sessions at their other properties are not this owner's to end. */
     @Transactional("adminTx")
     public void deactivate(UUID userId, CurrentUser actor) {
         if (userId.equals(actor.id())) throw new BadRequestException("You cannot deactivate yourself");
         Member before = member(userId);
         grantable(before.role(), actor); // an admin cannot remove an owner
         admin.sql("update property_users set active = false where property_id = ? and user_id = ?").params(TenantContext.require(), userId).update();
-        sessions.revokeAll(userId);
+        sessions.revokeAt(userId, TenantContext.require());
         audit.recordPlatform(TenantContext.require(), "property_users", userId.toString(), "deactivate", Map.of("role", before.role()), null, actor.id());
     }
 
@@ -145,12 +146,12 @@ public class UserAdminService {
      */
     @Transactional("adminTx")
     public void setPassword(String email, String currentPassword, String password, CurrentUser actor) {
-        if (password == null || password.length() < 8) throw new BadRequestException("Password must be at least 8 characters");
+        passwords.requireAcceptable(password);
         String hash = admin.sql("select password_hash from users where id = ?").param(actor.id()).query(String.class).optional().orElse(null);
         if (hash != null && !passwords.matches(currentPassword == null ? "" : currentPassword, hash))
             throw new BadRequestException("Your current password is not right");
         String e = email == null || email.isBlank() ? null : email.trim().toLowerCase();
-        admin.sql("update users set email = coalesce(?, email), password_hash = ?, updated_at = now() where id = ?").params(e, passwords.hash(password), actor.id()).update();
+        admin.sql("update users set email = coalesce(?, email), password_hash = ?, must_change_password = false, updated_at = now() where id = ?").params(e, passwords.hash(password), actor.id()).update();
         admin.sql("update sessions set revoked_at = now() where user_id = ? and id <> ? and revoked_at is null").params(actor.id(), actor.sessionId()).update();
         audit.recordPlatform(null, "users", actor.id().toString(), "password", null, null, actor.id());
     }

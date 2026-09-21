@@ -1,4 +1,4 @@
-package in.pms.selfreg;
+package in.pms.common;
 
 import org.springframework.stereotype.Component;
 

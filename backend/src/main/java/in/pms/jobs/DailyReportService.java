@@ -69,7 +69,7 @@ public class DailyReportService {
                         "language", s.guestLanguage(), "params", params), key + ":wa:" + phone);
             if (!"whatsapp".equals(channel) && email != null)
                 outbox.enqueue(property.id(), "email", Map.of("to", email, "subject", property.name() + " — " + businessDate,
-                        "html", "<pre>" + MessageTemplates.asText(MessageTemplates.DAILY_SUMMARY_OWNER, params) + "</pre>"), key + ":email:" + email);
+                        "html", "<pre>" + org.springframework.web.util.HtmlUtils.htmlEscape(MessageTemplates.asText(MessageTemplates.DAILY_SUMMARY_OWNER, params)) + "</pre>"), key + ":email:" + email);
         }
         jdbc.sql("update daily_reports set sent_at = now() where property_id = ? and business_date = ?").params(property.id(), businessDate).update();
         log.info("Daily report queued for {} ({})", property.name(), businessDate);

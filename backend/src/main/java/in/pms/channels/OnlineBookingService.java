@@ -29,18 +29,23 @@ public class OnlineBookingService {
     private final JdbcClient jdbc;
     private final SettingsService settings;
     private final in.pms.integrations.payments.PaymentGateway gateway;
+    private final in.pms.integrations.storage.StorageProvider storage;
 
-    public OnlineBookingService(@Qualifier("jdbc") JdbcClient jdbc, SettingsService settings, in.pms.integrations.payments.PaymentGateway gateway) {
-        this.jdbc = jdbc; this.settings = settings; this.gateway = gateway;
+    public OnlineBookingService(@Qualifier("jdbc") JdbcClient jdbc, SettingsService settings, in.pms.integrations.payments.PaymentGateway gateway,
+                                in.pms.integrations.storage.StorageProvider storage) {
+        this.jdbc = jdbc; this.settings = settings; this.gateway = gateway; this.storage = storage;
     }
 
     /** Whether this property takes payment on its page: its own setting, and only when a gateway is set up at all. */
     public String paymentMode(Settings s) { return gateway.enabled() ? s.onlinePayment() : "off"; }
 
-    /** {@code payment} is off, optional or required: whether the guest pays {@code advancePct}% online when booking. */
+    /**
+     * {@code payment} is off, optional or required: whether the guest pays {@code advancePct}% online when booking.
+     * {@code photoUrl} is a short-lived link to the property's photograph, or null when it has none.
+     */
     public record Page(String name, String city, String address, String phone, String checkinTime, String checkoutTime,
                        String today, int maxNights, int daysAhead, boolean consentRequired, Map<String, String> consentText,
-                       String payment, int advancePct) {}
+                       String payment, int advancePct, String photoUrl) {}
     public record Offer(UUID roomTypeId, String name, int maxOccupancy, boolean dormitory, long ratePaise, int free, long nights, long totalPaise) {}
     /** {@code status} is reserved, or pending while an online payment is awaited; {@code payment} is how to pay, when there is one. */
     public record Confirmation(String reference, String guestName, String propertyName, String propertyPhone, String roomType,
@@ -60,7 +65,8 @@ public class OnlineBookingService {
         var p = property();
         return new Page((String) p.get("name"), (String) p.get("city"), (String) p.get("address"), (String) p.get("phone"),
                 s.checkinTime().toString(), s.checkoutTime().toString(), LocalDate.now(zone(p)).toString(),
-                s.onlineBookingMaxNights(), s.onlineBookingDaysAhead(), s.consentRequired(), s.consentText(), paymentMode(s), s.onlinePaymentAdvancePct());
+                s.onlineBookingMaxNights(), s.onlineBookingDaysAhead(), s.consentRequired(), s.consentText(), paymentMode(s), s.onlinePaymentAdvancePct(),
+                in.pms.property.PropertyService.photoUrl(storage, (String) p.get("photo_key")));
     }
 
     /** Each room type with how many units are free for the whole stay, and the price before any tax. */
@@ -109,7 +115,7 @@ public class OnlineBookingService {
     }
 
     private Map<String, Object> property() {
-        return jdbc.sql("select name, city, address, phone, timezone from properties where id = ?").param(TenantContext.require()).query().singleRow();
+        return jdbc.sql("select name, city, address, phone, timezone, photo_key from properties where id = ?").param(TenantContext.require()).query().singleRow();
     }
 
     private static ZoneId zone(Map<String, Object> property) { return ZoneId.of((String) property.get("timezone")); }

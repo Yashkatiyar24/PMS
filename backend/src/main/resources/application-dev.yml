@@ -1,4 +1,6 @@
+spring.flyway.password: ${PMS_DB_OWNER_PASSWORD:postgres}
 pms:
+  api-url: ${PMS_API_URL:http://localhost:8080}
   seed.enabled: true
   auth.dev-otp: "123456"
   payments.provider: console

@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
- * Dharamshala PMS API.
+ * Padav API: the property management system for small and mid-sized hotels, guest houses and dharamshalas.
  *
  * Design rules that every package follows:
  * <ul>

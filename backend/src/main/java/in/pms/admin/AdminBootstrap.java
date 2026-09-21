@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The first platform admin, the one who onboards dharamshalas, on a fresh production database. Set PMS_ADMIN_EMAIL
+ * The first platform admin, the one who onboards properties, on a fresh production database. Set PMS_ADMIN_EMAIL
  * and PMS_ADMIN_PASSWORD for the first start; once any platform admin exists they are ignored, so leaving them set
  * cannot reset anyone's password.
  */
@@ -34,10 +34,10 @@ public class AdminBootstrap implements CommandLineRunner {
         if (email.isEmpty()) return;
         if (admin.sql("select exists (select 1 from users where is_super_admin)").query(Boolean.class).single()) return;
         if (password.length() < 12) throw new IllegalStateException("PMS_ADMIN_PASSWORD must be at least 12 characters");
-        admin.sql("""
-                insert into users(name, email, password_hash, is_super_admin) values ('Platform admin', ?, ?, true)
-                on conflict (email) do update set password_hash = excluded.password_hash, is_super_admin = true, active = true""")
+        int created = admin.sql("insert into users(name, email, password_hash, is_super_admin) values ('Platform admin', ?, ?, true) on conflict (email) do nothing")
                 .params(email, passwords.hash(password)).update();
+        // An existing account is never quietly promoted and re-keyed: that is a decision for a person to make.
+        if (created == 0) throw new IllegalStateException("PMS_ADMIN_EMAIL already belongs to a user; choose another address or promote that account deliberately");
         log.info("bootstrap: platform admin {} created", email);
     }
 }

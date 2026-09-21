@@ -9,6 +9,7 @@
 import { usePathname } from "next/navigation"
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 import { api, isPublicScreen } from "./api"
+import { setQueueOwner } from "./offline-queue"
 
 /** Rank. LIMITED is the narrow roles (housekeeping, accountant, maintenance), below the front desk. */
 export type Role = "LIMITED" | "STAFF" | "MANAGER" | "OWNER"
@@ -23,6 +24,20 @@ export type CurrentUser = {
   /** The role as stored (owner, admin, receptionist, housekeeping, ...) and what it may do. */
   position: string | null
   permissions: string[]
+  /** The working property's subscription state, null outside a property. The server enforces it; the shell explains it. */
+  billingStatus: "trial" | "active" | "overdue" | "readonly" | "closed" | null
+  /** Signed in with a password someone else chose: the server refuses everything until it is replaced. */
+  mustChangePassword: boolean
+}
+
+/** What the service worker kept for offline use belongs to the person who was signed in; the next one starts clean. */
+async function forgetCachedData() {
+  try {
+    const keys = await caches.keys()
+    await Promise.all(keys.filter((k) => k.startsWith("pms-data")).map((k) => caches.delete(k)))
+  } catch {
+    /* no Cache Storage here (private window, old browser): nothing was kept */
+  }
 }
 
 const RANK: Record<Role, number> = { LIMITED: 0, STAFF: 1, MANAGER: 2, OWNER: 3 }
@@ -55,9 +70,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     let current = true
     api<CurrentUser>("/api/auth/me")
       .then((user) => {
+        setQueueOwner({ userId: user.id, propertyId: user.propertyId })
         if (current) setState({ user, loading: false })
       })
       .catch(() => {
+        setQueueOwner(null)
         if (current) setState({ user: null, loading: false })
       })
     return () => {
@@ -80,6 +97,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const switchProperty = useCallback(
     async (propertyId: string) => {
       await api("/api/auth/switch-property", { method: "POST", body: { propertyId } })
+      await forgetCachedData()
       await reload()
     },
     [reload],
@@ -87,6 +105,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     await api("/api/auth/logout", { method: "POST" })
+    setQueueOwner(null)
+    await forgetCachedData()
     setState({ user: null, loading: false })
     window.location.href = "/login"
   }, [])

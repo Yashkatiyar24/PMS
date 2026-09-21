@@ -7,10 +7,10 @@ import { AppShell } from "@/components/AppShell"
 import { ServiceWorker } from "@/components/ServiceWorker"
 
 export const metadata: Metadata = {
-  title: "Dharamshala PMS",
-  description: "Guest register, receipts and daily accounts for dharamshalas and small hotels",
+  title: "Padav",
+  description: "Guest register, receipts and daily accounts for small hotels, guest houses and dharamshalas",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "PMS", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Padav", statusBarStyle: "default" },
 }
 
 /** Designed at 360px first; the viewport must not zoom away the tap targets. */
@@ -18,7 +18,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#ffffff",
+  // The browser chrome follows the page, which is the light ground the wordmark sits on; dark mode gets the ink.
+  themeColor: [{ media: "(prefers-color-scheme: light)", color: "#f7f8fa" }, { media: "(prefers-color-scheme: dark)", color: "#171c26" }],
 }
 
 /**

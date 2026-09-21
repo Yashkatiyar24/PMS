@@ -12,7 +12,7 @@
  */
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Boxes, Building2, Check, ChevronRight, DoorOpen, Globe, Lock, LogOut, PackageSearch, Percent, ReceiptIndianRupee, ScrollText, Search, ShieldCheck, UserRound, Users, UtensilsCrossed, Wrench } from "lucide-react"
+import { ArrowLeft, Building2, Check, ChevronRight, DoorOpen, Globe, Lock, LogOut, Percent, Search, ShieldCheck, Users } from "lucide-react"
 import { clsx } from "clsx"
 import { api, ApiError } from "@/lib/api"
 import type { SettingDef } from "@/lib/types"
@@ -20,6 +20,7 @@ import { useResource } from "@/lib/use-resource"
 import { rupees } from "@/lib/format"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
+import { useOperations } from "@/lib/operations-nav"
 import { Banner, Chip, ChoiceChips, Empty, Loading, PageHeader, TONE } from "@/components/ui"
 
 type Registry = { definitions: SettingDef[]; groups: Record<string, string> }
@@ -61,8 +62,9 @@ function describe(t: T, def: SettingDef, value: unknown): string {
 
 export default function SettingsPage() {
   const { t } = useI18n()
-  const { user, can, has, logout } = useSession()
-  const { data: loaded } = useResource(
+  const { user, can, logout } = useSession()
+  const operations = useOperations()
+  const { data: loaded, error: loadError } = useResource(
     async () => {
       const [registry, values] = await Promise.all([api<Registry>("/api/settings/registry"), api<Values>("/api/settings")])
       return { registry, values }
@@ -102,7 +104,8 @@ export default function SettingsPage() {
     return [...byGroup.entries()]
   }, [registry, user])
 
-  if (!registry) return <Loading />
+  // A refused load (a platform admin outside any property, say) must say so rather than shimmer forever.
+  if (!registry) return loadError ? <Banner tone="danger">{loadError}</Banner> : <Loading />
 
   const defs = new Map(registry.definitions.map((d) => [d.key, d]))
   const current = (def: SettingDef) => (def.key in draft ? (draft[def.key] ?? def.defaultValue) : values[def.key])
@@ -143,16 +146,6 @@ export default function SettingsPage() {
     ...(user?.superAdmin ? [{ href: "/admin", label: t("admin.title"), icon: ShieldCheck, tone: "warn" as const }] : []),
   ].filter((item) => item.href === "/admin" || can("MANAGER"))
 
-  // The day-to-day work that has no tab of its own, each shown only to roles that do it.
-  const operations = [
-    { href: "/guests", label: t("guests.title"), icon: UserRound, tone: "brand" as const, show: has("reservations.view") },
-    { href: "/maintenance", label: t("maint.title"), icon: Wrench, tone: "warn" as const, show: has("maintenance") || has("maintenance.report") },
-    { href: "/lost-found", label: t("lost.title"), icon: PackageSearch, tone: "teal" as const, show: has("lost_found") },
-    { href: "/restaurant", label: t("pos.title"), icon: UtensilsCrossed, tone: "ok" as const, show: has("restaurant") },
-    { href: "/inventory", label: t("stock.title"), icon: Boxes, tone: "teal" as const, show: has("inventory") },
-    { href: "/expenses", label: t("expense.title"), icon: ReceiptIndianRupee, tone: "warn" as const, show: has("expenses") },
-    { href: "/audit", label: t("audit.title"), icon: ScrollText, tone: "violet" as const, show: has("audit.view") },
-  ].filter((item) => item.show)
 
   const q = query.trim().toLowerCase()
   const results = q
@@ -192,7 +185,9 @@ export default function SettingsPage() {
       </label>
 
       <div className="md:grid md:grid-cols-[15rem_minmax(0,1fr)] md:items-start md:gap-8">
-        <nav aria-label={t("settings.title")} className={clsx("scroll-thin space-y-5 md:sticky md:top-8 md:max-h-[calc(100dvh-4rem)] md:overflow-y-auto", showContent && "hidden md:block")}>
+        {/* A phone lists the day's destinations first. A laptop, whose right column already shows a rules group, lists
+            the rules first so the selected one is in view; the other groups sit below, and the list scrolls. */}
+        <nav aria-label={t("settings.title")} className={clsx("scroll-thin flex flex-col gap-5 md:sticky md:top-8 md:max-h-[calc(100dvh-4rem)] md:overflow-y-auto", showContent && "hidden md:flex")}>
           {operations.length > 0 && (
             <NavGroup title={t("settings.operationsGroup")}>
               {operations.map(({ href, label, icon: Icon, tone }) => (
@@ -221,7 +216,7 @@ export default function SettingsPage() {
             </NavGroup>
           )}
 
-          <NavGroup title={t("settings.rules")}>
+          <NavGroup title={t("settings.rules")} className="md:order-first">
             {grouped.map(([group, list]) => {
               const on = !q && group === active
               const changed = changedIn(list)
@@ -303,9 +298,9 @@ const navItem = (on: boolean) =>
     on ? "bg-brand-soft text-brand-ink" : "text-ink-soft hover:bg-surface-2 hover:text-ink",
   )
 
-function NavGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function NavGroup({ title, className, children }: { title: string; className?: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div className={className}>
       <h2 className="mb-1.5 px-3 text-xs font-semibold uppercase tracking-wider text-ink-faint">{title}</h2>
       {/* A card of rows on a phone, a plain list beside the content on a laptop. */}
       <ul className="space-y-0.5 rounded-2xl border border-line bg-surface p-1.5 md:border-0 md:bg-transparent md:p-0">{children}</ul>

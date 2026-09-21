@@ -71,6 +71,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
                 .addFilterBefore(new SessionAuthFilter(sessions), AnonymousAuthenticationFilter.class)
+                // Runs inside the session filter's chain, so the principal and its billing state are already known.
+                .addFilterAfter(new BillingGate(), SessionAuthFilter.class)
                 .build();
     }
 }

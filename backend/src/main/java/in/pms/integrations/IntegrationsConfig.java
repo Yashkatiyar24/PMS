@@ -27,7 +27,8 @@ public class IntegrationsConfig {
     public StorageProvider storageProvider(PmsProperties p, SignedUrlSigner signer) {
         return switch (p.storage().provider()) {
             case "s3" -> new S3StorageProvider(p.storage().s3());
-            case "local" -> new LocalStorageProvider(p.storage().localDir(), p.appUrl(), signer);
+            // Links are served by this API's FilesController, so they must carry the API's origin, not the app's.
+            case "local" -> new LocalStorageProvider(p.storage().localDir(), p.apiUrl(), signer);
             default -> throw new IllegalArgumentException("Unknown storage provider " + p.storage().provider());
         };
     }

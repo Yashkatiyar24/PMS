@@ -34,7 +34,7 @@ public class CalendarFetcher {
         URI uri = check(address);
         for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
             HttpRequest request = HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(20))
-                    .header("User-Agent", "DharamshalaPMS-CalendarSync/1").GET().build();
+                    .header("User-Agent", "Padav-CalendarSync/1").GET().build();
             HttpResponse<InputStream> response = http.send(request, HttpResponse.BodyHandlers.ofInputStream());
             try (InputStream body = response.body()) {
                 int status = response.statusCode();
@@ -77,8 +77,10 @@ public class CalendarFetcher {
             if (first == 0 || first >= 224) return false;                            // "this network", multicast and reserved
             if (first == 100 && second >= 64 && second <= 127) return false;          // carrier-grade NAT
             if (first == 198 && (second == 18 || second == 19)) return false;         // benchmarking
-        } else if ((b[0] & 0xfe) == 0xfc) {
-            return false;                                                             // IPv6 unique local, fc00::/7
+        } else if (b.length == 16) {
+            if ((b[0] & 0xfe) == 0xfc) return false;                                          // unique local, fc00::/7
+            if ((b[0] & 0xff) == 0x20 && (b[1] & 0xff) == 0x02) return false;                 // 6to4, 2002::/16, embeds an IPv4 address
+            if ((b[0] & 0xff) == 0x00 && (b[1] & 0xff) == 0x64 && (b[2] & 0xff) == 0xff && (b[3] & 0xff) == 0x9b) return false; // NAT64, 64:ff9b::/96
         }
         return true;
     }

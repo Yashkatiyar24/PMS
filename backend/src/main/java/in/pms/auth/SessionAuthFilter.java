@@ -52,12 +52,26 @@ public class SessionAuthFilter extends OncePerRequestFilter {
             return;
         }
 
+        // A password someone else chose opens only the door to replace it (and the auth endpoints, so the app
+        // can see why). Everything else answers 403 with a code the app turns into that screen.
+        if (current.mustChangePassword() && !allowedBeforePasswordChange(req)) {
+            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            res.setContentType("application/json;charset=UTF-8");
+            res.getWriter().write("{\"error\":\"Set your own password to continue\",\"code\":\"password_change_required\"}");
+            return;
+        }
+
         // The context is deliberately not cleared here. An authorization failure is thrown further down the
         // chain and is translated to a status by a filter above this one; if the context were already empty
         // by the time it got there, every 403 for a signed-in user would be reported as 401 "signed out".
         // Spring's own SecurityContextHolderFilter, which sits above us, clears it when the request ends.
         if (current.propertyId() != null) TenantContext.runAs(current.propertyId(), () -> doChain(chain, req, res));
         else doChain(chain, req, res);
+    }
+
+    private static boolean allowedBeforePasswordChange(HttpServletRequest req) {
+        String path = req.getRequestURI();
+        return path.startsWith("/api/auth/") || ("POST".equals(req.getMethod()) && path.equals("/api/users/me/password"));
     }
 
     private static void doChain(FilterChain chain, HttpServletRequest req, HttpServletResponse res) {

@@ -4,6 +4,9 @@ import in.pms.common.BadRequestException;
 import in.pms.config.PmsProperties;
 import in.pms.integrations.email.EmailProvider;
 import in.pms.integrations.sms.SmsProvider;
+import jakarta.annotation.PreDestroy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
@@ -11,25 +14,37 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * One-time codes for phone (SMS) or email login. Codes are stored hashed, expire in minutes, and both sending
- * and verifying are rate-limited per target (PRD U1). An unknown target gets the same response as a known one,
- * so the endpoint cannot be used to enumerate users.
+ * and verifying are rate-limited per target (PRD U1).
+ *
+ * <p>An unknown target is indistinguishable from a known one: it gets a row too (with a hash nothing can match),
+ * so it runs out of sends at the same point, answers "wrong code" the same way, and takes the same time, because
+ * delivery to the real provider happens off the request thread. The login endpoints cannot be used to find out
+ * which numbers work here.
  */
 @Service
 public class OtpService {
+    private static final Logger log = LoggerFactory.getLogger(OtpService.class);
     private static final SecureRandom RANDOM = new SecureRandom();
+    static final String WRONG = "Wrong or expired code";
     private final JdbcClient adminJdbc;
     private final SmsProvider sms;
     private final EmailProvider email;
     private final PmsProperties.Auth cfg;
+    private final ExecutorService delivery = Executors.newVirtualThreadPerTaskExecutor();
 
     public OtpService(@Qualifier("adminJdbc") JdbcClient adminJdbc, SmsProvider sms, EmailProvider email, PmsProperties props) {
         this.adminJdbc = adminJdbc; this.sms = sms; this.email = email; this.cfg = props.auth();
     }
+
+    @PreDestroy void close() { delivery.close(); }
 
     public static String normalisePhone(String raw) {
         String digits = raw.replaceAll("\\D", "");
@@ -38,7 +53,7 @@ public class OtpService {
         return digits;
     }
 
-    /** Generate and send a code. Silently does nothing for unknown users (same response either way). */
+    /** Generate and send a code. An unknown target gets the same response, and the same allowance used up. */
     @Transactional("adminTx")
     public void send(String target) {
         boolean isEmail = target.contains("@");
@@ -49,13 +64,21 @@ public class OtpService {
 
         boolean known = !adminJdbc.sql(isEmail ? "select id from users where email = ? and active" : "select id from users where phone = ? and active")
                 .param(t).query(UUID.class).list().isEmpty();
-        if (!known) return;
-
         String code = cfg.devOtp() != null && !cfg.devOtp().isBlank() ? cfg.devOtp() : generate(cfg.otpLength());
+        // For a stranger the stored hash is of random bytes: a row that counts and can never be satisfied.
+        String hash = known ? SessionService.sha256(t + ":" + code) : SessionService.sha256(t + ":" + randomHex());
         adminJdbc.sql("insert into otp_codes(target, code_hash, expires_at) values (?, ?, ?)")
-                .params(t, SessionService.sha256(t + ":" + code), OffsetDateTime.now().plusMinutes(cfg.otpTtlMinutes())).update();
-        if (isEmail) email.send(t, "Your login code", "<p>Your login code is <b>" + code + "</b>. It expires in " + cfg.otpTtlMinutes() + " minutes.</p>", List.of());
-        else sms.sendOtp(t, code);
+                .params(t, hash, OffsetDateTime.now().plusMinutes(cfg.otpTtlMinutes())).update();
+        if (known) delivery.execute(() -> deliver(isEmail, t, code));
+    }
+
+    private void deliver(boolean isEmail, String target, String code) {
+        try {
+            if (isEmail) email.send(target, "Your login code", "<p>Your login code is <b>" + code + "</b>. It expires in " + cfg.otpTtlMinutes() + " minutes.</p>", List.of());
+            else sms.sendOtp(target, code);
+        } catch (RuntimeException e) {
+            log.warn("Login code could not be delivered to {}", mask(target), e);
+        }
     }
 
     /** Verify a code; returns the user id when correct. Counts attempts so codes cannot be brute-forced. */
@@ -65,20 +88,31 @@ public class OtpService {
         String t = isEmail ? target.trim().toLowerCase() : normalisePhone(target);
         var row = adminJdbc.sql("select id, code_hash, attempts from otp_codes where target = ? and consumed_at is null and expires_at > now() order by created_at desc limit 1 for update")
                 .param(t).query().listOfRows().stream().findFirst();
-        if (row.isEmpty()) throw new BadRequestException("Code expired or not requested. Request a new one.");
+        if (row.isEmpty()) throw new BadRequestException(WRONG);
         UUID id = (UUID) row.get().get("id");
         int attempts = (Integer) row.get().get("attempts");
         if (attempts >= cfg.otpMaxVerifyAttempts()) throw new BadRequestException("Too many wrong attempts. Request a new code.");
         boolean ok = SessionService.sha256(t + ":" + code.trim()).equals(row.get().get("code_hash"));
-        if (!ok) { adminJdbc.sql("update otp_codes set attempts = attempts + 1 where id = ?").param(id).update(); throw new BadRequestException("Wrong code"); }
+        if (!ok) { adminJdbc.sql("update otp_codes set attempts = attempts + 1 where id = ?").param(id).update(); throw new BadRequestException(WRONG); }
         adminJdbc.sql("update otp_codes set consumed_at = now() where id = ?").param(id).update();
         return adminJdbc.sql(isEmail ? "select id from users where email = ? and active" : "select id from users where phone = ? and active")
-                .param(t).query(UUID.class).optional().orElseThrow(() -> new BadRequestException("Wrong code"));
+                .param(t).query(UUID.class).optional().orElseThrow(() -> new BadRequestException(WRONG));
     }
 
     private static String generate(int length) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < length; i++) sb.append(RANDOM.nextInt(10));
         return sb.toString();
+    }
+
+    private static String randomHex() {
+        byte[] b = new byte[16];
+        RANDOM.nextBytes(b);
+        return HexFormat.of().formatHex(b);
+    }
+
+    private static String mask(String target) {
+        int at = target.indexOf('@');
+        return at > 0 ? target.charAt(0) + "***" + target.substring(at) : "******" + target.substring(Math.max(0, target.length() - 4));
     }
 }

@@ -12,7 +12,8 @@ import { formatTime, rupees, toPaise, unitName } from "@/lib/format"
 import type { Today } from "@/lib/types"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
-import { Avatar, Banner, Button, Chip, ChoiceChips, Empty, Field, ListCard, ListRow, Loading, PageHeader, Segmented, Sheet, type Tone } from "@/components/ui"
+import { Avatar, Banner, Button, Card, Chip, ChoiceChips, Empty, Field, KV, ListCard, ListRow, Loading, PageHeader, Segmented, Sheet, type Tone } from "@/components/ui"
+import { SplitPage } from "@/components/SplitPage"
 
 type MenuItem = { id: string; name: string; category: string; pricePaise: number; active: boolean; sortOrder: number }
 type Line = { id?: string; menuItemId: string | null; name: string; qty: number; unitPaise: number }
@@ -67,6 +68,7 @@ export default function RestaurantPage() {
   if (!data) return loadError ? <Banner tone="danger">{loadError}</Banner> : <Loading />
 
   const activeMenu = data.menu.filter((m) => m.active)
+  const openOrders = data.orders.filter((o) => o.status === "open").length
   const add = (m: MenuItem) => editing && setEditing({
     ...editing,
     lines: editing.lines.some((l) => l.menuItemId === m.id)
@@ -98,46 +100,55 @@ export default function RestaurantPage() {
           : can("MANAGER") ? <Button size="sm" onClick={() => setDish({ name: "", category: "", pricePaise: 0 })}><Plus size={16} aria-hidden /> {t("action.add")}</Button> : undefined} />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
 
-      <Segmented value={tab} onChange={setTab} items={[
-        { value: "orders", label: t("pos.orders"), count: data.orders.filter((o) => o.status === "open").length, tone: "warn" },
-        { value: "menu", label: t("pos.menu"), count: activeMenu.length, tone: "brand" },
-      ]} />
+      <SplitPage aside={
+        <Card title={t("booking.summary")}>
+          <dl className="divide-y divide-line">
+            <KV label={t("pos.orders")} value={openOrders} tone={openOrders > 0 ? "warn" : undefined} />
+            <KV label={t("pos.menu")} value={activeMenu.length} />
+          </dl>
+        </Card>
+      }>
+        <Segmented value={tab} onChange={setTab} items={[
+          { value: "orders", label: t("pos.orders"), count: openOrders, tone: "warn" },
+          { value: "menu", label: t("pos.menu"), count: activeMenu.length, tone: "brand" },
+        ]} />
 
-      {tab === "orders" ? (
-        <>
-          <label className="flex min-h-[44px] items-center gap-3 text-sm">
-            <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
-            <span>{t("pos.showSettled")}</span>
-          </label>
-          {data.orders.length === 0 ? <Empty icon={UtensilsCrossed} /> : (
-            <ListCard>
-              {data.orders.map((o) => (
-                <ListRow key={o.id}
-                  onClick={o.status === "open" ? () => { setSettling(o); setPostTo(o.bookingId ?? ""); setCancelReason("") } : undefined}
-                  leading={<Avatar icon={o.bookingId ? BedDouble : UtensilsCrossed} tone={STATUS_TONE[o.status]} size={38} />}
-                  title={o.bookingId ? `${o.units ?? ""} · ${o.guestName ?? ""}` : o.tableLabel || t("pos.counter")}
-                  subtitle={`${formatTime(o.createdAt)} · ${o.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")}`}
-                  right={
-                    <span className="flex items-center gap-1.5">
-                      {o.status !== "open" && o.status !== "cancelled" && (
-                        <a href={`${API_BASE}/api/restaurant/orders/${o.id}/bill`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
-                          className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-ink-soft hover:bg-surface-2" aria-label={t("action.print")}><Printer size={18} aria-hidden /></a>
-                      )}
-                      <Chip tone={STATUS_TONE[o.status]}>{o.status === "open" ? rupees(o.totalPaise) : t(`pos.status.${o.status}`)}</Chip>
-                    </span>
-                  } />
-              ))}
-            </ListCard>
-          )}
-        </>
-      ) : activeMenu.length === 0 && data.menu.length === 0 ? <Empty icon={UtensilsCrossed} /> : (
-        <ListCard>
-          {data.menu.map((m) => (
-            <ListRow key={m.id} onClick={can("MANAGER") ? () => setDish(m) : undefined} title={<span className={m.active ? "" : "line-through opacity-60"}>{m.name}</span>}
-              subtitle={m.category || undefined} right={<Chip tone="neutral">{rupees(m.pricePaise)}</Chip>} />
-          ))}
-        </ListCard>
-      )}
+        {tab === "orders" ? (
+          <>
+            <label className="flex min-h-[44px] items-center gap-3 text-sm">
+              <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
+              <span>{t("pos.showSettled")}</span>
+            </label>
+            {data.orders.length === 0 ? <Empty icon={UtensilsCrossed} /> : (
+              <ListCard>
+                {data.orders.map((o) => (
+                  <ListRow key={o.id}
+                    onClick={o.status === "open" ? () => { setSettling(o); setPostTo(o.bookingId ?? ""); setCancelReason("") } : undefined}
+                    leading={<Avatar icon={o.bookingId ? BedDouble : UtensilsCrossed} tone={STATUS_TONE[o.status]} size={38} />}
+                    title={o.bookingId ? `${o.units ?? ""} · ${o.guestName ?? ""}` : o.tableLabel || t("pos.counter")}
+                    subtitle={`${formatTime(o.createdAt)} · ${o.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")}`}
+                    right={
+                      <span className="flex items-center gap-1.5">
+                        {o.status !== "open" && o.status !== "cancelled" && (
+                          <a href={`${API_BASE}/api/restaurant/orders/${o.id}/bill`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                            className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-ink-soft hover:bg-surface-2" aria-label={t("action.print")}><Printer size={18} aria-hidden /></a>
+                        )}
+                        <Chip tone={STATUS_TONE[o.status]}>{o.status === "open" ? rupees(o.totalPaise) : t(`pos.status.${o.status}`)}</Chip>
+                      </span>
+                    } />
+                ))}
+              </ListCard>
+            )}
+          </>
+        ) : activeMenu.length === 0 && data.menu.length === 0 ? <Empty icon={UtensilsCrossed} /> : (
+          <ListCard>
+            {data.menu.map((m) => (
+              <ListRow key={m.id} onClick={can("MANAGER") ? () => setDish(m) : undefined} title={<span className={m.active ? "" : "line-through opacity-60"}>{m.name}</span>}
+                subtitle={m.category || undefined} right={<Chip tone="neutral">{rupees(m.pricePaise)}</Chip>} />
+            ))}
+          </ListCard>
+        )}
+      </SplitPage>
 
       {/* New order, or changing an open one. */}
       <Sheet wide open={!!editing} onOpenChange={(o) => !o && setEditing(null)} title={editing?.id ? t("pos.editOrder") : t("pos.newOrder")}
@@ -213,7 +224,7 @@ export default function RestaurantPage() {
                 <Button disabled={busy} onClick={() => run(async () => {
                   const paid = await api<Order>(`/api/restaurant/orders/${settling.id}/pay`, { method: "POST", body: { mode, reference: "" } })
                   setSettling(null)
-                  window.open(`${API_BASE}/api/restaurant/orders/${paid.id}/bill`, "_blank")
+                  window.open(`${API_BASE}/api/restaurant/orders/${paid.id}/bill`, "_blank", "noopener,noreferrer")
                 })}>{t("action.takePayment")}</Button>
               </div>
             </Field>

@@ -8,7 +8,8 @@ import { useResource } from "@/lib/use-resource"
 import { formatDateTime } from "@/lib/format"
 import type { Feed } from "@/lib/notifications"
 import { useI18n } from "@/i18n"
-import { Avatar, Banner, Empty, ListCard, ListRow, Loading, PageHeader, type Tone } from "@/components/ui"
+import { Avatar, Banner, Card, Empty, KV, ListCard, ListRow, Loading, PageHeader, type Tone } from "@/components/ui"
+import { SplitPage } from "@/components/SplitPage"
 
 const LOOK: Record<string, { icon: typeof Bell; tone: Tone }> = {
   new_booking: { icon: BedDouble, tone: "brand" },
@@ -39,19 +40,28 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-4">
       <PageHeader title={t("notif.title")} subtitle={data.unread > 0 ? t("notif.new", { n: data.unread }) : undefined} />
-      {data.items.length === 0 ? <Empty icon={Bell}>{t("notif.none")}</Empty> : (
-        <ListCard>
-          {data.items.map((n) => {
-            const look = LOOK[n.kind] ?? { icon: Bell, tone: "neutral" as Tone }
-            return (
-              <ListRow key={n.id} href={n.link ?? undefined} leading={<Avatar icon={look.icon} tone={look.tone} size={38} />}
-                title={<span className={n.unread ? "" : "font-medium text-ink-soft"}>{n.title}</span>}
-                subtitle={[n.body, formatDateTime(n.createdAt)].filter(Boolean).join(" · ")}
-                right={n.unread ? <span aria-label={t("notif.unread")} className="block h-2.5 w-2.5 rounded-full bg-brand" /> : undefined} />
-            )
-          })}
-        </ListCard>
-      )}
+      <SplitPage aside={
+        <Card>
+          <dl className="divide-y divide-line">
+            <KV label={t("notif.unread")} value={data.unread} strong={data.unread > 0} />
+            <KV label={t("common.all")} value={data.items.length} />
+          </dl>
+        </Card>
+      }>
+        {data.items.length === 0 ? <Empty icon={Bell}>{t("notif.none")}</Empty> : (
+          <ListCard>
+            {data.items.map((n) => {
+              const look = LOOK[n.kind] ?? { icon: Bell, tone: "neutral" as Tone }
+              return (
+                <ListRow key={n.id} href={n.link ?? undefined} leading={<Avatar icon={look.icon} tone={look.tone} size={38} />}
+                  title={<span className={n.unread ? "" : "font-medium text-ink-soft"}>{n.title}</span>}
+                  subtitle={[n.body, formatDateTime(n.createdAt)].filter(Boolean).join(" · ")}
+                  right={n.unread ? <span aria-label={t("notif.unread")} className="block h-2.5 w-2.5 rounded-full bg-brand" /> : undefined} />
+              )
+            })}
+          </ListCard>
+        )}
+      </SplitPage>
     </div>
   )
 }

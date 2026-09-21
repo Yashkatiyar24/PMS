@@ -12,7 +12,8 @@ import { formatDateTime } from "@/lib/format"
 import type { Room } from "@/lib/types"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
-import { Avatar, Banner, Button, Chip, ChoiceChips, Empty, Field, ListCard, ListRow, Loading, PageHeader, Segmented, Sheet, type Tone } from "@/components/ui"
+import { Avatar, Banner, Button, Card, Chip, ChoiceChips, Empty, Field, KV, ListCard, ListRow, Loading, PageHeader, Segmented, Sheet, type Tone } from "@/components/ui"
+import { SplitPage } from "@/components/SplitPage"
 import { PRIORITIES, ReportIssue } from "@/components/ReportIssue"
 
 type Ticket = {
@@ -81,23 +82,34 @@ export default function MaintenancePage() {
       />
       {error && !open && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
 
-      <Segmented value={showDone ? "all" : "open"} onChange={(v) => setShowDone(v === "all")}
-        items={[{ value: "open", label: t("maint.status.open") }, { value: "all", label: t("common.all") }]} />
+      <SplitPage aside={
+        <Card title={t("dash.col.status")}>
+          <dl className="divide-y divide-line">
+            {STATUSES.map((s) => {
+              const n = data.tickets.filter((x) => x.status === s).length
+              return <KV key={s} label={status(s)} value={n} tone={n > 0 ? STATUS_TONE[s] : undefined} />
+            })}
+          </dl>
+        </Card>
+      }>
+        <Segmented value={showDone ? "all" : "open"} onChange={(v) => setShowDone(v === "all")}
+          items={[{ value: "open", label: t("maint.status.open") }, { value: "all", label: t("common.all") }]} />
 
-      {data.tickets.length === 0 ? <Empty icon={Wrench} /> : (
-        <ListCard>
-          {data.tickets.map((x) => (
-            <ListRow
-              key={x.id}
-              onClick={() => { setOpenId(x.id); setEdit(null); setError("") }}
-              leading={<Avatar icon={Wrench} tone={PRIORITY_TONE[x.priority]} size={38} />}
-              title={`${x.roomNumber ? `${x.roomNumber} · ` : ""}${x.issue}`}
-              subtitle={`${formatDateTime(x.createdAt)}${x.assignedName ? ` · ${x.assignedName}` : ""}`}
-              right={<Chip tone={STATUS_TONE[x.status]} dot>{status(x.status)}</Chip>}
-            />
-          ))}
-        </ListCard>
-      )}
+        {data.tickets.length === 0 ? <Empty icon={Wrench} /> : (
+          <ListCard>
+            {data.tickets.map((x) => (
+              <ListRow
+                key={x.id}
+                onClick={() => { setOpenId(x.id); setEdit(null); setError("") }}
+                leading={<Avatar icon={Wrench} tone={PRIORITY_TONE[x.priority]} size={38} />}
+                title={`${x.roomNumber ? `${x.roomNumber} · ` : ""}${x.issue}`}
+                subtitle={`${formatDateTime(x.createdAt)}${x.assignedName ? ` · ${x.assignedName}` : ""}`}
+                right={<Chip tone={STATUS_TONE[x.status]} dot>{status(x.status)}</Chip>}
+              />
+            ))}
+          </ListCard>
+        )}
+      </SplitPage>
 
       <Sheet open={!!open} onOpenChange={(o) => { if (!o) { setOpenId(null); setEdit(null) } }} title={open?.issue ?? ""}
         description={open ? [open.roomNumber && `${t("nav.rooms")} ${open.roomNumber}`, open.reportedByName && t("res.by", { name: open.reportedByName })].filter(Boolean).join(" · ") : undefined}
@@ -115,7 +127,7 @@ export default function MaintenancePage() {
               {open.description && <p className="text-sm text-ink-soft">{open.description}</p>}
               {works ? (
                 <>
-                  <Field label={t("dash.col.status")}>
+                  <Field group label={t("dash.col.status")}>
                     <ChoiceChips value={e.status} onChange={(v) => setEdit({ ...e, status: v })} options={STATUSES.map((s) => ({ value: s, label: status(s) }))} />
                   </Field>
                   <Field label={t("maint.assignee")}>
@@ -124,7 +136,7 @@ export default function MaintenancePage() {
                       {data.people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </Field>
-                  <Field label={t("rooms.priority")}>
+                  <Field group label={t("rooms.priority")}>
                     <ChoiceChips value={e.priority} onChange={(v) => setEdit({ ...e, priority: v })} options={PRIORITIES.map((p) => ({ value: p, label: t(`priority.${p}`) }))} />
                   </Field>
                   <Field label={t("maint.resolution")} hint={t("maint.resolutionHint")}>

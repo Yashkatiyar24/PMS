@@ -1,5 +1,6 @@
 package in.pms.selfreg;
 
+import in.pms.common.PublicRateLimiter;
 import in.pms.common.ForbiddenException;
 import in.pms.common.NotFoundException;
 import in.pms.selfreg.SelfRegistrationService.Resolved;

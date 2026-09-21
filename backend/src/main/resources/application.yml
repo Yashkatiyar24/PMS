@@ -11,6 +11,9 @@ spring:
     url: ${PMS_DB_OWNER_URL:jdbc:postgresql://localhost:5432/pms}
     user: ${PMS_DB_OWNER_USER:postgres}
     password: ${PMS_DB_OWNER_PASSWORD:}
+    placeholders:                          # V23 gives the runtime roles the configured passwords
+      pms_app_password: ${PMS_DB_APP_PASSWORD:pms_app}
+      pms_admin_password: ${PMS_DB_ADMIN_PASSWORD:pms_admin}
   thymeleaf:
     check-template-location: false
     cache: true
@@ -20,7 +23,12 @@ spring:
 
 server:
   port: ${PMS_PORT:8080}
-  forward-headers-strategy: framework
+  # The client's address comes from X-Forwarded-For only when the hop that sent it is a proxy we trust: any
+  # private-network proxy (nginx, docker, a cloud load balancer) by default, plus whatever PMS_TRUSTED_PROXIES
+  # names as a regex of addresses. A caller on the internet cannot forge the header to dodge the per-address
+  # login and public-page limits.
+  forward-headers-strategy: native
+  tomcat.remoteip.trusted-proxies: ${PMS_TRUSTED_PROXIES:}
   error.include-message: never
   error.include-stacktrace: never
 
@@ -30,6 +38,9 @@ management:
 
 pms:
   app-url: ${PMS_APP_URL:http://localhost:3000}
+  # Where a browser reaches this API. Behind the app's /api rewrite it is the app's own origin, so it defaults to
+  # app-url; in development the two differ, and signed file links (photos, receipts) must point at the API.
+  api-url: ${PMS_API_URL:${pms.app-url}}
   session-secret: ${PMS_SESSION_SECRET:dev-only-change-me-32-bytes-minimum!!}
   cookie-secure: ${PMS_COOKIE_SECURE:false}   # true behind HTTPS
   # Browser origins allowed to call this API with a session cookie. The desk app is served from a different
@@ -37,7 +48,7 @@ pms:
   # credentialed requests cannot use "*", and we would not want them to.
   allowed-origins: ${PMS_ALLOWED_ORIGINS:http://localhost:3000}
   default-timezone: ${PMS_DEFAULT_TIMEZONE:Asia/Kolkata}
-  # The first platform admin on a fresh database (who onboards dharamshalas); ignored once one exists.
+  # The first platform admin on a fresh database (who onboards properties); ignored once one exists.
   bootstrap-admin:
     email: ${PMS_ADMIN_EMAIL:}
     password: ${PMS_ADMIN_PASSWORD:}
@@ -78,7 +89,7 @@ pms:
       otp-template-id: ${PMS_MSG91_OTP_TEMPLATE_ID:}
   email:
     provider: ${PMS_EMAIL_PROVIDER:console}    # console | brevo
-    from: ${PMS_EMAIL_FROM:PMS <no-reply@example.in>}
+    from: ${PMS_EMAIL_FROM:Padav <no-reply@example.in>}
     brevo.api-key: ${PMS_BREVO_API_KEY:}
   whatsapp:
     provider: ${PMS_WHATSAPP_PROVIDER:console} # console | meta

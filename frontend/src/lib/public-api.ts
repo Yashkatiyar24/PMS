@@ -36,9 +36,9 @@ export async function submitForm<T>(token: string, body: unknown): Promise<T> {
   )
 }
 
-export async function uploadPhoto(token: string, file: File): Promise<void> {
+export async function uploadPhoto(token: string, photo: Blob): Promise<void> {
   const form = new FormData()
-  form.append("file", file)
+  form.append("file", photo, "id.jpg")
   await unwrap<unknown>(
     await fetch(`${API_BASE}/api/public/registration/${encodeURIComponent(token)}/photo`, {
       method: "POST",
@@ -64,6 +64,8 @@ export type BookingPage = {
   /** Whether the guest pays online when booking, and how much of the stay. */
   payment: "off" | "optional" | "required"
   advancePct: number
+  /** A short-lived link to the property's photograph, or null when it has none. */
+  photoUrl: string | null
 }
 /** What opens the payment gateway's checkout. The key is the public one. */
 export type Checkout = { provider: "razorpay" | "console"; keyId: string; orderId: string; amountPaise: number; currency: string; name: string; holdUntil: string | null }

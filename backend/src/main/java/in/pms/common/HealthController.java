@@ -1,13 +1,13 @@
 package in.pms.common;
 
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-/** Cheap liveness for Uptime Kuma and the deploy script: database reachable, outbox lag. */
+/** Cheap liveness for the uptime monitor and the deploy script: the database answers. Nothing about the queue or the data. */
 @RestController
 public class HealthController {
     private final JdbcClient adminJdbc;
@@ -16,8 +16,7 @@ public class HealthController {
 
     @GetMapping("/api/health")
     public Map<String, Object> health() {
-        Long pending = adminJdbc.sql("select count(*) from outbox where status = 'pending' and send_after < now() - interval '10 minutes'")
-                .query(Long.class).single();
-        return Map.of("status", "ok", "outboxLag", pending);
+        adminJdbc.sql("select 1").query(Integer.class).single();
+        return Map.of("status", "ok");
     }
 }

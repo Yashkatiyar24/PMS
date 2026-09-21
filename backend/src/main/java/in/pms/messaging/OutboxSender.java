@@ -119,7 +119,7 @@ public class OutboxSender {
     private void alertTeam(UUID id, Exception cause) {
         String to = props.ops().teamAlertEmail();
         if (to == null || to.isBlank()) return;
-        try { email.send(to, "PMS: message could not be delivered", "<p>Outbox row " + id + " gave up: " + truncate(cause.getMessage()) + "</p>", List.of()); }
+        try { email.send(to, "Padav: message could not be delivered", "<p>Outbox row " + id + " gave up: " + org.springframework.web.util.HtmlUtils.htmlEscape(truncate(cause.getMessage())) + "</p>", List.of()); }
         catch (Exception e) { log.error("Could not alert the team about outbox {}", id, e); }
     }
 

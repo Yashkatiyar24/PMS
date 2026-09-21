@@ -7,7 +7,7 @@
  */
 import { useState } from "react"
 import { usePathname } from "next/navigation"
-import { ArrowLeftRight, Bell, Building2, CalendarPlus, KeyRound, Languages, LogOut, Monitor, Moon, Plus, Search, Sun, Type, UserPlus } from "lucide-react"
+import { ArrowLeftRight, Bell, Building2, CalendarPlus, KeyRound, Languages, Lock, LogOut, Monitor, Moon, Plus, Search, Sun, Type, UserPlus } from "lucide-react"
 import { clsx } from "clsx"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
@@ -16,18 +16,25 @@ import { ChangePassword } from "./ChangePassword"
 import { BottomNav, SideRail } from "./BottomNav"
 import { OfflineBar } from "./OfflineBar"
 import { SearchBox } from "./SearchBox"
-import { Avatar, IconButton, Loading, Logo, Menu, Sheet, type MenuItem } from "./ui"
+import { Avatar, Banner, Button, Empty, IconButton, Loading, Logo, Menu, Sheet, Wordmark, type MenuItem } from "./ui"
 
-// Overview screens and a reservation use a laptop's width; forms stay a readable column.
-const WIDE = ["/", "/bookings", "/rooms", "/reports", "/settings"]
-const wide = (path: string) => WIDE.includes(path) || path.startsWith("/stays/")
+// Every working screen uses a laptop's width and puts its context beside its content (see SplitPage). Only
+// screens that are a single readable thing, such as one guest's record, keep the narrow column.
+const NARROW = ["/needs-attention"]
+const wide = (path: string) => !NARROW.includes(path) && !path.startsWith("/guests/")
 
-function Brand({ name, sub }: { name: string; sub?: string }) {
+function Brand({ name, sub, wrap, mark }: { name: string; sub?: string; wrap?: boolean; mark?: boolean }) {
   return (
     <div className="flex min-w-0 items-center gap-2.5">
       <Logo />
       <div className="min-w-0">
-        <p className="truncate text-[15px] font-extrabold leading-tight tracking-tight">{name}</p>
+        {/* The property's name, or the product's own wordmark for someone who runs no property. */}
+        {mark ? (
+          <Wordmark label={name} className="h-[15px]" />
+        ) : (
+          /* The rail has height to spare, so a long name takes two lines there rather than an ellipsis. */
+          <p className={clsx("text-[15px] font-extrabold leading-tight tracking-tight", wrap ? "line-clamp-2" : "truncate")}>{name}</p>
+        )}
         {sub && <p className="truncate text-xs text-ink-soft">{sub}</p>}
       </div>
     </div>
@@ -54,6 +61,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const themeIcon = { light: Sun, dark: Moon, system: Monitor }[theme]
   // A trust with several properties: see them side by side, or move to another one.
   const others = (user?.memberships ?? []).filter((m) => m.propertyId !== user?.propertyId)
+
+  // An unpaid subscription is between the trust and the platform. The server refuses the property's requests;
+  // this says why, in one place, instead of every screen failing on its own.
+  const billing = user?.propertyId ? user.billingStatus : null
+  if (billing === "closed") {
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-3 p-6">
+        <Empty icon={Lock}>{t("billing.closed")}</Empty>
+        {others.map((m) => (
+          <Button key={m.propertyId} variant="soft" onClick={() => void switchProperty(m.propertyId).then(() => { window.location.href = "/" })}>
+            <ArrowLeftRight size={18} aria-hidden /> {t("portfolio.switchTo", { name: m.propertyName })}
+          </Button>
+        ))}
+        <Button variant="secondary" onClick={() => void logout()}><LogOut size={18} aria-hidden /> {t("action.logout")}</Button>
+      </main>
+    )
+  }
   const menu: MenuItem[] = [
     { label: unread > 0 ? `${t("notif.title")} (${unread})` : t("notif.title"), icon: Bell, href: "/notifications" },
     ...(others.length > 0
@@ -81,24 +105,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Laptop rail */}
       <aside className="no-print sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-surface px-3 py-4 md:flex">
         <div className="px-2 pb-5">
-          <Brand name={name} sub={user?.role ? user.role.toLowerCase() : undefined} />
+          <Brand name={name} sub={user?.role ? user.role.toLowerCase() : undefined} wrap mark={!property} />
         </div>
-        <nav className="flex-1"><SideRail /></nav>
+        <nav className="scroll-thin min-h-0 flex-1 overflow-y-auto"><SideRail /></nav>
         <div className="flex items-center gap-2 border-t border-line pt-3">
           <Menu align="start" trigger={userButton} items={menu} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{user?.name}</p>
             <p className="truncate text-xs text-ink-soft">{user?.role?.toLowerCase()}</p>
           </div>
+          {/* Sign-out in plain sight on a shared desk computer; the menu keeps it too. */}
+          <IconButton label={t("action.logout")} onClick={() => void logout()} className="hover:text-danger"><LogOut size={18} aria-hidden /></IconButton>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Phone header */}
         <header className="no-print sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-line bg-surface/95 px-4 py-2 backdrop-blur md:hidden">
-          <Brand name={name} />
+          <Brand name={name} mark={!property} />
           <span className="flex items-center gap-1">
-            <IconButton label={t("search.placeholder")} onClick={() => setSearching(true)}><Search size={20} aria-hidden /></IconButton>
+            {user?.propertyId && <IconButton label={t("search.placeholder")} onClick={() => setSearching(true)}><Search size={20} aria-hidden /></IconButton>}
             <Menu trigger={userButton} items={menu} />
           </span>
         </header>
@@ -107,8 +133,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Sheet>
         <ChangePassword open={changingPassword} onOpenChange={setChangingPassword} />
 
-        {/* Laptop top bar: find any stay from any screen, and start the two things the desk starts most. */}
-        <div className="no-print sticky top-0 z-10 hidden border-b border-line bg-surface/85 backdrop-blur md:block">
+        {/* Laptop top bar: find any stay from any screen, and start the two things the desk starts most.
+            A platform admin in no property has no stays to find and nothing to start, so they get no bar. */}
+        {user?.propertyId && <div className="no-print sticky top-0 z-10 hidden border-b border-line bg-surface/85 backdrop-blur md:block">
           <div className={clsx("mx-auto flex items-center gap-3 px-8 py-2.5", wide(path) ? "max-w-6xl" : "max-w-3xl")}>
             <SearchBox className="max-w-md flex-1" />
             <Menu
@@ -120,8 +147,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ]}
             />
           </div>
-        </div>
+        </div>}
 
+        {(billing === "overdue" || billing === "readonly") && (
+          <div className="px-4 pt-3 md:px-8">
+            <Banner tone={billing === "readonly" ? "danger" : "warn"}>{t(`billing.${billing}`)}</Banner>
+          </div>
+        )}
         <OfflineBar />
 
         <main className={clsx("mx-auto w-full flex-1 px-4 pb-28 pt-4 md:px-8 md:pb-10 md:pt-8", wide(path) ? "max-w-6xl" : "max-w-3xl")}>{children}</main>

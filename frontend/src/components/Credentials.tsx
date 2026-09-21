@@ -1,7 +1,7 @@
 "use client"
 
 /**
- * Someone's sign-in details, shown once to whoever created them: the dharamshala's code, the mobile number and a
+ * Someone's sign-in details, shown once to whoever created them: the property's code, the mobile number and a
  * first password. The server keeps only the password's hash, so this is the one chance to hand it over.
  */
 import { useState } from "react"

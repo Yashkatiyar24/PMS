@@ -88,6 +88,8 @@ public class BookingService {
     /** What a booking carries beyond who, where and when. Every field is optional. */
     public record Details(String specialRequests, String groupName, String organization, String billingGstin) {}
 
+    static final int WEBSITE_BOOKINGS_PER_DAY = 40;
+
     /** Sources the desk can choose; the website and the OTAs make their own bookings. */
     static final Set<String> DESK_SOURCES = Set.of("walk_in", "phone", "direct", "travel_agent", "corporate", "group", "other");
 
@@ -381,7 +383,7 @@ public class BookingService {
         Settings s = settings.current();
         UUID p = TenantContext.require();
         if (in.clientUuid() != null) {
-            var existing = jdbc.sql("select id from bookings where property_id = ? and client_uuid = ?").params(p, in.clientUuid()).query(UUID.class).optional();
+            var existing = jdbc.sql("select id from bookings where property_id = ? and client_uuid = ? and source = 'website'").params(p, in.clientUuid()).query(UUID.class).optional();
             if (existing.isPresent()) return load(existing.get()); // the guest pressed Book twice
         }
         ZoneId zone = zone();
@@ -397,6 +399,12 @@ public class BookingService {
         int open = jdbc.sql("select count(*) from bookings b join guests g on g.id = b.guest_id where b.property_id = ? and b.source = 'website' and b.state::text in ('reserved', 'pending') and g.phone = ?")
                 .params(p, phone).query(Integer.class).single();
         if (open >= 3) throw new BadRequestException("This number already has open bookings here; please call the property");
+        // Unpaid website bookings hold rooms on a stranger's word; a day's worth is bounded so a script cannot
+        // reserve the whole house for the season. ponytail: one ceiling for every property; a setting if a large one needs more.
+        if (!payingOnline) {
+            int today = jdbc.sql("select count(*) from bookings where property_id = ? and source = 'website' and created_at > now() - interval '24 hours'").param(p).query(Integer.class).single();
+            if (today >= WEBSITE_BOOKINGS_PER_DAY) throw new ConflictException("Online booking is paused for today; please call the property");
+        }
 
         // Always a new guest record: a stranger must not be able to attach a booking to someone else's by phone.
         UUID guestId = guests.create(new GuestService.GuestInput(in.name(), phone, in.city(), "", "IN", null, null, null, null, null, ""), null).id();

@@ -47,7 +47,7 @@
   --radius-card: 16px;
 }
 
-/* The login scene: a day sky over a sandstone dharamshala. Night re-steps these like any other token. */
+/* The login scene: a day sky over a sandstone building. Night re-steps these like any other token. */
 :root {
   color-scheme: light;
   --sky-top: #9dc0e6;
@@ -251,7 +251,7 @@ details[open] .disclosure-chevron { transform: rotate(180deg); }
 }
 /*
  * Login page motion, all CSS so it plays before the app has loaded on a slow phone. On load the headline
- * rises and the dharamshala emerges from the clouds; on scroll it sinks back into them and each section
+ * rises and the building emerges from the clouds; on scroll it sinks back into them and each section
  * eases in. Scroll-linked parts use scroll-driven animations and simply stand still where a browser lacks them.
  */
 @keyframes rise { from { opacity: 0; transform: translateY(24px) } }
@@ -278,4 +278,29 @@ details[open] .disclosure-chevron { transform: rotate(180deg); }
 @media print {
   .no-print { display: none !important; }
   body { background: #fff; }
+}
+
+/* The sign-in form on the landing page: a quiet caption over a hairline, in the landing's own editorial style
+   rather than the desk's boxed fields. Scoped to .line-form, so no other screen's inputs change. */
+.line-form :where(label) > span:first-child {
+  font-weight: 500;
+  color: var(--color-ink-faint);
+}
+.line-form input:not([type="checkbox"]):not([type="radio"]) {
+  border: 0;
+  border-bottom: 1px solid var(--color-line-strong);
+  border-radius: 0;
+  background: transparent;
+  padding: 10px 0;
+  min-height: 52px;
+  font-size: 17px;
+  font-weight: 600;
+}
+.line-form input::placeholder { color: var(--color-ink-soft); font-weight: 500; }
+.line-form input:not([type="checkbox"]):not([type="radio"]):focus-visible {
+  outline: none;
+  border: 0;
+  border-bottom: 2px solid var(--color-ink);
+  box-shadow: none;
+  padding-bottom: 9px;   /* the extra border pixel comes out of the padding, so nothing below it moves */
 }

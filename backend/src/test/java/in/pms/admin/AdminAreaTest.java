@@ -34,6 +34,8 @@ class AdminAreaTest {
     @Autowired @Qualifier("adminJdbc") JdbcClient admin;
     @Autowired @Qualifier("adminTx") PlatformTransactionManager adminTx;
     @Autowired in.pms.auth.PasswordService passwords;
+    @Autowired in.pms.integrations.storage.StorageProvider storage;
+    @Autowired in.pms.auth.SessionService sessions;
 
     UUID orgId, propertyId, superAdminId, ownerId;
     final String superEmail = "superadmin@test.local", ownerEmail = "adminowner@test.local";
@@ -104,8 +106,8 @@ class AdminAreaTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.propertyName == 'Admin Test')]").exists())
                 .andReturn().getResponse().getContentAsString();
-        // Counts and status only: nothing that identifies a guest.
-        org.assertj.core.api.Assertions.assertThat(body).doesNotContain("guestName", "phone", "idLast4");
+        // Counts, status and the trust's own contacts: nothing that identifies a guest.
+        org.assertj.core.api.Assertions.assertThat(body).doesNotContain("guestName", "guestPhone", "idLast4");
     }
 
     @Test
@@ -142,6 +144,96 @@ class AdminAreaTest {
         org.assertj.core.api.Assertions.assertThat(audited).isPositive();
     }
 
+    /** The billing state the platform sets is what the desk lives under: it is not a label. */
+    @Test
+    void billingStateGatesTheDesk() throws Exception {
+        Cookie owner = signIn(ownerEmail);
+        setBilling("active");
+        mvc.perform(get("/api/property").cookie(owner)).andExpect(status().isOk());
+
+        setBilling("readonly");
+        mvc.perform(get("/api/property").cookie(signIn(ownerEmail))).andExpect(status().isOk());
+        mvc.perform(put("/api/property").cookie(signIn(ownerEmail)).header("X-Requested-With", "pms")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Admin Test\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error", containsString("read-only")));
+
+        setBilling("closed");
+        mvc.perform(get("/api/property").cookie(signIn(ownerEmail))).andExpect(status().isForbidden());
+        // The person can still learn why, and leave.
+        mvc.perform(get("/api/auth/me").cookie(signIn(ownerEmail))).andExpect(status().isOk()).andExpect(jsonPath("$.billingStatus").value("closed"));
+
+        setBilling("active");
+        mvc.perform(get("/api/property").cookie(signIn(ownerEmail))).andExpect(status().isOk());
+    }
+
+    private void setBilling(String status) {
+        new TransactionTemplate(adminTx).executeWithoutResult(tx ->
+                admin.sql("update organisations set billing_status = ?::billing_status where id = ?").params(status, orgId).update());
+    }
+
+    @Test
+    void platformCanSetAndClearAPropertysPhoto() throws Exception {
+        Cookie support = signIn(superEmail);
+        byte[] png = java.util.Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==");
+        mvc.perform(multipart("/api/admin/properties/" + propertyId + "/photo")
+                        .file(new org.springframework.mock.web.MockMultipartFile("file", "photo.png", "image/png", png))
+                        .cookie(support).header("X-Requested-With", "pms"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.photoUrl", containsString("/api/files/")));
+        // Something that is not a photo is refused before it is stored.
+        mvc.perform(multipart("/api/admin/properties/" + propertyId + "/photo")
+                        .file(new org.springframework.mock.web.MockMultipartFile("file", "notes.txt", "text/plain", "hello".getBytes()))
+                        .cookie(support).header("X-Requested-With", "pms"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/admin/properties/" + propertyId).cookie(support))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.photoUrl", containsString("/api/files/")));
+        mvc.perform(delete("/api/admin/properties/" + propertyId + "/photo").cookie(support).header("X-Requested-With", "pms"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.photoUrl").doesNotExist());
+    }
+
+    /** Off means off for the people who work there, and nothing is lost when it comes back on. */
+    @Test
+    void switchingAPropertyOffHidesItFromItsOwnStaff() throws Exception {
+        Cookie support = signIn(superEmail);
+        mvc.perform(patch("/api/admin/properties/" + propertyId + "/active").cookie(support).header("X-Requested-With", "pms")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.active").value(false));
+        mvc.perform(get("/api/auth/me").cookie(signIn(ownerEmail))).andExpect(status().isOk()).andExpect(jsonPath("$.propertyId").doesNotExist());
+        mvc.perform(patch("/api/admin/properties/" + propertyId + "/active").cookie(support).header("X-Requested-With", "pms")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"active\":true}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.active").value(true));
+        mvc.perform(get("/api/auth/me").cookie(signIn(ownerEmail))).andExpect(status().isOk()).andExpect(jsonPath("$.propertyId").value(propertyId.toString()));
+    }
+
+    @Test
+    void platformNotesRoundTripAndStayOffTheOwnersScreens() throws Exception {
+        Cookie support = signIn(superEmail);
+        mvc.perform(patch("/api/admin/properties/" + propertyId + "/notes").cookie(support).header("X-Requested-With", "pms")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"notes\":\"Owner asked about GST on 20 Sep.\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.notes").value("Owner asked about GST on 20 Sep."));
+        // The property's own record carries no trace of it.
+        String own = mvc.perform(get("/api/property").cookie(signIn(ownerEmail))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        org.assertj.core.api.Assertions.assertThat(own).doesNotContain("GST on 20 Sep");
+    }
+
+    @Test
+    void platformCanResetAStaffPasswordAndItWorksAtOnce() throws Exception {
+        Cookie support = signIn(superEmail);
+        String body = mvc.perform(post("/api/admin/properties/" + propertyId + "/team/" + ownerId + "/password").cookie(support).header("X-Requested-With", "pms"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.password").isNotEmpty()).andReturn().getResponse().getContentAsString();
+        String fresh = new com.fasterxml.jackson.databind.ObjectMapper().readTree(body).get("password").asText();
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + ownerEmail + "\",\"password\":\"" + fresh + "\"}"))
+                .andExpect(status().isOk());
+        // A platform admin cannot be reset through a property.
+        mvc.perform(post("/api/admin/properties/" + propertyId + "/team/" + superAdminId + "/password").cookie(support).header("X-Requested-With", "pms"))
+                .andExpect(status().isNotFound());
+        // Put the fixture's password back so the other tests can sign in as the owner.
+        new TransactionTemplate(adminTx).executeWithoutResult(tx ->
+                admin.sql("update users set password_hash = ?, must_change_password = false where id = ?").params(passwords.hash("password123"), ownerId).update());
+    }
+
     @Test
     void readingAPropertysActivityIsItselfLogged() throws Exception {
         mvc.perform(get("/api/admin/properties/" + propertyId + "/activity").cookie(signIn(superEmail))).andExpect(status().isOk());
@@ -151,7 +243,7 @@ class AdminAreaTest {
 
     @Test
     void supportAccessToGuestDataNeedsTheOwnersConsentWindow() {
-        AdminService service = new AdminService(admin, passwords, new in.pms.audit.AuditService(admin, admin, new com.fasterxml.jackson.databind.ObjectMapper()));
+        AdminService service = new AdminService(admin, passwords, new in.pms.audit.AuditService(admin, admin, new com.fasterxml.jackson.databind.ObjectMapper()), storage, sessions);
         var actor = new in.pms.auth.CurrentUser(superAdminId, "Support", true, UUID.randomUUID(), null, null, List.of(), null, java.util.Set.of());
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() ->

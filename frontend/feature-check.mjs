@@ -44,10 +44,11 @@ async function screen(path, name, ready) {
 try {
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle" })
   await page.getByRole("button", { name: /भाषा|Language/ }).click()
+  await page.getByRole("button", { name: /Sign in/i }).first().click()
   await page.getByRole("tab", { name: /Email/ }).click()
   await page.getByLabel("Email").fill("owner@pms.local")
   await page.getByLabel("Password").fill("password123")
-  await page.getByRole("button", { name: "Sign in", exact: true }).click()
+  await page.getByRole("dialog").getByRole("button", { name: "Sign in", exact: true }).click()
   await page.waitForURL(`${BASE}/`, { timeout: 15000 })
 
   await screen("/rooms", "rooms", "text=/Floor/")
@@ -57,9 +58,11 @@ try {
   await page.screenshot({ path: `${OUT}/feature-room-sheet.png` })
   await page.keyboard.press("Escape")
 
-  await screen("/settings", "settings with operations", "text=Operations")
-  check("the operations list links the new work", (await page.getByRole("link", { name: /Maintenance|Expenses|Inventory|Restaurant|Guests|Audit/ }).count()) >= 6)
-  await screen("/guests", "guests", "main input[type=search]")
+  await screen("/settings", "settings with operations", "main >> text=Operations")
+  check("the operations list links the new work", (await page.locator("main").getByRole("link", { name: /Maintenance|Lost and found|Expenses|Inventory|Restaurant|Audit/ }).count()) >= 6)
+  // Guests has a tab of its own now, and opens on whoever is in the house rather than on an empty search box.
+  check("guests is a tab, not an operations link", (await page.locator("nav.fixed").getByRole("link", { name: "Guests" }).count()) === 1)
+  await screen("/guests", "guests", "main >> text=Staying now")
   await screen("/maintenance", "maintenance", "main >> text=Maintenance")
   await screen("/lost-found", "lost and found", "main >> text=Lost and found")
   await screen("/expenses", "expenses", "main >> text=Expenses")

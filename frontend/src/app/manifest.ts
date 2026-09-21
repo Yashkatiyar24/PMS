@@ -3,14 +3,14 @@ import type { MetadataRoute } from "next"
 /** Installed to the home screen so the desk opens it like an app, with no browser chrome in the way. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Dharamshala PMS",
-    short_name: "PMS",
+    name: "Padav",
+    short_name: "Padav",
     description: "Guest register, receipts and daily accounts",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#f6f7f9",
-    theme_color: "#0b5c4a",
+    background_color: "#f7f8fa",   // --color-bg
+    theme_color: "#171c26",        // --color-ink, the wordmark's own dark
     lang: "hi",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

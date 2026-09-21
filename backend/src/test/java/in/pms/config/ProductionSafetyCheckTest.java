@@ -22,8 +22,30 @@ class ProductionSafetyCheckTest {
 
     private static PmsProperties props(String secret, String devOtp, boolean cookieSecure, List<String> origins) {
         var auth = new PmsProperties.Auth(6, 10, 5, 15, 5, devOtp);
-        return new PmsProperties("https://desk.example", secret, origins, cookieSecure, "Asia/Kolkata",
+        return new PmsProperties("https://desk.example", "https://desk.example", secret, origins, cookieSecure, "Asia/Kolkata",
                 null, auth, null, null, null, null, null, null, null, null, null);
+    }
+
+    /** The safe configuration with real provider and database settings, which each case below then spoils. */
+    private static PmsProperties with(PmsProperties.Sms sms, PmsProperties.Email email, PmsProperties.Db db) {
+        var s = safe();
+        return new PmsProperties(s.appUrl(), s.apiUrl(), s.sessionSecret(), s.allowedOrigins(), s.cookieSecure(), s.defaultTimezone(),
+                db, s.auth(), null, sms, email, null, null, null, null, null, null);
+    }
+
+    @Test
+    void theConsoleSmsProviderIsRefusedBecauseItLogsEveryLoginCode() {
+        assertThatThrownBy(() -> check(with(new PmsProperties.Sms("console", null), null, null))).hasMessageContaining("PMS_SMS_PROVIDER");
+        check(with(new PmsProperties.Sms("msg91", null), null, null));
+    }
+
+    @Test
+    void databaseRolesStillOnTheirCreationPasswordsAreRefused() {
+        var shipped = new PmsProperties.Pool("jdbc:postgresql://db/pms", "pms_app", "pms_app", 4);
+        var strong = new PmsProperties.Pool("jdbc:postgresql://db/pms", "pms_app", "k9v2m4x8q1w3e5r7t0y6", 4);
+        assertThatThrownBy(() -> check(with(null, null, new PmsProperties.Db(shipped, strong)))).hasMessageContaining("PMS_DB_APP_PASSWORD");
+        assertThatThrownBy(() -> check(with(null, null, new PmsProperties.Db(strong, new PmsProperties.Pool("jdbc:postgresql://db/pms", "pms_admin", "short", 4))))).hasMessageContaining("PMS_DB_ADMIN_PASSWORD");
+        check(with(null, null, new PmsProperties.Db(strong, strong)));
     }
 
     private static void check(PmsProperties props, String... properties) {
