@@ -131,7 +131,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Sheet open={searching} onOpenChange={setSearching} title={t("search.placeholder")}>
           <SearchBox autoFocus onDone={() => setSearching(false)} className="min-h-[50vh]" />
         </Sheet>
-        <ChangePassword open={changingPassword} onOpenChange={setChangingPassword} />
+        <ChangePassword open={changingPassword || !!user?.mustChangePassword} onOpenChange={setChangingPassword} required={!!user?.mustChangePassword} />
 
         {/* Laptop top bar: find any stay from any screen, and start the two things the desk starts most.
             A platform admin in no property has no stays to find and nothing to start, so they get no bar. */}

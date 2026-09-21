@@ -96,6 +96,12 @@ class DharamshalaCodeTest {
         return body.isBlank() ? null : json.readTree(body);
     }
 
+    /** A password handed out opens nothing until it is replaced; the session that replaces it stays signed in. */
+    Cookie ownPassword(Cookie who, String handed) throws Exception {
+        call(who, post("/api/users/me/password").content("{\"currentPassword\":\"" + handed + "\",\"password\":\"owner-own-pass\"}"), 204);
+        return who;
+    }
+
     @Test
     void aDharamshalaGetsItsCodeAndStartsWithTheBasics() throws Exception {
         Cookie platform = signIn("{\"email\":\"" + SUPER + "\",\"password\":\"password123\"}");
@@ -108,7 +114,7 @@ class DharamshalaCodeTest {
         assertThat(ownerPassword).hasSize(10);
 
         // Typed the way people type it: lower case, a space, the country code.
-        Cookie owner = signIn(byCode(" " + code.toLowerCase() + " ", "+91 95556 00001", ownerPassword));
+        Cookie owner = ownPassword(signIn(byCode(" " + code.toLowerCase() + " ", "+91 95556 00001", ownerPassword)), ownerPassword);
         JsonNode me = call(owner, get("/api/auth/me"), 200);
         assertThat(me.get("propertyId").asText()).isEqualTo(propertyId);
         List<String> can = json.convertValue(me.get("permissions"), json.getTypeFactory().constructCollectionType(List.class, String.class));
@@ -136,7 +142,8 @@ class DharamshalaCodeTest {
         JsonNode onboarded = call(platform, post("/api/admin/properties").content("""
                 {"orgName":"Code Trust","propertyName":"Seva Bhawan","ownerName":"Owner","ownerPhone":"9555600003","planCode":"basic"}"""), 200);
         String code = onboarded.get("code").asText();
-        Cookie owner = signIn(byCode(code, "9555600003", onboarded.get("ownerPassword").asText()));
+        String handed = onboarded.get("ownerPassword").asText();
+        Cookie owner = ownPassword(signIn(byCode(code, "9555600003", handed)), handed);
 
         // Somebody who works at another dharamshala cannot get in here with that one's password.
         login(byCode(code, "9555600009", "elsewhere1")).andExpect(status().isBadRequest());
@@ -156,12 +163,12 @@ class DharamshalaCodeTest {
         String second = call(owner, post("/api/users/" + deskId + "/password"), 200).get("password").asText();
         login(byCode(code, "9555600002", first)).andExpect(status().isBadRequest());
         Cookie desk = signIn(byCode(code, "9555600002", second));
-        call(desk, post("/api/users/" + deskId + "/password"), 403); // a receptionist resets nobody's
 
         // Changing your own password needs the current one.
         call(desk, post("/api/users/me/password").content("{\"currentPassword\":\"wrong-one\",\"password\":\"desk-new-pass\"}"), 400);
         call(desk, post("/api/users/me/password").content("{\"currentPassword\":\"" + second + "\",\"password\":\"desk-new-pass\"}"), 204);
         signIn(byCode(code, "9555600002", "desk-new-pass"));
+        call(desk, post("/api/users/" + deskId + "/password"), 403); // a receptionist resets nobody's
 
         // Removed from this dharamshala: the code no longer lets them in.
         call(owner, delete("/api/users/" + deskId), 204);

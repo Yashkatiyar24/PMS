@@ -1,12 +1,16 @@
 "use client"
 
-/** Replace the first password someone was handed with their own. The current one is asked for, so a phone left signed in cannot lock its owner out. */
+/**
+ * Replace the first password someone was handed with their own. The current one is asked for, so a phone left
+ * signed in cannot lock its owner out. When `required`, the server refuses everything else until this is done,
+ * so the sheet cannot be closed and the app reloads once the new password is saved.
+ */
 import { useState } from "react"
 import { api, ApiError } from "@/lib/api"
 import { useI18n } from "@/i18n"
 import { Banner, Button, Field, Sheet } from "./ui"
 
-export function ChangePassword({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function ChangePassword({ open, onOpenChange, required = false }: { open: boolean; onOpenChange: (open: boolean) => void; required?: boolean }) {
   const { t } = useI18n()
   const [current, setCurrent] = useState("")
   const [next, setNext] = useState("")
@@ -15,6 +19,7 @@ export function ChangePassword({ open, onOpenChange }: { open: boolean; onOpenCh
   const [busy, setBusy] = useState(false)
 
   const close = (o: boolean) => {
+    if (required) { if (!o && done) window.location.reload(); return }
     onOpenChange(o)
     if (!o) { setCurrent(""); setNext(""); setError(""); setDone(false) }
   }
@@ -33,7 +38,8 @@ export function ChangePassword({ open, onOpenChange }: { open: boolean; onOpenCh
   }
 
   return (
-    <Sheet open={open} onOpenChange={close} title={t("account.changePassword")}
+    <Sheet open={open} onOpenChange={close} title={t(required ? "account.mustChangeTitle" : "account.changePassword")}
+      description={required && !done ? t("account.mustChange") : undefined}
       footer={done
         ? <Button size="lg" className="w-full" onClick={() => close(false)}>{t("action.done")}</Button>
         : <Button size="lg" className="w-full" disabled={busy || !current || next.length < 8} onClick={() => void save()}>{t("action.save")}</Button>}>

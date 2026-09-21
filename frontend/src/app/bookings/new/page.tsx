@@ -15,7 +15,7 @@ import { CalendarCheck } from "lucide-react"
 import { clsx } from "clsx"
 import { api, ApiError, newClientUuid } from "@/lib/api"
 import { formatDate, rupees, toPaise, unitName } from "@/lib/format"
-import { DESK_SOURCES, OFF_SALE, type Booking, type FreeUnit, type Guest, type Room, type RoomType } from "@/lib/types"
+import { DESK_SOURCES, type Booking, type FreeUnit, type Guest, type Room, type RoomType } from "@/lib/types"
 import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
 import { Banner, Button, Card, Chip, ChoiceChips, Disclosure, Field, KV, Loading, PageHeader, Stepper } from "@/components/ui"
@@ -69,17 +69,10 @@ export default function NewBookingPage() {
   // The type follows a preselected unit (from the tape chart), else the first type listed.
   const roomTypeId = chosenTypeId || (unitKey && data?.rooms.find((r) => r.id === unitKey.split(":")[0])?.roomTypeId) || data?.types[0]?.id || ""
 
-  /** Units of the chosen type, offered when the manager wants a particular room. */
-  const units = useMemo(() => {
-    if (!data) return []
-    return data.rooms
-      .filter((room) => room.active && !OFF_SALE.includes(room.status) && (!roomTypeId || room.roomTypeId === roomTypeId))
-      .flatMap((room) =>
-        room.beds.length > 0
-          ? room.beds.filter((b) => b.active).map((bed) => ({ key: `${room.id}:${bed.id}`, label: unitName(room.number, bed.label) }))
-          : [{ key: `${room.id}:`, label: room.number }],
-      )
-  }, [data, roomTypeId])
+  /** Free units of the chosen type, offered when the manager wants a particular room. Booked ones never show. */
+  const units = useMemo(() => (free ?? [])
+    .filter((f) => !roomTypeId || f.roomTypeId === roomTypeId)
+    .map((f) => ({ key: `${f.roomId}:${f.bedId ?? ""}`, label: unitName(f.roomNumber, f.bedLabel) })), [free, roomTypeId])
 
   const settings = data?.settings
   const consentRequired = Boolean(settings?.consent_required)
@@ -88,17 +81,23 @@ export default function NewBookingPage() {
   const group = source === "group"
   const datesOk = !!arrive && !!depart && depart > arrive
 
-  // A group chooses from what is free for the whole stay, asked of the server whenever the dates change.
+  // Rooms on offer are what is free for the whole stay, asked of the server whenever the dates change.
   useEffect(() => {
-    if (!group || !datesOk) return
+    if (!datesOk) return
     let live = true
     const from = new Date(`${arrive}T${checkinTime}`).toISOString()
     const to = new Date(`${depart}T${checkoutTime}`).toISOString()
     api<FreeUnit[]>(`/api/bookings/availability?arrive=${encodeURIComponent(from)}&depart=${encodeURIComponent(to)}`)
-      .then((found) => { if (live) { setFree(found); setGroupKeys((keys) => keys.filter((k) => found.some((f) => `${f.roomId}:${f.bedId ?? ""}` === k))) } })
+      .then((found) => {
+        if (!live) return
+        const isFree = (k: string) => found.some((f) => `${f.roomId}:${f.bedId ?? ""}` === k)
+        setFree(found)
+        setGroupKeys((keys) => keys.filter(isFree))
+        setUnitKey((k) => (k && !isFree(k) ? "" : k))
+      })
       .catch(() => { if (live) setFree([]) })
     return () => { live = false }
-  }, [group, datesOk, arrive, depart, checkinTime, checkoutTime])
+  }, [datesOk, arrive, depart, checkinTime, checkoutTime])
 
   async function lookup() {
     const digits = phone.replace(/\D/g, "")
