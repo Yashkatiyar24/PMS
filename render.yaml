@@ -1,0 +1,83 @@
+# Render Blueprint for the Padav API. The desk app runs on Vercel (root directory `frontend`, PMS_API_ORIGIN set to
+# this service's URL). Values marked `sync: false` are asked for when the Blueprint is created; see
+# infra/.env.example for what each one means.
+#
+# The database is not a Render Postgres: the migrations create a role with BYPASSRLS, which needs a host that grants
+# it (Neon or Supabase). Point the three PMS_DB_*_URL values at the same database.
+services:
+  - type: web
+    name: padav-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    # ponytail: one instance; the scheduled jobs (reports, outbox, purge) assume a single runner.
+    plan: starter
+    numInstances: 1
+    healthCheckPath: /actuator/health/readiness
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: PMS_COOKIE_SECURE
+        value: "true"
+      - key: PMS_APP_URL
+        sync: false # the Vercel address, e.g. https://padav.vercel.app
+      - key: PMS_ALLOWED_ORIGINS
+        sync: false # same as PMS_APP_URL (comma-separate preview URLs if needed)
+      - key: PMS_SESSION_SECRET
+        generateValue: true
+      - key: PMS_ADMIN_EMAIL
+        sync: false
+      - key: PMS_ADMIN_PASSWORD
+        sync: false # at least 12 characters
+
+      - key: PMS_DB_OWNER_URL
+        sync: false # jdbc:postgresql://<host>/<db>?sslmode=require
+      - key: PMS_DB_OWNER_USER
+        sync: false
+      - key: PMS_DB_OWNER_PASSWORD
+        sync: false
+      - key: PMS_DB_APP_URL
+        sync: false
+      - key: PMS_DB_APP_PASSWORD
+        generateValue: true
+      - key: PMS_DB_APP_POOL
+        value: "8"
+      - key: PMS_DB_ADMIN_URL
+        sync: false
+      - key: PMS_DB_ADMIN_PASSWORD
+        generateValue: true
+      - key: PMS_DB_ADMIN_POOL
+        value: "4"
+
+      - key: PMS_STORAGE_PROVIDER
+        value: s3 # Render's disk is wiped on every deploy; ID photos and receipts must live in R2/S3
+      - key: PMS_S3_ENDPOINT
+        sync: false
+      - key: PMS_S3_BUCKET
+        sync: false
+      - key: PMS_S3_ACCESS_KEY
+        sync: false
+      - key: PMS_S3_SECRET_KEY
+        sync: false
+      - key: PMS_S3_REGION
+        value: auto
+
+      - key: PMS_SMS_PROVIDER
+        value: msg91
+      - key: PMS_MSG91_AUTH_KEY
+        sync: false
+      - key: PMS_MSG91_SENDER_ID
+        sync: false
+      - key: PMS_MSG91_OTP_TEMPLATE_ID
+        sync: false
+      - key: PMS_EMAIL_PROVIDER
+        value: brevo
+      - key: PMS_EMAIL_FROM
+        sync: false # e.g. Padav <no-reply@yourdomain.in>, a sender verified in Brevo
+      - key: PMS_BREVO_API_KEY
+        sync: false
+      - key: PMS_PAYMENT_PROVIDER
+        value: none
+      - key: PMS_DEFAULT_TIMEZONE
+        value: Asia/Kolkata
