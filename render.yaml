@@ -8,8 +8,8 @@ services:
   - type: web
     name: padav-api
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     region: singapore
     # ponytail: free plan sleeps after 15 idle minutes and scheduled jobs pause with it; keep it awake with an
     # external ping to /api/health every 10 minutes, or move to starter.
