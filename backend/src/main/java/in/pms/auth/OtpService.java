@@ -39,11 +39,13 @@ public class OtpService {
     private final EmailProvider email;
     private final PmsProperties.Auth cfg;
     private final boolean smsOff;
+    private final boolean emailOff;
     private final ExecutorService delivery = Executors.newVirtualThreadPerTaskExecutor();
 
     public OtpService(@Qualifier("adminJdbc") JdbcClient adminJdbc, SmsProvider sms, EmailProvider email, PmsProperties props) {
         this.adminJdbc = adminJdbc; this.sms = sms; this.email = email; this.cfg = props.auth();
         this.smsOff = props.sms() != null && "off".equals(props.sms().provider());
+        this.emailOff = props.email() != null && "off".equals(props.email().provider());
     }
 
     @PreDestroy void close() { delivery.close(); }
@@ -66,6 +68,7 @@ public class OtpService {
     public void send(String target) {
         boolean isEmail = target.contains("@");
         if (!isEmail && smsOff) throw new BadRequestException("Codes by SMS are not available yet. Sign in with your email, or your property code and password.");
+        if (isEmail && emailOff) throw new BadRequestException("Codes by email are not available yet. Sign in with your property code, email and password.");
         String t = isEmail ? target.trim().toLowerCase() : normalisePhone(target);
         Integer recent = adminJdbc.sql("select count(*) from otp_codes where target = ? and created_at > now() - make_interval(mins => ?)")
                 .params(t, cfg.otpWindowMinutes()).query(Integer.class).single();

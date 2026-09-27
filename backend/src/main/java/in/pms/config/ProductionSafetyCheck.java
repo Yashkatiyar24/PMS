@@ -67,7 +67,7 @@ public class ProductionSafetyCheck {
         if (props.sms() != null && "console".equals(props.sms().provider()))
             problems.add("PMS_SMS_PROVIDER is console: login codes are written to the log and never sent. Use msg91, or off to refuse phone codes until SMS is set up.");
         if (props.email() != null && "console".equals(props.email().provider()))
-            problems.add("PMS_EMAIL_PROVIDER is console: login codes and reports are written to the log and never sent. Use brevo.");
+            problems.add("PMS_EMAIL_PROVIDER is console: login codes and reports are written to the log and never sent. Use brevo, or off to refuse email codes until email is set up.");
         if (props.db() != null && (weakDatabasePassword(props.db().app()) || weakDatabasePassword(props.db().admin())))
             problems.add("PMS_DB_APP_PASSWORD or PMS_DB_ADMIN_PASSWORD is unset, shorter than 16 characters, or still the value the roles "
                     + "were created with. The admin role reads every property; set both to long random values (see infra/.env.example).");

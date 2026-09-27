@@ -67,7 +67,7 @@ services:
       - key: PMS_SMS_PROVIDER
         value: "off" # phone codes refused until MSG91 (paid, needs DLT) is set up; email and property-code login work
       - key: PMS_EMAIL_PROVIDER
-        value: brevo
+        value: "off" # email codes refused until Brevo is set up; property-code + password login works
       - key: PMS_EMAIL_FROM
         sync: false # e.g. Padav <no-reply@yourdomain.in>, a sender verified in Brevo
       - key: PMS_BREVO_API_KEY

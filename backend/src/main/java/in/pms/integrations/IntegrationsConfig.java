@@ -49,6 +49,8 @@ public class IntegrationsConfig {
         return switch (p.email().provider()) {
             case "brevo" -> new BrevoEmailProvider(p.email().brevo().apiKey(), p.email().from());
             case "console" -> new ConsoleEmailProvider();
+            // No email account yet: email codes are refused up front (OtpService); outbox mail waits and retries.
+            case "off" -> (to, subject, html, attachments) -> { throw new IllegalStateException("Email is switched off (PMS_EMAIL_PROVIDER=off)"); };
             default -> throw new IllegalArgumentException("Unknown email provider " + p.email().provider());
         };
     }
