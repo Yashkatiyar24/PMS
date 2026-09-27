@@ -46,6 +46,9 @@ jobs:
         run: npm ci
       - name: Lint, typecheck, test, build
         working-directory: frontend
+        env:
+          # The build refuses to point at localhost; any https origin satisfies it, the artifact is discarded.
+          PMS_API_ORIGIN: https://ci.invalid
         run: |
           npm run lint
           npm run typecheck
