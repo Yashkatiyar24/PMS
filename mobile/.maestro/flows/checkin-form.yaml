@@ -1,0 +1,21 @@
+# flow: login → Check-in → the form validates the missing steps in order.
+appId: ${MAESTRO_APP_ID}
+env:
+  PROPERTY_CODE: SRD1001
+  EMAIL: owner@pms.local
+  PASSWORD: password123
+onFlowStart:
+  - runFlow: ../shared/_OnFlowStart.yaml
+---
+- runFlow: ../shared/_Login.yaml
+- tapOn:
+    id: "today-checkin"
+- assertVisible: "Check-in"
+- assertVisible: "Enter the guest's name first"
+- tapOn:
+    id: "guest-name"
+- inputText: "Maestro Guest"
+- hideKeyboard
+- assertVisible: "Pick a room or bed first"
+- back
+- assertVisible: "Today"

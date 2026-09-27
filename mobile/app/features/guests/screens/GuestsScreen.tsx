@@ -6,6 +6,7 @@ import {
   Avatar,
   Chip,
   Empty,
+  ErrorState,
   Input,
   KV,
   ListCard,
@@ -90,6 +91,9 @@ export const GuestsScreen = observer(function GuestsScreen() {
         </Panel>
       )}
       {view === "inHouse" && today.loading && <Loading />}
+      {view === "inHouse" && today.problem && !t && (
+        <ErrorState message={today.problem.message} onRetry={today.reload} />
+      )}
       {view === "inHouse" &&
         t &&
         (inHouse.length === 0 ? (

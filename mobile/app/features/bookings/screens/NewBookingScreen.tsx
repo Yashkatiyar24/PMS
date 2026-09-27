@@ -7,6 +7,7 @@ import {
   Button,
   ChoiceChips,
   KV,
+  Loading,
   MoneyInput,
   PageHeader,
   Panel,
@@ -129,6 +130,7 @@ export function NewBookingScreen() {
             ) : undefined
           }
         />
+        {roomTypes.loading && !roomTypes.data && <Loading rows={1} />}
         <RoomAndDatesCard
           form={form}
           patch={patch}

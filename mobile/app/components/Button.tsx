@@ -19,7 +19,7 @@ type Presets = "primary" | "secondary" | "soft" | "danger" | "ghost"
 export type ButtonSize = "sm" | "md" | "lg"
 
 export interface ButtonAccessoryProps {
-  style: StyleProp<any>
+  style: StyleProp<ViewStyle>
   pressableState: PressableStateCallbackType
   disabled?: boolean
 }
@@ -168,7 +168,11 @@ export function Button(props: ButtonProps) {
       {(state) => (
         <>
           {!!LeftAccessory && (
-            <LeftAccessory style={$leftAccessoryStyle} pressableState={state} disabled={disabled} />
+            <LeftAccessory
+              style={themed($leftAccessoryStyle)}
+              pressableState={state}
+              disabled={disabled}
+            />
           )}
 
           <Text tx={tx} text={text} txOptions={txOptions} style={$textStyle(state)}>
@@ -177,7 +181,7 @@ export function Button(props: ButtonProps) {
 
           {!!RightAccessory && (
             <RightAccessory
-              style={$rightAccessoryStyle}
+              style={themed($rightAccessoryStyle)}
               pressableState={state}
               disabled={disabled}
             />

@@ -26,32 +26,36 @@ import { SettingsGroupScreen } from "@/features/settings/screens/SettingsGroupSc
 import { StaffScreen } from "@/features/settings/screens/StaffScreen"
 import { TaxRulesScreen } from "@/features/settings/screens/TaxRulesScreen"
 
+import { gated } from "./gated"
 import type { ScreenComponent, SharedStackParamList } from "./navigationTypes"
 
 type Entry = { name: keyof SharedStackParamList; component: ScreenComponent }
 
 export const sharedScreens: Entry[] = [
-  { name: "Stay", component: StayScreen },
-  { name: "CheckIn", component: CheckInScreen },
-  { name: "NewBooking", component: NewBookingScreen },
-  { name: "Guest", component: GuestScreen },
+  { name: "Stay", component: gated(StayScreen, { anyOf: ["reservations.view"] }) },
+  { name: "CheckIn", component: gated(CheckInScreen, { anyOf: ["checkin"] }) },
+  { name: "NewBooking", component: gated(NewBookingScreen, { anyOf: ["reservations.create"] }) },
+  { name: "Guest", component: gated(GuestScreen, { anyOf: ["reservations.view"] }) },
   { name: "NeedsAttention", component: NeedsAttentionScreen },
   { name: "Notifications", component: NotificationsScreen },
   { name: "Portfolio", component: PortfolioScreen },
   { name: "Sessions", component: SessionsScreen },
   { name: "ReceiptViewer", component: ReceiptViewerScreen },
-  { name: "Maintenance", component: MaintenanceScreen },
-  { name: "LostFound", component: LostFoundScreen },
-  { name: "Restaurant", component: RestaurantScreen },
-  { name: "Inventory", component: InventoryScreen },
-  { name: "Expenses", component: ExpensesScreen },
-  { name: "Audit", component: AuditScreen },
+  {
+    name: "Maintenance",
+    component: gated(MaintenanceScreen, { anyOf: ["maintenance", "maintenance.report"] }),
+  },
+  { name: "LostFound", component: gated(LostFoundScreen, { anyOf: ["lost_found"] }) },
+  { name: "Restaurant", component: gated(RestaurantScreen, { anyOf: ["restaurant"] }) },
+  { name: "Inventory", component: gated(InventoryScreen, { anyOf: ["inventory"] }) },
+  { name: "Expenses", component: gated(ExpensesScreen, { anyOf: ["expenses"] }) },
+  { name: "Audit", component: gated(AuditScreen, { anyOf: ["audit.view"] }) },
   { name: "SettingsGroup", component: SettingsGroupScreen },
-  { name: "PropertyDetails", component: PropertyDetailsScreen },
-  { name: "RoomTypes", component: RoomTypesScreen },
-  { name: "TaxRules", component: TaxRulesScreen },
-  { name: "Staff", component: StaffScreen },
-  { name: "Channels", component: ChannelsScreen },
-  { name: "PlatformList", component: PlatformListScreen },
-  { name: "PlatformProperty", component: PlatformPropertyScreen },
+  { name: "PropertyDetails", component: gated(PropertyDetailsScreen, { rank: "MANAGER" }) },
+  { name: "RoomTypes", component: gated(RoomTypesScreen, { rank: "MANAGER" }) },
+  { name: "TaxRules", component: gated(TaxRulesScreen, { rank: "MANAGER" }) },
+  { name: "Staff", component: gated(StaffScreen, { rank: "MANAGER" }) },
+  { name: "Channels", component: gated(ChannelsScreen, { rank: "MANAGER" }) },
+  { name: "PlatformList", component: gated(PlatformListScreen, { superAdmin: true }) },
+  { name: "PlatformProperty", component: gated(PlatformPropertyScreen, { superAdmin: true }) },
 ]

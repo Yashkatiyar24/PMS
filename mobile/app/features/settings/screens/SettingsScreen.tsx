@@ -4,9 +4,11 @@ import { observer } from "mobx-react-lite"
 import {
   Button,
   Chip,
+  ErrorState,
   Input,
   ListCard,
   ListRow,
+  Loading,
   PageHeader,
   Screen,
   SectionLabel,
@@ -120,6 +122,10 @@ export const SettingsScreen = observer(function SettingsScreen() {
             )}
           </ListCard>
         </>
+      )}
+      {registry.loading && !registry.data && <Loading rows={2} />}
+      {registry.problem && !registry.data && (
+        <ErrorState message={registry.problem.message} onRetry={registry.reload} />
       )}
       {groups.length > 0 && (
         <>

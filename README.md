@@ -11,6 +11,7 @@ The requirements are in [`docs/PRD.md`](docs/PRD.md); the build steps that shape
 ```
 backend/    Spring Boot 3.5 on Java 21 (virtual threads), Postgres, Flyway
 frontend/   Next.js 16 App Router, TypeScript, Tailwind, installable PWA
+mobile/     React Native (Expo prebuild, Ignite) app for Android and iOS — see mobile/README.md
 docs/       PRD and build prompts
 infra/      docker-compose for local Postgres
 ```

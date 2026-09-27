@@ -20,6 +20,7 @@ import { useStores } from "@/models/useStores"
 import { useAppTheme } from "@/theme/context"
 import { visibleTabs } from "@/utils/permissions"
 
+import { gated } from "./gated"
 import type { MainTabParamList, ScreenComponent, SharedStackParamList } from "./navigationTypes"
 import { sharedScreens } from "./sharedScreens"
 
@@ -51,11 +52,15 @@ const TodayStack = makeStack({ name: "Today", component: TodayScreen })
 const GuestsStack = makeStack({ name: "Guests", component: GuestsScreen })
 const BookingsStack = makeStack({ name: "TapeChart", component: TapeChartScreen })
 const RoomsStack = makeStack({ name: "Rooms", component: RoomsScreen })
-const ReportsStack = makeStack({ name: "Reports", component: ReportsScreen }, [
-  { name: "PeriodReport", component: PeriodReportScreen },
-])
+const ReportsStack = makeStack(
+  { name: "Reports", component: gated(ReportsScreen, { anyOf: ["revenue.view"] }) },
+  [{ name: "PeriodReport", component: gated(PeriodReportScreen, { anyOf: ["revenue.view"] }) }],
+)
 const SettingsStack = makeStack({ name: "Settings", component: SettingsScreen })
-const PlatformStack = makeStack({ name: "Platform", component: PlatformListScreen })
+const PlatformStack = makeStack({
+  name: "Platform",
+  component: gated(PlatformListScreen, { superAdmin: true }),
+})
 
 const TABS = {
   Today: { route: "TodayTab", label: "nav.today", glyph: "⌂", component: TodayStack },
