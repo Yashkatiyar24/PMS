@@ -2,9 +2,8 @@
 
 /**
  * Walk-in check-in (PRD Flow A). The target is under 60 seconds from first tap to receipt, so it is one
- * screen in the order the desk actually asks: who, which bed, what did they pay. Each step unfolds as the
- * one before it is answered (or on a tap, for a desk that wants to jump ahead) and never folds back, so a
- * fresh screen asks one thing and nothing vanishes mid-edit. The register's extra questions (address, ID,
+ * screen in the order the desk actually asks: who, which bed, what did they pay. All three steps sit open
+ * top to bottom, so nothing needs a tap to appear. The register's extra questions (address, ID,
  * photo) fold away until the desk needs them.
  *
  * Nothing here blocks on the network. If the phone is offline the whole check-in is stored on the device
@@ -12,10 +11,11 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Camera, Check, ChevronDown, Search } from "lucide-react"
+import { Camera, Check, Search } from "lucide-react"
 import { clsx } from "clsx"
 import { api, ApiError, newClientUuid, QueuedOffline, upload } from "@/lib/api"
 import { compressImage } from "@/lib/image"
+import { readIdFromPhoto } from "@/lib/ocr"
 import { rupees, toPaise, unitName } from "@/lib/format"
 import { OFF_SALE, type Booking, type Guest, type Room, type RoomType } from "@/lib/types"
 import { useI18n } from "@/i18n"
@@ -38,25 +38,6 @@ function Step({ n, title, done }: { n: number; title: string; done?: boolean }) 
   )
 }
 
-/** A step the desk has not reached yet: its name and number only, and a tap opens it early. */
-function FoldedStep({ n, title, onOpen }: { n: number; title: string; onOpen: () => void }) {
-  const { t } = useI18n()
-  return (
-    <button
-      type="button"
-      aria-expanded={false}
-      onClick={onOpen}
-      className="flex min-h-[56px] w-full items-center gap-2.5 rounded-[var(--radius-card)] border border-dashed border-line-strong bg-surface px-4 text-left transition-colors hover:bg-surface-2"
-    >
-      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-surface-2 text-xs font-bold text-ink-soft">{n}</span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-semibold text-ink-soft">{title}</span>
-        <span className="block text-xs text-ink-faint">{t("checkin.stepOf", { n, total: 3 })}</span>
-      </span>
-      <ChevronDown size={18} aria-hidden className="shrink-0 text-ink-faint" />
-    </button>
-  )
-}
 
 export default function CheckInPage() {
   const { t } = useI18n()
@@ -96,9 +77,6 @@ export default function CheckInPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
-  // Steps the desk has reached, by answering one or by tapping ahead. Once reached, a step stays open.
-  const [opened, setOpened] = useState(1)
-  const reach = useCallback((n: number) => setOpened((o) => Math.max(o, n)), [])
 
   useEffect(() => {
     started.current = Date.now()
@@ -162,7 +140,15 @@ export default function CheckInPage() {
   }
 
   async function pickPhoto(file: File) {
-    setPhoto(await compressImage(file, Number(settings?.id_photo_max_kb ?? 300)))
+    const compressed = await compressImage(file, Number(settings?.id_photo_max_kb ?? 300))
+    setPhoto(compressed)
+    // The ID number, read off the photo on this phone alone; it fills only what the desk left empty.
+    const read = await readIdFromPhoto(compressed)
+    if (read) {
+      setIdLast4((v) => v || read.idLast4)
+      if (read.idType) setIdType(read.idType)
+      setNotice(t("ocr.filled", { last4: read.idLast4 }))
+    }
   }
 
   const photoRequired = Boolean(settings?.id_photo_required)
@@ -261,7 +247,6 @@ export default function CheckInPage() {
 
   const paymentModes = (settings.payment_modes as string[]) ?? ["cash"]
   const total = chosenRate * nights
-  const shown = Math.max(opened, unitKey ? 3 : name.trim() ? 2 : 1)
 
   // The total, the one button that matters, and why it is waiting. Pinned under the thumb on a phone; a card
   // beside the form on a laptop.
@@ -297,7 +282,7 @@ export default function CheckInPage() {
       <Card>
         <Step n={1} title={t("checkin.guest")} done={!!name.trim()} />
         <div className="space-y-3">
-          <Field label={t("checkin.phoneLookup")} hint={t("checkin.phoneHint")}>
+          <Field label={t("checkin.phoneLookup")}>
             <div className="flex gap-2">
               <input inputMode="numeric" value={phone} onChange={(e) => { setPhone(e.target.value); setGuestId(null) }} onBlur={lookup} placeholder="9876543210" />
               <Button variant="secondary" onClick={lookup} aria-label={t("action.search")}><Search size={18} aria-hidden /></Button>
@@ -319,13 +304,10 @@ export default function CheckInPage() {
 
           <div className="grid grid-cols-[1fr_auto] items-end gap-2">
             <Field label={t("checkin.name")}>
-              <input value={name} onChange={(e) => { setName(e.target.value); if (e.target.value.trim()) reach(2) }} autoComplete="name" />
+              <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
             </Field>
             {guestId && <Chip tone="ok" className="mb-3">{t("checkin.guest")}</Chip>}
           </div>
-          <Field label={t("checkin.city")}>
-            <input value={city} onChange={(e) => setCity(e.target.value)} />
-          </Field>
         </div>
       </Card>
 
@@ -345,6 +327,9 @@ export default function CheckInPage() {
             <Field label={t("setup.address")}>
               <input value={address} onChange={(e) => setAddress(e.target.value)} />
             </Field>
+            <Field label={t("checkin.city")}>
+              <input value={city} onChange={(e) => setCity(e.target.value)} />
+            </Field>
           </div>
           <input ref={fileInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files?.[0] && pickPhoto(e.target.files[0])} />
           <div className="flex flex-wrap items-center gap-2">
@@ -362,9 +347,6 @@ export default function CheckInPage() {
       </Disclosure>
 
       {/* 2 · Room */}
-      {shown < 2 ? (
-        <FoldedStep n={2} title={t("checkin.stepRoom")} onOpen={() => reach(2)} />
-      ) : (
       <Card>
         <Step n={2} title={t("checkin.stepRoom")} done={!!unitKey} />
         <div className="space-y-3">
@@ -394,7 +376,7 @@ export default function CheckInPage() {
                       key={u.key}
                       type="button"
                       aria-pressed={on}
-                      onClick={() => { setUnitKey(u.key); reach(3) }}
+                      onClick={() => setUnitKey(u.key)}
                       className={clsx("min-h-[44px] min-w-[64px] rounded-xl border px-3 text-[15px] font-bold tabular-nums transition-colors", on ? "border-brand bg-brand text-on-solid" : "border-line-strong bg-surface hover:bg-surface-2")}
                     >
                       {u.dirty && <span aria-label={t("rooms.status.dirty")} title={t("rooms.status.dirty")} className="mr-1.5 inline-block h-2 w-2 rounded-full bg-warn align-middle" />}
@@ -407,12 +389,8 @@ export default function CheckInPage() {
           </Field>
         </div>
       </Card>
-      )}
 
       {/* 3 · Payment */}
-      {shown < 3 ? (
-        <FoldedStep n={3} title={t("stay.payment")} onOpen={() => reach(3)} />
-      ) : (
       <Card>
         <Step n={3} title={t("stay.payment")} />
         <div className="space-y-3">
@@ -439,7 +417,6 @@ export default function CheckInPage() {
           </label>
         </div>
       </Card>
-      )}
         </div>
       </div>
 

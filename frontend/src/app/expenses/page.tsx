@@ -95,7 +95,7 @@ export default function ExpensesPage() {
           )}
         </Card>
       }>
-        {data && (data.expenses.length === 0 ? <Empty icon={ReceiptIndianRupee} /> : (
+        {data && (data.expenses.length === 0 ? <Empty icon={ReceiptIndianRupee}>{t("empty.expenses")}</Empty> : (
           <ListCard>
             {data.expenses.map((e) => (
               <ListRow

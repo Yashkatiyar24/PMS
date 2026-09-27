@@ -106,7 +106,7 @@ export default function InventoryPage() {
           { value: "low", label: t("stock.low"), count: lowCount, tone: "danger" },
         ]} />
 
-        {shown.length === 0 ? <Empty icon={Boxes} /> : CATEGORIES.filter((c) => shown.some((i) => i.category === c)).map((c) => (
+        {shown.length === 0 ? <Empty icon={Boxes}>{t("empty.inventory")}</Empty> : CATEGORIES.filter((c) => shown.some((i) => i.category === c)).map((c) => (
           <section key={c}>
             <SectionLabel>{cat(c)}</SectionLabel>
             <ListCard>
@@ -169,7 +169,7 @@ export default function InventoryPage() {
               <Button variant="ghost" size="sm" onClick={() => { setEditing(moving); setMoving(null) }}>{t("stock.editItem")}</Button>
             </div>
             <SectionLabel>{t("stock.history")}</SectionLabel>
-            {history === null ? <Loading rows={1} /> : history.length === 0 ? <Empty /> : (
+            {history === null ? <Loading rows={1} /> : history.length === 0 ? <Empty>{t("empty.stockHistory")}</Empty> : (
               <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line text-sm">
                 {history.map((m) => (
                   <li key={m.id} className="flex items-center justify-between gap-2 px-3 py-2">

@@ -61,7 +61,7 @@ try {
   // 3. Sign in with email and password. The chooser is a segmented control (role=tab), not a button:
   // it replaced the old "Use email and password" button in the redesign.
   await page.getByRole("button", { name: /Sign in/i }).first().click()
-  await page.getByRole("tab", { name: /Email/ }).click()
+  await page.getByLabel("Property code").fill("SRD1001")
   await page.getByLabel("Email").fill("manager@pms.local")
   await page.getByLabel("Password").fill("password123")
   await page.getByRole("dialog").getByRole("button", { name: "Sign in", exact: true }).click()
@@ -81,15 +81,13 @@ try {
   // 5. Check-in: a fresh screen asks for the guest only; naming them unfolds the room step, which the API fills
   await page.getByRole("button", { name: /Check-in/i }).first().click()
   await page.waitForURL("**/check-in")
-  const folded = page.getByRole("button", { name: "Room and nights", expanded: false })
-  await folded.waitFor({ timeout: 15000 })
-  check("the check-in form starts with the guest step alone", await folded.isVisible())
-  const choicesBefore = await page.locator("button[aria-pressed]").count()
-  await page.getByLabel("Name", { exact: true }).fill("Smoke Test")
   await page.getByText("Adults").waitFor({ timeout: 15000 })
+  check("the check-in form shows all three steps at once", await page.getByRole("heading", { name: "Payment" }).isVisible())
   await overflows("the check-in form")
-  const units = (await page.locator("button[aria-pressed]").count()) - choicesBefore
-  check("naming the guest unfolds the room step, with free rooms from the server", units > 1, `${units} choices`)
+  // Room and bed buttons are "101" or "D1-4"; type, ID and mode chips all start with two letters.
+  const units = await page.locator("button[aria-pressed]").filter({ hasText: /^[A-Z]?\d/ }).count()
+  check("the room step is open with free rooms from the server", units > 1, `${units} choices`)
+  await page.getByLabel("Name", { exact: true }).fill("Smoke Test")
   await page.screenshot({ path: `${OUT}/ui-checkin.png`, fullPage: true })
 
   // 6. Navigation reaches the other screens

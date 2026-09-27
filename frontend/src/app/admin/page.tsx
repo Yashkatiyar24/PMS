@@ -23,11 +23,11 @@ import { Avatar, Banner, Button, Chip, ChoiceChips, Empty, Field, Loading, PageH
 import { Credentials } from "@/components/Credentials"
 import { BILLING_TONE, isQuiet, needsAttention, QUIET_DAYS, type Plan, type PropertyHealth } from "./shared"
 
-type Onboarded = { propertyId: string; code: string; ownerPhone: string; ownerPassword?: string | null }
+type Onboarded = { propertyId: string; code: string; ownerEmail: string; ownerPassword?: string | null }
 type Filter = "all" | "trial" | "active" | "attention" | "quiet"
 type Sort = "name" | "lastUsed" | "outstanding" | "stayingNow" | "rooms"
 type View = "cards" | "list"
-const EMPTY_FORM = { orgName: "", propertyName: "", city: "", state: "", phone: "", ownerName: "", ownerPhone: "", planCode: "basic" }
+const EMPTY_FORM = { orgName: "", propertyName: "", city: "", state: "", phone: "", ownerName: "", ownerPhone: "", ownerEmail: "", planCode: "basic" }
 
 /** Cards or a table is a matter of taste and screen; the choice is kept on this device. */
 const VIEW_KEY = "pms.admin.view"
@@ -218,8 +218,8 @@ function PlatformList() {
       <Sheet open={adding} onOpenChange={setAdding} title={t("admin.onboard")} wide
         footer={
           <Button size="lg" className="w-full"
-            disabled={busy || !form.orgName.trim() || !form.propertyName.trim() || !form.ownerName.trim() || form.ownerPhone.replace(/\D/g, "").length < 10}
-            onClick={() => run(async () => { setAdded(await api<Onboarded>("/api/admin/properties", { method: "POST", body: { ...form, ownerEmail: null } })); setAdding(false); setForm(EMPTY_FORM) })}>
+            disabled={busy || !form.orgName.trim() || !form.propertyName.trim() || !form.ownerName.trim() || form.ownerPhone.replace(/\D/g, "").length < 10 || !form.ownerEmail.includes("@")}
+            onClick={() => run(async () => { setAdded(await api<Onboarded>("/api/admin/properties", { method: "POST", body: form })); setAdding(false); setForm(EMPTY_FORM) })}>
             <CreditCard size={18} aria-hidden /> {t("action.save")}
           </Button>
         }>
@@ -235,6 +235,7 @@ function PlatformList() {
             <Field label={t("admin.ownerName")}><input {...field("ownerName")} /></Field>
             <Field label={t("admin.ownerPhone")}><input inputMode="numeric" {...field("ownerPhone")} placeholder="9876543210" /></Field>
           </div>
+          <Field label={t("admin.ownerEmail")} hint={t("admin.ownerEmailHint")}><input type="email" {...field("ownerEmail")} placeholder="name@example.in" /></Field>
           <Field group label={t("admin.plan")}>
             <ChoiceChips value={form.planCode} onChange={(planCode) => setForm({ ...form, planCode })} options={plans.map((p) => ({ value: p.code, label: p.name }))} />
           </Field>
@@ -242,7 +243,7 @@ function PlatformList() {
       </Sheet>
 
       <Sheet open={!!added} onOpenChange={(o) => !o && setAdded(null)} title={t("admin.onboarded")} description={t("credentials.title")}>
-        {added && <Credentials code={added.code} phone={added.ownerPhone} password={added.ownerPassword} />}
+        {added && <Credentials code={added.code} email={added.ownerEmail} password={added.ownerPassword} />}
       </Sheet>
     </div>
   )

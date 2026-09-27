@@ -1,17 +1,16 @@
 "use client"
 
 /**
- * Two ways in: the property's code, a mobile number and a password (what the desk uses; no SMS is needed), or
- * email and password (the platform admin, an owner on a laptop). A wrong code, number or password all get the
- * same answer, so this page cannot be used to find out who works where.
+ * One way in: the property's code, the person's email and a password (no SMS is needed). A wrong code, email or
+ * password all get the same answer, so this page cannot be used to find out who works where.
  */
 import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Building2, KeyRound } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { clsx } from "clsx"
 import { api, ApiError } from "@/lib/api"
 import { useI18n } from "@/i18n"
-import { Banner, Button, Field, Segmented, Sheet, Wordmark } from "@/components/ui"
+import { Banner, Button, Field, Sheet, Wordmark } from "@/components/ui"
 import { Landing } from "./Landing"
 
 /** The desk signs in on the same phone every morning, so the code is remembered on the device. */
@@ -29,8 +28,6 @@ function readSavedCode() {
 export default function LoginPage() {
   const { t, language, setLanguage } = useI18n()
   const router = useRouter()
-  const [mode, setMode] = useState<"code" | "email">("code")
-  const [phone, setPhone] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -87,14 +84,15 @@ export default function LoginPage() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     void run(async () => {
-      const who = mode === "code" ? { code, phone } : { email }
-      await api("/api/auth/login", { method: "POST", body: { ...who, password, deviceName: navigator.userAgent.slice(0, 60) } })
-      if (mode === "code") try { localStorage.setItem(CODE_KEY, code.replace(/[^a-z0-9]/gi, "").toUpperCase()) } catch { /* not remembered */ }
+      await api("/api/auth/login", { method: "POST", body: { code, email, password, deviceName: navigator.userAgent.slice(0, 60) } })
+      if (code.trim()) try { localStorage.setItem(CODE_KEY, code.replace(/[^a-z0-9]/gi, "").toUpperCase()) } catch { /* not remembered */ }
       router.push("/")
     })
   }
 
-  const ready = mode === "code" ? code.replace(/[^a-z0-9]/gi, "").length >= 4 && phone.replace(/\D/g, "").length >= 10 && !!password : !!email && !!password
+  // The platform admin has no property code and leaves it empty; everyone at a property types theirs.
+  const codeLength = code.replace(/[^a-z0-9]/gi, "").length
+  const ready = (codeLength >= 4 || codeLength === 0) && email.includes("@") && !!password
 
   return (
     <div className="overflow-x-clip">
@@ -151,34 +149,17 @@ export default function LoginPage() {
       {/* The desk is here every morning: the code is remembered on the device, so it is two fields and a tap. */}
       <Sheet open={open} onOpenChange={setOpen} hero title={t("login.title")} description={t("login.dialogLead")}>
         <form id="signin" onSubmit={submit} className="line-form space-y-7 pt-7">
-          <Segmented fit={false}
-            value={mode}
-            onChange={(m) => { setMode(m); setError("") }}
-            items={[
-              { value: "code", label: <span className="inline-flex items-center gap-1.5"><Building2 size={15} aria-hidden /> {t("login.useCode")}</span> },
-              { value: "email", label: <span className="inline-flex items-center gap-1.5"><KeyRound size={15} aria-hidden /> {t("login.email")}</span> },
-            ]}
-          />
-
           {error && <Banner tone="danger">{error}</Banner>}
 
           {/* Two to a row on a laptop, stacked on a phone; the password always has the row to itself. */}
           <div className="grid gap-6 sm:grid-cols-2 sm:gap-x-10">
-            {mode === "code" ? (
-              <>
-                <Field label={t("login.propertyCode")} hint={t("login.codeHint")}>
-                  <input autoCapitalize="characters" autoCorrect="off" spellCheck={false} autoComplete="organization" value={code}
-                    onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="SRD4821" className="tracking-wider" autoFocus />
-                </Field>
-                <Field label={t("login.phone")}>
-                  <input inputMode="numeric" autoComplete="username" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" />
-                </Field>
-              </>
-            ) : (
-              <Field label={t("login.email")} className="sm:col-span-2">
-                <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.in" autoFocus />
-              </Field>
-            )}
+            <Field label={t("login.propertyCode")} hint={t("login.codeHint")}>
+              <input autoCapitalize="characters" autoCorrect="off" spellCheck={false} autoComplete="organization" value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="SRD4821" className="tracking-wider" autoFocus />
+            </Field>
+            <Field label={t("login.email")}>
+              <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.in" />
+            </Field>
             <Field label={t("login.password")} className="sm:col-span-2">
               <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
             </Field>

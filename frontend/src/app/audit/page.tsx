@@ -48,7 +48,7 @@ export default function AuditPage() {
           </Field>
         </Card>
       }>
-        {!data ? (error ? <Banner tone="danger">{error}</Banner> : <Loading />) : data.length === 0 ? <Empty icon={ScrollText} /> : (
+        {!data ? (error ? <Banner tone="danger">{error}</Banner> : <Loading />) : data.length === 0 ? <Empty icon={ScrollText}>{t("empty.audit")}</Empty> : (
           <div className="space-y-2">
             {data.map((e) => (
               <Disclosure key={e.id}

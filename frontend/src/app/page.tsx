@@ -298,12 +298,10 @@ function ForecastCard({ start }: { start: string }) {
 
       {!f ? <div className="mt-4"><Loading rows={1} /></div> : (
         <>
-          <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {[
               [t("reports.occupancy"), `${f.occupancyPct}%`],
               [t("dash.roomNights"), String(f.roomNights)],
-              [t("dash.adr"), rupees(f.adrPaise)],
-              [t("dash.revpar"), rupees(f.revparPaise)],
               [t("dash.revenue"), rupees(f.revenuePaise)],
             ].map(([label, value]) => (
               <div key={label} className="rounded-xl border border-line px-3.5 py-3">

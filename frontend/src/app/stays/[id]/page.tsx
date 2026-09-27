@@ -461,7 +461,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
         </Tabs.Content>
 
         <Tabs.Content value="receipts" className="p-4 outline-none md:p-5">
-          {receipts.length === 0 ? <Empty /> : (
+          {receipts.length === 0 ? <Empty>{t("empty.receipts")}</Empty> : (
             <Table
               head={[t("res.reference"), t("dash.col.status"), t("res.col.dates"), t("stay.total"), ""]}
               rows={receipts.map((r) => [

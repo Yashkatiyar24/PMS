@@ -20,7 +20,7 @@ export default function NeedsAttentionPage() {
     <div className="space-y-4">
       <PageHeader title={t("offline.needsAttention")} back="/" />
       {entries.length === 0 ? (
-        <Empty />
+        <Empty>{t("empty.needsAttention")}</Empty>
       ) : (
         <ListCard>
           {entries.map((entry) => (

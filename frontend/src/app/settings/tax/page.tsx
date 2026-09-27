@@ -72,7 +72,7 @@ export default function TaxSetupPage() {
         }
       >
       {rules.length === 0 ? (
-        <Empty icon={Percent} />
+        <Empty icon={Percent}>{t("empty.tax")}</Empty>
       ) : (
         <div className="space-y-2">
           {rules.map((rule, index) => (

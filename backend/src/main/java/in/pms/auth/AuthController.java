@@ -32,7 +32,7 @@ public class AuthController {
     private static final String TOO_MANY = "Too many attempts; please wait a few minutes";
     /**
      * Wrong passwords per account and address: ten in a rolling quarter of an hour, then that pair waits. Keyed
-     * on both so that someone who knows a property's code and a staff phone cannot lock the desk out from
+     * on both so that someone who knows a property's code and a staff email cannot lock the desk out from
      * afar with ten bad guesses.
      */
     private final Lockout wrong = new Lockout(10, Duration.ofMinutes(15));
@@ -47,8 +47,8 @@ public class AuthController {
 
     public record TargetRequest(@NotBlank String target) {}
     public record VerifyRequest(@NotBlank String target, @NotBlank String code, String deviceName) {}
-    /** Either the property's code and a mobile number, or an email (the platform admin, an owner on a laptop). */
-    public record LoginRequest(String email, String code, String phone, @NotBlank String password, String deviceName) {}
+    /** The property's code and the person's email; without a code, the email alone (the platform admin). */
+    public record LoginRequest(String email, String code, @NotBlank String password, String deviceName) {}
     public record SwitchRequest(UUID propertyId) {}
 
     /** Open to anyone, so each address gets a small allowance: codes cost money to send and are worth guessing. */
@@ -71,9 +71,8 @@ public class AuthController {
     public Map<String, Object> passwordLogin(@RequestBody @jakarta.validation.Valid LoginRequest r, HttpServletRequest req, HttpServletResponse res) {
         boolean byCode = r.code() != null && !r.code().isBlank();
         String code = byCode ? r.code().replaceAll("[^A-Za-z0-9]", "").toUpperCase() : null;
-        String phone = byCode ? OtpService.normalisePhone(r.phone() == null ? "" : r.phone()) : null;
-        String email = byCode ? null : r.email() == null ? "" : r.email().trim().toLowerCase();
-        String account = byCode ? code + ":" + phone : email;
+        String email = r.email() == null ? "" : r.email().trim().toLowerCase();
+        String account = byCode ? code + ":" + email : email;
         String from = req.getRemoteAddr();
         String pair = account + "|" + from;
         if (wrong.locked(pair) || wrongFrom.locked(from) || wrongAccount.locked(account)) throw new ForbiddenException(TOO_MANY);
@@ -85,7 +84,7 @@ public class AuthController {
                         from properties p
                         join property_users pu on pu.property_id = p.id and pu.active
                         join users u on u.id = pu.user_id and u.active
-                        where p.code = ? and p.active and u.phone = ?""").params(code, phone)
+                        where p.code = ? and p.active and u.email = ?""").params(code, email)
                 : adminJdbc.sql("select id, password_hash, null::uuid as property_id from users where email = ? and active").param(email))
                 .query().listOfRows().stream().findFirst();
         // Always run the hash comparison so timing does not reveal whether the account exists.
@@ -95,7 +94,7 @@ public class AuthController {
             wrong.fail(pair);
             wrongFrom.fail(from);
             wrongAccount.fail(account);
-            throw new BadRequestException(byCode ? "Wrong property code, mobile number or password" : "Wrong email or password");
+            throw new BadRequestException(byCode ? "Wrong property code, email or password" : "Wrong email or password");
         }
         wrong.clear(pair);
         wrongAccount.clear(account);

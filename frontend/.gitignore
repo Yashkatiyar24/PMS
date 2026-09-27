@@ -44,3 +44,6 @@ next-env.d.ts
 /storage
 ui-check-shots/
 !.env.example
+
+# OCR runtime, copied from node_modules on install (scripts/copy-ocr-assets.mjs)
+/public/ocr

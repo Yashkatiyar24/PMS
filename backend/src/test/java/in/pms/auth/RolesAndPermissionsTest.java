@@ -141,18 +141,18 @@ class RolesAndPermissionsTest {
     void anAdminManagesStaffButOnlyAnOwnerGrantsOwnerOrAdmin() throws Exception {
         Cookie c = as(adminUser);
         mvc.perform(post("/api/users").cookie(c).header("X-Requested-With", "pms").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"New Cleaner\",\"phone\":\"9700000009\",\"role\":\"housekeeping\"}")).andExpect(status().isOk())
+                .content("{\"name\":\"New Cleaner\",\"phone\":\"9700000009\",\"email\":\"p9700000009@roles.test\",\"role\":\"housekeeping\"}")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.role", is("housekeeping")));
         mvc.perform(post("/api/users").cookie(c).header("X-Requested-With", "pms").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Usurper\",\"phone\":\"9700000008\",\"role\":\"owner\"}")).andExpect(status().isForbidden());
+                .content("{\"name\":\"Usurper\",\"phone\":\"9700000008\",\"email\":\"p9700000008@roles.test\",\"role\":\"owner\"}")).andExpect(status().isForbidden());
         mvc.perform(patch("/api/users/" + owner + "/role").cookie(c).header("X-Requested-With", "pms").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"role\":\"staff\"}")).andExpect(status().isForbidden());
         // Nor by inviting the owner's number again with a lesser role.
         mvc.perform(post("/api/users").cookie(c).header("X-Requested-With", "pms").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Owner\",\"phone\":\"9700000001\",\"role\":\"housekeeping\"}")).andExpect(status().isForbidden());
+                .content("{\"name\":\"Owner\",\"phone\":\"9700000001\",\"email\":\"p9700000001@roles.test\",\"role\":\"housekeeping\"}")).andExpect(status().isForbidden());
         // A manager does not manage staff at all.
         mvc.perform(post("/api/users").cookie(as(manager)).header("X-Requested-With", "pms").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"X\",\"phone\":\"9700000007\",\"role\":\"staff\"}")).andExpect(status().isForbidden());
+                .content("{\"name\":\"X\",\"phone\":\"9700000007\",\"email\":\"p9700000007@roles.test\",\"role\":\"staff\"}")).andExpect(status().isForbidden());
     }
 
     @Test

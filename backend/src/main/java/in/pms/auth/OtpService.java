@@ -55,6 +55,12 @@ public class OtpService {
         return digits;
     }
 
+    public static String normaliseEmail(String raw) {
+        String email = raw == null ? "" : raw.trim().toLowerCase();
+        if (!email.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")) throw new BadRequestException("Enter a valid email address");
+        return email;
+    }
+
     /** Generate and send a code. An unknown target gets the same response, and the same allowance used up. */
     @Transactional("adminTx")
     public void send(String target) {

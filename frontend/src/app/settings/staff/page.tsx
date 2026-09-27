@@ -2,8 +2,8 @@
 
 /**
  * Who works here (PRD U1, U2). One login per person, because a shared login makes the audit log meaningless.
- * Inviting costs a name and a mobile number; the person gets a first password, shown once, and signs in with the
- * property's code, their number and that password, which they then change.
+ * Inviting costs a name, a mobile number and an email; the person gets a first password, shown once, and signs in
+ * with the property's code, their email and that password, which they then change.
  * Removing access signs them out everywhere within a minute.
  */
 import { useState } from "react"
@@ -35,6 +35,7 @@ export default function StaffPage() {
   const [inviting, setInviting] = useState(false)
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
+  const [email, setEmail] = useState("")
   const [role, setRole] = useState<Member["role"]>("receptionist")
   const [pinFor, setPinFor] = useState<Member | null>(null)
   const [pin, setPin] = useState("")
@@ -42,7 +43,7 @@ export default function StaffPage() {
   const [removing, setRemoving] = useState<Member | null>(null)
   const [resetting, setResetting] = useState<Member | null>(null)
   // Sign-in details just created, shown once.
-  const [issued, setIssued] = useState<{ name: string; phone: string; password?: string | null } | null>(null)
+  const [issued, setIssued] = useState<{ name: string; email: string; password?: string | null } | null>(null)
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
@@ -118,11 +119,11 @@ export default function StaffPage() {
 
       <Sheet open={inviting} onOpenChange={setInviting} title={t("setup.invite")}
         footer={
-          <Button size="lg" className="w-full" disabled={busy || !name.trim() || phone.replace(/\D/g, "").length < 10}
+          <Button size="lg" className="w-full" disabled={busy || !name.trim() || phone.replace(/\D/g, "").length < 10 || !email.includes("@")}
             onClick={() => run(async () => {
-              const added = await api<Member & { password?: string | null }>("/api/users", { method: "POST", body: { name, phone, email: null, role } })
-              setInviting(false); setName(""); setPhone("")
-              setIssued({ name: added.name, phone: added.phone, password: added.password })
+              const added = await api<Member & { password?: string | null }>("/api/users", { method: "POST", body: { name, phone, email, role } })
+              setInviting(false); setName(""); setPhone(""); setEmail("")
+              setIssued({ name: added.name, email: added.email ?? email, password: added.password })
             })}>
             {t("setup.invite")}
           </Button>
@@ -130,6 +131,7 @@ export default function StaffPage() {
         <div className="space-y-3">
           <Field label={t("setup.name")}><input value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
           <Field label={t("login.phone")}><input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" /></Field>
+          <Field label={t("login.email")}><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.in" /></Field>
           <Field group label={t("setup.role")}><ChoiceChips value={role} onChange={setRole} options={grantable.map((r) => ({ value: r, label: roleLabel(r) }))} /></Field>
         </div>
       </Sheet>
@@ -177,7 +179,7 @@ export default function StaffPage() {
             <Button className="flex-1" disabled={busy}
               onClick={() => resetting && run(async () => {
                 const { password } = await api<{ password: string }>(`/api/users/${resetting.userId}/password`, { method: "POST" })
-                setIssued({ name: resetting.name, phone: resetting.phone, password })
+                setIssued({ name: resetting.name, email: resetting.email ?? "—", password })
                 setResetting(null)
               })}>
               {t("setup.resetPassword")}
@@ -188,7 +190,7 @@ export default function StaffPage() {
       </Sheet>
 
       <Sheet open={!!issued} onOpenChange={(o) => !o && setIssued(null)} title={t("credentials.title")} description={issued?.name}>
-        {issued && <Credentials code={property?.code ?? ""} phone={issued.phone} password={issued.password} />}
+        {issued && <Credentials code={property?.code ?? ""} email={issued.email} password={issued.password} />}
       </Sheet>
     </div>
   )

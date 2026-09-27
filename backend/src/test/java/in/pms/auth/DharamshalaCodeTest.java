@@ -24,8 +24,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * A dharamshala signs a deal: we onboard it, it gets its code, and its people sign in with the code, their mobile
- * number and a password. It starts with the basics; each extra part is switched on for it alone.
+ * A dharamshala signs a deal: we onboard it, it gets its code, and its people sign in with the code, their email
+ * and a password. It starts with the basics; each extra part is switched on for it alone.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -53,9 +53,9 @@ class DharamshalaCodeTest {
             var p = admin.sql("insert into properties(org_id, name) values (?, 'Other Code Place') returning id, code").param(otherOrg).query().singleRow();
             otherProperty = (UUID) p.get("id");
             otherCode = (String) p.get("code");
-            UUID elsewhere = admin.sql("insert into users(name, phone, password_hash) values ('Elsewhere', '9555600009', ?) returning id").param(passwords.hash("elsewhere1")).query(UUID.class).single();
+            UUID elsewhere = admin.sql("insert into users(name, phone, email, password_hash) values ('Elsewhere', '9555600009', 'p9555600009@code.test', ?) returning id").param(passwords.hash("elsewhere1")).query(UUID.class).single();
             admin.sql("insert into property_users(property_id, user_id, role) values (?, ?, 'receptionist')").params(otherProperty, elsewhere).update();
-            UUID guessed = admin.sql("insert into users(name, phone, password_hash) values ('Guessed', '9555600008', ?) returning id").param(passwords.hash("guessed-12")).query(UUID.class).single();
+            UUID guessed = admin.sql("insert into users(name, phone, email, password_hash) values ('Guessed', '9555600008', 'p9555600008@code.test', ?) returning id").param(passwords.hash("guessed-12")).query(UUID.class).single();
             admin.sql("insert into property_users(property_id, user_id, role) values (?, ?, 'receptionist')").params(otherProperty, guessed).update();
         });
     }
@@ -86,8 +86,8 @@ class DharamshalaCodeTest {
         return new Cookie("pms_session", header.substring("pms_session=".length(), header.indexOf(';')));
     }
 
-    static String byCode(String code, String phone, String password) {
-        return "{\"code\":\"" + code + "\",\"phone\":\"" + phone + "\",\"password\":\"" + password + "\"}";
+    static String byCode(String code, String email, String password) {
+        return "{\"code\":\"" + code + "\",\"email\":\"" + email + "\",\"password\":\"" + password + "\"}";
     }
 
     JsonNode call(Cookie who, org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request, int status) throws Exception {
@@ -106,15 +106,15 @@ class DharamshalaCodeTest {
     void aDharamshalaGetsItsCodeAndStartsWithTheBasics() throws Exception {
         Cookie platform = signIn("{\"email\":\"" + SUPER + "\",\"password\":\"password123\"}");
         JsonNode onboarded = call(platform, post("/api/admin/properties").content("""
-                {"orgName":"Code Trust","propertyName":"Ganga Seva Sadan","city":"Haridwar","ownerName":"Owner","ownerPhone":"9555600001","planCode":"basic"}"""), 200);
+                {"orgName":"Code Trust","propertyName":"Ganga Seva Sadan","city":"Haridwar","ownerName":"Owner","ownerPhone":"9555600001","ownerEmail":"p9555600001@code.test","planCode":"basic"}"""), 200);
         String code = onboarded.get("code").asText();
         String ownerPassword = onboarded.get("ownerPassword").asText();
         String propertyId = onboarded.get("propertyId").asText();
         assertThat(code).matches("GSS\\d{4}");
         assertThat(ownerPassword).hasSize(10);
 
-        // Typed the way people type it: lower case, a space, the country code.
-        Cookie owner = ownPassword(signIn(byCode(" " + code.toLowerCase() + " ", "+91 95556 00001", ownerPassword)), ownerPassword);
+        // Typed the way people type it: lower case code, stray spaces, a capital in the email.
+        Cookie owner = ownPassword(signIn(byCode(" " + code.toLowerCase() + " ", " P9555600001@Code.test ", ownerPassword)), ownerPassword);
         JsonNode me = call(owner, get("/api/auth/me"), 200);
         assertThat(me.get("propertyId").asText()).isEqualTo(propertyId);
         List<String> can = json.convertValue(me.get("permissions"), json.getTypeFactory().constructCollectionType(List.class, String.class));
@@ -140,44 +140,48 @@ class DharamshalaCodeTest {
     void theOwnerAddsStaffWhoSignInWithTheSameCode() throws Exception {
         Cookie platform = signIn("{\"email\":\"" + SUPER + "\",\"password\":\"password123\"}");
         JsonNode onboarded = call(platform, post("/api/admin/properties").content("""
-                {"orgName":"Code Trust","propertyName":"Seva Bhawan","ownerName":"Owner","ownerPhone":"9555600003","planCode":"basic"}"""), 200);
+                {"orgName":"Code Trust","propertyName":"Seva Bhawan","ownerName":"Owner","ownerPhone":"9555600003","ownerEmail":"p9555600003@code.test","planCode":"basic"}"""), 200);
         String code = onboarded.get("code").asText();
         String handed = onboarded.get("ownerPassword").asText();
-        Cookie owner = ownPassword(signIn(byCode(code, "9555600003", handed)), handed);
+        // Without an email nobody could sign in, so onboarding and inviting both refuse it.
+        call(platform, post("/api/admin/properties").content("""
+                {"orgName":"Code Trust","propertyName":"No Email","ownerName":"Owner","ownerPhone":"9555600003","planCode":"basic"}"""), 400);
+        Cookie owner = ownPassword(signIn(byCode(code, "p9555600003@code.test", handed)), handed);
 
         // Somebody who works at another dharamshala cannot get in here with that one's password.
-        login(byCode(code, "9555600009", "elsewhere1")).andExpect(status().isBadRequest());
-        login(byCode(otherCode, "9555600009", "elsewhere1")).andExpect(status().isOk());
+        login(byCode(code, "p9555600009@code.test", "elsewhere1")).andExpect(status().isBadRequest());
+        login(byCode(otherCode, "p9555600009@code.test", "elsewhere1")).andExpect(status().isOk());
 
-        JsonNode invited = call(owner, post("/api/users").content("{\"name\":\"Desk\",\"phone\":\"9555600002\",\"role\":\"receptionist\"}"), 200);
+        JsonNode invited = call(owner, post("/api/users").content("{\"name\":\"Desk\",\"phone\":\"9555600002\",\"email\":\"p9555600002@code.test\",\"role\":\"receptionist\"}"), 200);
         String first = invited.get("password").asText();
-        signIn(byCode(code, "9555600002", first));
+        call(owner, post("/api/users").content("{\"name\":\"Desk\",\"phone\":\"9555600002\",\"role\":\"receptionist\"}"), 400);
+        signIn(byCode(code, "p9555600002@code.test", first));
         String deskId = invited.get("userId").asText();
 
         // Their existing account is not ours to open: no password is handed out for it, and it cannot be reset here.
-        JsonNode borrowed = call(owner, post("/api/users").content("{\"name\":\"Elsewhere\",\"phone\":\"9555600009\",\"role\":\"receptionist\"}"), 200);
+        JsonNode borrowed = call(owner, post("/api/users").content("{\"name\":\"Elsewhere\",\"phone\":\"9555600009\",\"email\":\"p9555600009@code.test\",\"role\":\"receptionist\"}"), 200);
         assertThat(borrowed.hasNonNull("password")).isFalse();
         call(owner, post("/api/users/" + borrowed.get("userId").asText() + "/password"), 403);
 
         // A forgotten password: the owner resets it, the old one stops working and the new one works.
         String second = call(owner, post("/api/users/" + deskId + "/password"), 200).get("password").asText();
-        login(byCode(code, "9555600002", first)).andExpect(status().isBadRequest());
-        Cookie desk = signIn(byCode(code, "9555600002", second));
+        login(byCode(code, "p9555600002@code.test", first)).andExpect(status().isBadRequest());
+        Cookie desk = signIn(byCode(code, "p9555600002@code.test", second));
 
         // Changing your own password needs the current one.
         call(desk, post("/api/users/me/password").content("{\"currentPassword\":\"wrong-one\",\"password\":\"desk-new-pass\"}"), 400);
         call(desk, post("/api/users/me/password").content("{\"currentPassword\":\"" + second + "\",\"password\":\"desk-new-pass\"}"), 204);
-        signIn(byCode(code, "9555600002", "desk-new-pass"));
+        signIn(byCode(code, "p9555600002@code.test", "desk-new-pass"));
         call(desk, post("/api/users/" + deskId + "/password"), 403); // a receptionist resets nobody's
 
         // Removed from this dharamshala: the code no longer lets them in.
         call(owner, delete("/api/users/" + deskId), 204);
-        login(byCode(code, "9555600002", "desk-new-pass")).andExpect(status().isBadRequest());
+        login(byCode(code, "p9555600002@code.test", "desk-new-pass")).andExpect(status().isBadRequest());
     }
 
     @Test
     void wrongPasswordsRunOut() throws Exception {
-        for (int i = 0; i < 10; i++) login(byCode(otherCode, "9555600008", "guess-" + i)).andExpect(status().isBadRequest());
-        login(byCode(otherCode, "9555600008", "guessed-12")).andExpect(status().isForbidden());
+        for (int i = 0; i < 10; i++) login(byCode(otherCode, "p9555600008@code.test", "guess-" + i)).andExpect(status().isBadRequest());
+        login(byCode(otherCode, "p9555600008@code.test", "guessed-12")).andExpect(status().isForbidden());
     }
 }

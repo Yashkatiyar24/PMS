@@ -30,8 +30,7 @@ cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=dev
 cd frontend && npm install && npm run dev
 ```
 
-Then open http://localhost:3000 and sign in as `owner@pms.local` / `password123`, or by phone `9000000001`
-with the code `123456` (the dev profile prints OTPs instead of sending them).
+Then open http://localhost:3000 and sign in with the property code `SRD1001`, `owner@pms.local` and `password123`.
 
 The seed creates one trust, one property in Haridwar, twenty rooms, two ten-bed dormitories, and three
 users: an owner, a manager and a staff member. The approval PIN is `1234`.

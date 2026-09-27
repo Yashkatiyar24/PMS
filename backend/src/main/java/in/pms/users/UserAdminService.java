@@ -50,20 +50,23 @@ public class UserAdminService {
 
     /**
      * Creates the user if the phone is new, then adds the membership. Idempotent for an existing member. Someone new
-     * gets a first password to sign in with the property's code; someone who already has one keeps it.
+     * gets a first password to sign in with the property's code and their email; someone who already has one keeps it.
      */
     @Transactional("adminTx")
     public Invited invite(InviteInput in, CurrentUser actor) {
         String phone = OtpService.normalisePhone(in.phone());
+        String email = OtpService.normaliseEmail(in.email());
         String role = grantable(in.role(), actor);
         if (in.name() == null || in.name().isBlank()) throw new BadRequestException("Name is required");
         UUID property = TenantContext.require();
         var found = admin.sql("select id from users where phone = ?").param(phone).query(UUID.class).optional();
         UUID userId = found.orElseGet(() ->
-                admin.sql("insert into users(name, phone, email) values (?, ?, ?) returning id").params(in.name().trim(), phone, blank(in.email())).query(UUID.class).single());
+                admin.sql("insert into users(name, phone, email) values (?, ?, ?) returning id").params(in.name().trim(), phone, email).query(UUID.class).single());
         // Inviting someone who is already a member changes their role: the same rule as setRole applies, so an
         // admin cannot demote an owner by inviting their number again.
         if (userId.equals(actor.id())) throw new BadRequestException("You cannot change your own role");
+        // Sign-in is by email, so an account that has none gets this one; one it already has is kept.
+        admin.sql("update users set email = ? where id = ? and email is null").params(email, userId).update();
         admin.sql("select role::text from property_users where property_id = ? and user_id = ?").params(property, userId).query(String.class).optional()
                 .ifPresent(existing -> grantable(existing, actor));
         admin.sql("""
@@ -166,7 +169,6 @@ public class UserAdminService {
         if (List.of("owner", "admin").contains(r) && !actor.hasRole(CurrentUser.Role.OWNER)) throw new ForbiddenException("Only an owner can grant or change the owner and admin roles");
         return r;
     }
-    private static String blank(String s) { return s == null || s.isBlank() ? null : s.trim(); }
     private static String mask(String phone) { return "******" + phone.substring(6); }
 
     private Member member(UUID userId) {

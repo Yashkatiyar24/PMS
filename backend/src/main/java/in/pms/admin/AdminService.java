@@ -53,7 +53,7 @@ public class AdminService {
     /** Someone who works at a property: a name and a role the owner gave us. Nothing about any guest. */
     public record Member(UUID userId, String name, String phone, String role, boolean active) {}
     /** A password the platform just set for someone, shown once; the desk signs in with their code, phone and this. */
-    public record NewPassword(String name, String phone, String password) {}
+    public record NewPassword(String name, String phone, String email, String password) {}
     public record Plan(String code, String name, int maxRooms, long monthlyPaise) {}
 
     /** One property's health in numbers. The first owner is the person to call about it. */
@@ -134,7 +134,7 @@ public class AdminService {
     @Transactional("adminTx")
     public NewPassword resetPassword(UUID propertyId, UUID userId, CurrentUser actor) {
         var row = admin.sql("""
-                select u.name, u.phone, u.is_super_admin from users u join property_users pu on pu.user_id = u.id
+                select u.name, u.phone, u.email, u.is_super_admin from users u join property_users pu on pu.user_id = u.id
                 where pu.property_id = ? and u.id = ?""").params(propertyId, userId).query().listOfRows().stream().findFirst()
                 .orElseThrow(() -> new NotFoundException("That person does not work at this property"));
         if (Boolean.TRUE.equals(row.get("is_super_admin"))) throw new ForbiddenException("A platform admin's password cannot be reset here");
@@ -142,7 +142,7 @@ public class AdminService {
         admin.sql("update users set password_hash = ?, must_change_password = true, updated_at = now() where id = ?").params(passwords.hash(password), userId).update();
         sessions.revokeAll(userId); // whoever held the old password, or a session opened with it, is out
         audit.recordPlatform(propertyId, "users", userId.toString(), "password_reset", null, null, actor.id());
-        return new NewPassword((String) row.get("name"), (String) row.get("phone"), password);
+        return new NewPassword((String) row.get("name"), (String) row.get("phone"), (String) row.get("email"), password);
     }
 
     /** The platform setting a property's photograph, e.g. at onboarding. The owner can change it from their own settings. */
@@ -195,17 +195,18 @@ public class AdminService {
     public record NewPropertyInput(String orgName, String propertyName, String city, String state, String phone,
                                    String ownerName, String ownerPhone, String ownerEmail, String planCode) {}
     /** {@code ownerPassword} is shown once and never stored in the clear; null when the owner already had one. */
-    public record NewPropertyResult(UUID orgId, UUID propertyId, UUID ownerId, String ownerPhone, String code, String ownerPassword) {}
+    public record NewPropertyResult(UUID orgId, UUID propertyId, UUID ownerId, String ownerPhone, String ownerEmail, String code, String ownerPassword) {}
 
     /**
      * Onboard a property: organisation, property, first owner and their membership, in one transaction. The
-     * property gets its code and starts with the basics only. The owner signs in with the code, their mobile number
+     * property gets its code and starts with the basics only. The owner signs in with the code, their email
      * and the first password returned here, which they change after signing in.
      */
     @Transactional("adminTx")
     public NewPropertyResult createProperty(NewPropertyInput in, CurrentUser actor) {
         if (blank(in.orgName()) || blank(in.propertyName()) || blank(in.ownerName())) throw new BadRequestException("Trust, property and owner names are required");
         String ownerPhone = OtpService.normalisePhone(in.ownerPhone());
+        String ownerEmail = OtpService.normaliseEmail(in.ownerEmail());
         String plan = blank(in.planCode()) ? null : in.planCode();
         if (plan != null && admin.sql("select code from plans where code = ?").param(plan).query(String.class).list().isEmpty())
             throw new BadRequestException("Unknown plan " + plan);
@@ -221,9 +222,11 @@ public class AdminService {
         var existing = admin.sql("select id, password_hash is not null as has_password from users where phone = ?").param(ownerPhone).query().listOfRows();
         UUID ownerId = existing.isEmpty()
                 ? admin.sql("insert into users(name, phone, email) values (?, ?, ?) returning id")
-                        .params(in.ownerName().trim(), ownerPhone, blank(in.ownerEmail()) ? null : in.ownerEmail().trim().toLowerCase())
+                        .params(in.ownerName().trim(), ownerPhone, ownerEmail)
                         .query(UUID.class).single()
                 : (UUID) existing.getFirst().get("id");
+        // Sign-in is by email: an existing account without one gets this one, and one it already has is kept.
+        String signInEmail = admin.sql("update users set email = coalesce(email, ?) where id = ? returning email").params(ownerEmail, ownerId).query(String.class).single();
         // Someone who already signs in somewhere keeps the password they have.
         String password = existing.isEmpty() || !Boolean.TRUE.equals(existing.getFirst().get("has_password")) ? passwords.generate() : null;
         if (password != null) admin.sql("update users set password_hash = ?, must_change_password = true, updated_at = now() where id = ?").params(passwords.hash(password), ownerId).update();
@@ -234,7 +237,7 @@ public class AdminService {
 
         audit.recordPlatform(propertyId, "properties", propertyId.toString(), "onboard", null,
                 Map.of("org", in.orgName(), "property", in.propertyName(), "ownerPhone", mask(ownerPhone)), actor.id());
-        return new NewPropertyResult(orgId, propertyId, ownerId, ownerPhone, (String) property.get("code"), password);
+        return new NewPropertyResult(orgId, propertyId, ownerId, ownerPhone, signInEmail, (String) property.get("code"), password);
     }
 
     /** Switch the optional parts of the product on or off for one property; takes effect on everyone's next request. */

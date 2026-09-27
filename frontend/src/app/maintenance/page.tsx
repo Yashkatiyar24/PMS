@@ -95,7 +95,7 @@ export default function MaintenancePage() {
         <Segmented value={showDone ? "all" : "open"} onChange={(v) => setShowDone(v === "all")}
           items={[{ value: "open", label: t("maint.status.open") }, { value: "all", label: t("common.all") }]} />
 
-        {data.tickets.length === 0 ? <Empty icon={Wrench} /> : (
+        {data.tickets.length === 0 ? <Empty icon={Wrench}>{t("empty.maintenance")}</Empty> : (
           <ListCard>
             {data.tickets.map((x) => (
               <ListRow

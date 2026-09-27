@@ -56,6 +56,7 @@ public class ApiExceptionHandler {
         if (msg.contains("booking_units_no_overlap")) return body(HttpStatus.CONFLICT, "That room or bed is already taken for those dates");
         if (msg.contains("positive_stay")) return body(HttpStatus.BAD_REQUEST, "Departure must be after arrival");
         if (msg.contains("rooms_property_id_number_key")) return body(HttpStatus.CONFLICT, "A room with that number already exists");
+        if (msg.contains("users_email_key")) return body(HttpStatus.CONFLICT, "That email already belongs to someone else");
         if (msg.contains("booking_units_room")) return body(HttpStatus.BAD_REQUEST, "That room or bed is not part of this property");
         // The constraint's name says what went wrong; the driver's message would also carry the values, e.g. a phone number.
         log.warn("Data integrity violation: {}", constraintOf(e));

@@ -58,7 +58,7 @@ try {
   await desk.goto(`${BASE}/login`, { waitUntil: "networkidle" })
   await desk.getByRole("button", { name: /भाषा|Language/ }).click()
   await desk.getByRole("button", { name: /Sign in/i }).first().click()
-  await desk.getByRole("tab", { name: /Email/ }).click()
+  await desk.getByLabel("Property code").fill("SRD1001")
   await desk.getByLabel("Email").fill("manager@pms.local")
   await desk.getByLabel("Password").fill("password123")
   await desk.getByRole("dialog").getByRole("button", { name: "Sign in", exact: true }).click()

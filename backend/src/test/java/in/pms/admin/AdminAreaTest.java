@@ -118,10 +118,11 @@ class AdminAreaTest {
                         .content("""
                                 {"orgName":"Onboarded Trust","propertyName":"New Dharamshala","city":"Rishikesh",
                                  "state":"Uttarakhand","phone":"0135-000000","ownerName":"New Owner",
-                                 "ownerPhone":"9555500001","ownerEmail":null,"planCode":"basic"}"""))
+                                 "ownerPhone":"9555500001","ownerEmail":"newowner@test.local","planCode":"basic"}"""))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.propertyId").exists())
-                .andExpect(jsonPath("$.ownerPhone", is("9555500001")));
+                .andExpect(jsonPath("$.ownerPhone", is("9555500001")))
+                .andExpect(jsonPath("$.ownerEmail", is("newowner@test.local")));
 
         Integer memberships = admin.sql("""
                 select count(*) from property_users pu join users u on u.id = pu.user_id

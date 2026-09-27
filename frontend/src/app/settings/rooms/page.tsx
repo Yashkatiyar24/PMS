@@ -129,7 +129,7 @@ export default function RoomSetupPage() {
         )}
       >
       {data.types.length === 0 ? (
-        <Empty icon={BedDouble} action={<Button variant="soft" size="sm" onClick={() => setEditing({ maxOccupancy: 2, dormitory: false })}>{t("setup.addRoomType")}</Button>} />
+        <Empty icon={BedDouble} action={<Button variant="soft" size="sm" onClick={() => setEditing({ maxOccupancy: 2, dormitory: false })}>{t("setup.addRoomType")}</Button>}>{t("empty.roomTypes")}</Empty>
       ) : (
         <ListCard>
           {data.types.map((type) => (

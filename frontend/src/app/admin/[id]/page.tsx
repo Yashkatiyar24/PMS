@@ -20,7 +20,7 @@ import { Credentials } from "@/components/Credentials"
 import { BILLING_TONE, isQuiet, MODULES, QUIET_DAYS, STATUSES, type Member, type Plan, type PropertyHealth } from "../shared"
 
 type Activity = { at: string; table_name: string; action: string; who: string }
-type NewPassword = { name: string; phone: string; password: string }
+type NewPassword = { name: string; email: string; password: string }
 
 export default function AdminPropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -216,7 +216,7 @@ export default function AdminPropertyPage({ params }: { params: Promise<{ id: st
 
       {/* Shown once, like the credentials at onboarding: the password is never stored in the clear. */}
       <Sheet open={!!fresh} onOpenChange={(o) => !o && setFresh(null)} title={fresh ? t("admin.resetDone", { name: fresh.name }) : ""} description={t("credentials.title")}>
-        {fresh && <Credentials code={p.code} phone={fresh.phone} password={fresh.password} />}
+        {fresh && <Credentials code={p.code} email={fresh.email} password={fresh.password} />}
       </Sheet>
     </div>
   )

@@ -45,7 +45,7 @@ try {
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle" })
   await page.getByRole("button", { name: /भाषा|Language/ }).click()
   await page.getByRole("button", { name: /Sign in/i }).first().click()
-  await page.getByRole("tab", { name: /Email/ }).click()
+  await page.getByLabel("Property code").fill("SRD1001")
   await page.getByLabel("Email").fill("owner@pms.local")
   await page.getByLabel("Password").fill("password123")
   await page.getByRole("dialog").getByRole("button", { name: "Sign in", exact: true }).click()
@@ -72,7 +72,9 @@ try {
   await screen("/audit", "audit log", "main >> text=Audit log")
   await screen("/notifications", "notifications", "main >> text=Notifications")
   await screen("/portfolio", "portfolio", "main >> text=All properties")
-  await screen("/bookings/new", "new booking", "text=How did it come in?")
+  await screen("/bookings/new", "new booking", "text=Room and nights")
+  // The source lives behind More details now: only the essentials sit on the form itself.
+  await page.getByText("More details").click()
   await page.getByRole("button", { name: "Group", exact: true }).click()
   check("a group booking asks for its name", await page.getByText("Group name").isVisible())
 

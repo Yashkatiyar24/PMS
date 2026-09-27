@@ -182,7 +182,7 @@ export default function NewBookingPage() {
       <div className="min-w-0 space-y-4">
       <Card title={t("checkin.guest")}>
         <div className="space-y-3">
-          <Field label={t("checkin.phoneLookup")} hint={t("checkin.phoneHint")}>
+          <Field label={t("checkin.phoneLookup")}>
             <input inputMode="numeric" value={phone} onChange={(e) => { setPhone(e.target.value); setGuestId(null) }} onBlur={lookup} placeholder="9876543210" />
           </Field>
           {matches.length > 0 && (
@@ -197,27 +197,10 @@ export default function NewBookingPage() {
               ))}
             </ul>
           )}
-          <div className="grid grid-cols-2 gap-2">
-            <Field label={t("checkin.name")}>
-              <input value={name} onChange={(e) => setName(e.target.value)} />
-            </Field>
-            <Field label={t("checkin.city")}>
-              <input value={city} onChange={(e) => setCity(e.target.value)} />
-            </Field>
-          </div>
-          {guestId && <Chip tone="ok">{t("checkin.guest")}</Chip>}
-          <Field group label={t("booking.source")}>
-            <ChoiceChips value={source} onChange={setSource} options={DESK_SOURCES.map((s) => ({ value: s, label: t(`source.${s}`) }))} />
+          <Field label={t("checkin.name")}>
+            <input value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          {(source === "corporate" || source === "travel_agent" || group) && (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {group && <Field label={t("booking.groupName")}><input value={groupName} onChange={(e) => setGroupName(e.target.value)} /></Field>}
-              <Field label={t("booking.organization")}><input value={organization} onChange={(e) => setOrganization(e.target.value)} /></Field>
-              {source === "corporate" && (
-                <Field label={t("booking.billingGstin")}><input value={billingGstin} maxLength={15} onChange={(e) => setBillingGstin(e.target.value.toUpperCase())} /></Field>
-              )}
-            </div>
-          )}
+          {guestId && <Chip tone="ok">{t("checkin.guest")}</Chip>}
         </div>
       </Card>
 
@@ -287,14 +270,34 @@ export default function NewBookingPage() {
         </Disclosure>
       )}
 
-      <Disclosure title={t("booking.details")} summary={[specialRequests, tentative && t("state.pending")].filter(Boolean).join(" · ") || undefined}>
+      {/* Everything the desk rarely needs on a phone booking lives here; the summary line says what was set. */}
+      <Disclosure title={t("booking.details")} summary={[source !== "phone" && t(`source.${source}`), city, specialRequests, tentative && t("state.pending")].filter(Boolean).join(" · ") || undefined}>
         <div className="space-y-3">
+          <Field group label={t("booking.source")}>
+            <ChoiceChips value={source} onChange={setSource} options={DESK_SOURCES.map((s) => ({ value: s, label: t(`source.${s}`) }))} />
+          </Field>
+          {(source === "corporate" || source === "travel_agent" || group) && (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {group && <Field label={t("booking.groupName")}><input value={groupName} onChange={(e) => setGroupName(e.target.value)} /></Field>}
+              <Field label={t("booking.organization")}><input value={organization} onChange={(e) => setOrganization(e.target.value)} /></Field>
+              {source === "corporate" && (
+                <Field label={t("booking.billingGstin")}><input value={billingGstin} maxLength={15} onChange={(e) => setBillingGstin(e.target.value.toUpperCase())} /></Field>
+              )}
+            </div>
+          )}
+          <Field label={t("checkin.city")}>
+            <input value={city} onChange={(e) => setCity(e.target.value)} />
+          </Field>
           <Field label={t("booking.specialRequests")}>
             <textarea rows={2} value={specialRequests} onChange={(e) => setSpecialRequests(e.target.value)} />
           </Field>
           <label className="flex gap-3 text-sm">
             <input type="checkbox" checked={tentative} onChange={(e) => setTentative(e.target.checked)} />
             <span>{t("booking.tentative")}<span className="block text-xs text-ink-faint">{t("booking.tentativeHint")}</span></span>
+          </label>
+          <label className="flex gap-3 text-sm">
+            <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} />
+            <span>{t("checkin.whatsappOptIn")}</span>
           </label>
         </div>
       </Disclosure>
@@ -319,10 +322,6 @@ export default function NewBookingPage() {
               <span>{t("checkin.consent")}</span>
             </label>
           )}
-          <label className="flex gap-3 text-sm">
-            <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} />
-            <span>{t("checkin.whatsappOptIn")}</span>
-          </label>
         </div>
       </Card>
 
@@ -333,14 +332,12 @@ export default function NewBookingPage() {
           <dl className="divide-y divide-line">
             <KV label={t("checkin.guest")} value={name.trim() || "—"} />
             <KV label={t("booking.dates")} value={datesOk ? `${formatDate(arrive)} → ${formatDate(depart)}` : "—"} />
-            <KV label={t("checkin.nights")} value={datesOk ? (nights === 1 ? t("book.oneNight") : t("book.nights", { n: nights })) : "—"} />
             <KV
               label={t("booking.roomType")}
               value={group
                 ? (groupKeys.length > 0 ? t("booking.selected", { n: groupKeys.length }) : "—")
                 : [type?.name, unitKey ? units.find((u) => u.key === unitKey)?.label : null].filter(Boolean).join(" · ") || "—"}
             />
-            <KV label={`${t("checkin.adults")} · ${t("checkin.children")}`} value={`${adults} · ${children}`} />
             {toPaise(advance) > 0 && <KV label={t("checkin.advance")} value={rupees(toPaise(advance))} />}
             <KV label={t("stay.total")} value={rupees(total)} strong />
           </dl>

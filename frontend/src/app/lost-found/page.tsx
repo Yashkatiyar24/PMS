@@ -66,7 +66,7 @@ export default function LostFoundPage() {
           </dl>
         </Card>
       }>
-        {data.items.length === 0 ? <Empty icon={PackageSearch} /> : (
+        {data.items.length === 0 ? <Empty icon={PackageSearch}>{t("empty.lostFound")}</Empty> : (
           <ListCard>
             {data.items.map((item) => (
               <ListRow

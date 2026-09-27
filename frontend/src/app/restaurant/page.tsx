@@ -119,7 +119,7 @@ export default function RestaurantPage() {
               <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
               <span>{t("pos.showSettled")}</span>
             </label>
-            {data.orders.length === 0 ? <Empty icon={UtensilsCrossed} /> : (
+            {data.orders.length === 0 ? <Empty icon={UtensilsCrossed}>{t("empty.orders")}</Empty> : (
               <ListCard>
                 {data.orders.map((o) => (
                   <ListRow key={o.id}
@@ -140,7 +140,7 @@ export default function RestaurantPage() {
               </ListCard>
             )}
           </>
-        ) : activeMenu.length === 0 && data.menu.length === 0 ? <Empty icon={UtensilsCrossed} /> : (
+        ) : activeMenu.length === 0 && data.menu.length === 0 ? <Empty icon={UtensilsCrossed}>{t("empty.menu")}</Empty> : (
           <ListCard>
             {data.menu.map((m) => (
               <ListRow key={m.id} onClick={can("MANAGER") ? () => setDish(m) : undefined} title={<span className={m.active ? "" : "line-through opacity-60"}>{m.name}</span>}

@@ -43,14 +43,12 @@ const overflows = async (where) => {
 }
 
 try {
-  // --- The platform admin signs in. They run no property of their own. ---
+  // --- The platform admin signs in. They run no property of their own, and the sign-in form is for property
+  // people only for now, so the admin signs in through the API with their email alone. ---
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle" })
   await page.getByRole("button", { name: /भाषा|Language/ }).click()
-  await page.getByRole("button", { name: /Sign in/i }).first().click()
-  await page.getByRole("tab", { name: /Email/ }).click()
-  await page.getByLabel("Email").fill("admin@pms.local")
-  await page.getByLabel("Password").fill("password123")
-  await page.getByRole("dialog").getByRole("button", { name: "Sign in", exact: true }).click()
+  await page.request.post(`${API}/api/auth/login`, { headers: { "X-Requested-With": "pms" }, data: { email: "admin@pms.local", password: "password123" } })
+  await page.goto(`${BASE}/admin`, { waitUntil: "networkidle" })
   await page.waitForURL(/\/admin$/, { timeout: 20000 })
   check("signing in lands the platform admin on the platform screen", true)
   await page.locator("aside nav a[href^='/admin/']").first().waitFor({ timeout: 15000 })
@@ -167,7 +165,7 @@ try {
   await page.screenshot({ path: "ui-check-shots/admin-password.png" })
   await page.keyboard.press("Escape")
   const other2 = await (await browser.newContext()).newPage()
-  const login = await other2.request.post(`${API}/api/auth/login`, { headers: { "X-Requested-With": "pms" }, data: { code: "SRD1001", phone: "9000000003", password: fresh } })
+  const login = await other2.request.post(`${API}/api/auth/login`, { headers: { "X-Requested-With": "pms" }, data: { code: "SRD1001", email: "staff@pms.local", password: fresh } })
   check("the reset password signs the staff member in at once", login.ok(), `${login.status()} with ${fresh.length} chars`)
   await other2.context().close()
   // Put the seeded password back so the other checks, which document "password123", stay true.
