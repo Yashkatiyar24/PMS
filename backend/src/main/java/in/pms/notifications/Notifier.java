@@ -44,8 +44,8 @@ public class Notifier {
     }
 
     /** What the phone needs to open the right screen on tap: the kind, the desk-app link and the feed row's id. */
-    static Map<String, String> pushPayload(String token, String kind, String title, String body, String link, UUID id) {
-        var payload = new java.util.HashMap<String, String>();
+    static Map<String, Object> pushPayload(String token, String kind, String title, String body, String link, UUID id) {
+        var payload = new java.util.HashMap<String, Object>();
         payload.put("token", token);
         payload.put("title", title);
         payload.put("body", body == null ? "" : body);
