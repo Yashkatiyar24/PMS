@@ -2,15 +2,16 @@
 --   pms_app   : what the API uses for tenant work. Row Level Security applies.
 --   pms_admin : auth, sessions, jobs and cross-property owner views. Bypasses RLS.
 -- Neither owns the tables, so RLS is enforced on both unless BYPASSRLS is set.
--- Change the passwords in production: ALTER ROLE pms_app PASSWORD '...';
+-- The passwords come from PMS_DB_APP_PASSWORD / PMS_DB_ADMIN_PASSWORD via Flyway placeholders, so the roles
+-- are born with the configured values: hosts that check password strength (Neon) refuse weak throwaways.
 
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pms_app') THEN
-    CREATE ROLE pms_app LOGIN PASSWORD 'pms_app' NOBYPASSRLS;
+    CREATE ROLE pms_app LOGIN PASSWORD '${pms_app_password}' NOBYPASSRLS;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pms_admin') THEN
-    CREATE ROLE pms_admin LOGIN PASSWORD 'pms_admin' BYPASSRLS;
+    CREATE ROLE pms_admin LOGIN PASSWORD '${pms_admin_password}' BYPASSRLS;
   END IF;
 END $$;
 
