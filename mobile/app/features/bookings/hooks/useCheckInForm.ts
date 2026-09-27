@@ -53,7 +53,9 @@ export function useCheckInForm(defaults: { depositPaise: number; mode: string })
     whatsappOptIn: false,
     registration: null,
   })
-  const patch = (p: Partial<CheckInForm>) => setForm((f) => ({ ...f, ...p }))
+  /** Merge a change; pass a function when it depends on what is in the form by then. */
+  const patch = (p: Partial<CheckInForm> | ((f: CheckInForm) => Partial<CheckInForm>)) =>
+    setForm((f) => ({ ...f, ...(typeof p === "function" ? p(f) : p) }))
 
   /** What the guest typed on their own phone fills the form; the desk can still correct it. */
   const applySubmission = (s: Submission, reg: Registration) =>

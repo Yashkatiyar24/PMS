@@ -60,6 +60,7 @@
     "expo-sharing": "~55.0.11",
     "expo-splash-screen": "~55.0.10",
     "expo-system-ui": "~55.0.9",
+    "expo-text-extractor": "^2.0.0",
     "i18next": "^23.14.0",
     "intl-pluralrules": "^2.0.1",
     "mobx": "^7.0.5",

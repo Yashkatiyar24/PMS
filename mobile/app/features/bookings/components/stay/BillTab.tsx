@@ -11,16 +11,20 @@ import { balanceDue } from "../../lib/bookingLabels"
 export type BillTabProps = {
   folio: Folio | null
   onProvisionalReceipt: (payment: FolioPayment) => void
+  /** Offered on charges someone added; room charges follow the stay's dates instead. */
+  onRemoveLine?: (line: FolioLine) => void
 }
 
-function lineTotal(l: FolioLine): number {
+/** What one bill line adds up to, GST included. */
+export function lineTotal(l: FolioLine): number {
   return l.unitPaise * l.qty + l.cgstPaise + l.sgstPaise + l.igstPaise
 }
 
 /** Bill lines with GST, totals, and payments with a receipt button each. */
-export function BillTab({ folio, onProvisionalReceipt }: BillTabProps) {
+export function BillTab({ folio, onProvisionalReceipt, onRemoveLine }: BillTabProps) {
   if (!folio) return null
   const due = balanceDue(folio)
+  const removable = (l: FolioLine) => !!onRemoveLine && !l.auto && folio.status === "open"
   return (
     <View style={$wrap}>
       <ListCard>
@@ -35,12 +39,24 @@ export function BillTab({ folio, onProvisionalReceipt }: BillTabProps) {
               ) : undefined
             }
             right={
-              <KV
-                label=""
-                value={rupees(lineTotal(l))}
-                strong
-                tone={lineTotal(l) < 0 ? "ok" : undefined}
-              />
+              <View style={$lineRight}>
+                <KV
+                  label=""
+                  value={rupees(lineTotal(l))}
+                  strong
+                  tone={lineTotal(l) < 0 ? "ok" : undefined}
+                />
+                {removable(l) && (
+                  <Button
+                    preset="ghost"
+                    size="sm"
+                    text="✕"
+                    accessibilityLabel={`${translate("stay.removeLine")}: ${l.description}`}
+                    onPress={() => onRemoveLine?.(l)}
+                    testID={`remove-line-${i}`}
+                  />
+                )}
+              </View>
             }
             chevron={false}
             last={i === folio.lines.length - 1}
@@ -94,3 +110,4 @@ export function BillTab({ folio, onProvisionalReceipt }: BillTabProps) {
 }
 
 const $wrap: ViewStyle = { gap: 12 }
+const $lineRight: ViewStyle = { flexDirection: "row", alignItems: "center", gap: 4 }

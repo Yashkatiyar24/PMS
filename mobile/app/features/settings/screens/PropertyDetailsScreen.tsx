@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Image, View, type ImageStyle, type ViewStyle } from "react-native"
+import type { ViewStyle } from "react-native"
 
 import {
   Button,
@@ -10,7 +10,6 @@ import {
   PageHeader,
   Panel,
   Screen,
-  Text,
   showError,
   showToast,
 } from "@/components"
@@ -18,9 +17,8 @@ import { useResource } from "@/hooks/useResource"
 import { translate } from "@/i18n/translate"
 import { useAppNavigation } from "@/navigators/useAppNavigation"
 import { api } from "@/services/api"
-import { useAppTheme } from "@/theme/context"
-import { compressImage, pickPhoto, takePhoto } from "@/utils/image"
 
+import { PropertyPhotoCard } from "../components/PropertyPhotoCard"
 import type { Property, PropertyInput } from "../types"
 
 const FIELDS: (keyof PropertyInput)[] = ["name", "address", "city", "state", "phone", "email"]
@@ -58,7 +56,6 @@ function toInput(p: Property): PropertyInput {
 /** Name, address, contacts, GSTIN and registrations; the photo saves on its own. */
 export function PropertyDetailsScreen() {
   const navigation = useAppNavigation()
-  const { theme } = useAppTheme()
   const property = useResource(() => api.settings.property(), [], { cacheKey: "property" })
   const [form, setForm] = useState<PropertyInput | null>(null)
   const [busy, setBusy] = useState(false)
@@ -78,20 +75,6 @@ export function PropertyDetailsScreen() {
     setForm(toInput(r.data))
     showToast(translate("settings.savedAt"), "ok")
   }
-  const photo = async (source: "camera" | "gallery") => {
-    const picked = source === "camera" ? await takePhoto() : await pickPhoto()
-    if (!picked) return
-    const file = await compressImage(picked, 600, 1600)
-    const r = await api.settings.uploadPropertyPhoto(file)
-    if (!r.ok) return showError(r.problem)
-    property.set(() => r.data)
-  }
-  const removePhoto = async () => {
-    const r = await api.settings.removePropertyPhoto()
-    if (!r.ok) return showError(r.problem)
-    property.set(() => r.data)
-  }
-
   const set = (k: keyof PropertyInput) => (v: string) => setForm((f) => (f ? { ...f, [k]: v } : f))
   return (
     <Screen
@@ -118,54 +101,12 @@ export function PropertyDetailsScreen() {
       )}
       {form && (
         <>
-          <Panel>
-            <Text
-              text={translate("property.photo")}
-              weight="bold"
-              size="sm"
-              style={{ color: theme.colors.text }}
-            />
-            {property.data?.photoUrl ? (
-              <Image
-                source={{ uri: property.data.photoUrl }}
-                style={$photo}
-                accessibilityIgnoresInvertColors
-              />
-            ) : (
-              <Text
-                text={translate("property.noPhoto")}
-                size="xs"
-                style={{ color: theme.colors.textDim }}
-              />
-            )}
-            <Text
-              text={translate("property.photoHint")}
-              size="xxs"
-              style={{ color: theme.colors.textFaint }}
-            />
-            <View style={$row}>
-              <Button
-                preset="secondary"
-                size="sm"
-                text={translate("mobile.camera")}
-                onPress={() => void photo("camera")}
-              />
-              <Button
-                preset="secondary"
-                size="sm"
-                text={translate("mobile.gallery")}
-                onPress={() => void photo("gallery")}
-              />
-              {property.data?.photoUrl && (
-                <Button
-                  preset="ghost"
-                  size="sm"
-                  text={translate("property.removePhoto")}
-                  onPress={() => void removePhoto()}
-                />
-              )}
-            </View>
-          </Panel>
+          <PropertyPhotoCard
+            photoUrl={property.data?.photoUrl}
+            upload={(file) => api.settings.uploadPropertyPhoto(file)}
+            remove={() => api.settings.removePropertyPhoto()}
+            onSaved={(saved) => property.set(() => saved)}
+          />
           <Panel>
             {FIELDS.map((k) => (
               <Input
@@ -210,5 +151,3 @@ export function PropertyDetailsScreen() {
 }
 
 const $content: ViewStyle = { padding: 16, gap: 12, paddingBottom: 32 }
-const $row: ViewStyle = { flexDirection: "row", flexWrap: "wrap", gap: 8 }
-const $photo: ImageStyle = { width: "100%", aspectRatio: 16 / 9, borderRadius: 12 }

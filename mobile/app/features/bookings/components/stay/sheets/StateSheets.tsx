@@ -136,3 +136,46 @@ export function ReleaseSheet({
     </Sheet>
   )
 }
+
+/** Take a charge someone added off the bill: a reason for the audit trail, PIN when the role lacks `discount.apply`. */
+export function RemoveLineSheet({
+  open,
+  onClose,
+  line,
+  onDone,
+}: {
+  open: boolean
+  onClose: () => void
+  line: string
+  onDone: (reason: string, approval: Approval) => void
+}) {
+  const [reason, setReason] = useState("")
+  const approval = useApproval("discount.apply")
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={translate("stay.removeLine")}
+      description={line}
+      footer={
+        <Button
+          preset="danger"
+          size="lg"
+          text={translate("action.remove")}
+          disabled={!reason.trim() || !approval.ready}
+          onPress={() => onDone(reason.trim(), approval.approval)}
+          testID="remove-line-submit"
+        />
+      }
+    >
+      <Input
+        label={translate("common.reason")}
+        value={reason}
+        onChangeText={setReason}
+        autoFocus
+        testID="remove-line-reason"
+      />
+      {approval.needsPin && <PinField value={approval.pin} onChangeText={approval.setPin} />}
+    </Sheet>
+  )
+}

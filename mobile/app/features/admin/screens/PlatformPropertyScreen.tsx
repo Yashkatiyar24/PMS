@@ -21,6 +21,7 @@ import {
   showToast,
 } from "@/components"
 import type { BillingStatus } from "@/features/auth/types"
+import { PropertyPhotoCard } from "@/features/settings/components/PropertyPhotoCard"
 import { CredentialsSheet, type Credentials } from "@/features/settings/components/StaffSheets"
 import { useResource } from "@/hooks/useResource"
 import { translate, translateOr } from "@/i18n/translate"
@@ -43,7 +44,7 @@ const MODULE_LABEL: Record<string, string> = {
   audit: "audit.title",
 }
 
-/** One property from the platform side: plan, billing, on/off, modules, team, notes, recent changes. */
+/** One property from the platform side: photo, plan, billing, on/off, modules, team, notes, recent changes. */
 export function PlatformPropertyScreen() {
   const navigation = useAppNavigation()
   const { params } = useAppRoute<"PlatformProperty">()
@@ -139,6 +140,12 @@ export function PlatformPropertyScreen() {
         />
         {p.supportAccess && <Chip tone="ok" text={translate("admin.supportAccess")} />}
       </Panel>
+      <PropertyPhotoCard
+        photoUrl={p.photoUrl}
+        upload={(file) => api.admin.uploadPhoto(p.propertyId, file)}
+        remove={() => api.admin.removePhoto(p.propertyId)}
+        onSaved={(saved) => property.set(() => saved)}
+      />
       <SectionLabel text={translate("admin.planBilling")} />
       <Panel>
         <ChoiceChips

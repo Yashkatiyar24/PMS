@@ -14,7 +14,14 @@ module.exports = {
   plugins: ["reactotron", "prettier"],
   overrides: [
     {
-      files: ["app/utils/**/*.ts", "app/services/api/**/*.ts", "app/devtools/**", "test/**", "**/*.test.ts", "**/*.test.tsx"],
+      files: [
+        "app/utils/**/*.ts",
+        "app/services/api/**/*.ts",
+        "app/devtools/**",
+        "test/**",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+      ],
       rules: { "no-restricted-imports": "off", "no-console": "off", "max-lines": "off" },
     },
   ],
@@ -65,6 +72,7 @@ module.exports = {
           { name: "expo-image-picker", message: "Use @/utils/image." },
           { name: "expo-image-manipulator", message: "Use @/utils/image." },
           { name: "expo-network", message: "Use @/utils/network." },
+          { name: "expo-text-extractor", message: "Use @/utils/ocr." },
           { name: "expo-file-system", message: "Use @/utils/files." },
           { name: "expo-sharing", message: "Use @/utils/files." },
           { name: "@react-native-firebase/messaging", message: "Use @/utils/notifications." },

@@ -14,19 +14,21 @@ import {
   showToast,
 } from "@/components"
 import { usePermission } from "@/features/auth/hooks/usePermission"
-import type { Receipt } from "@/features/folio/types"
+import type { FolioLine, Receipt } from "@/features/folio/types"
 import { useSettingsValues } from "@/features/settings/hooks/useSettingsValues"
 import { settingList } from "@/features/settings/types"
 import { translate } from "@/i18n/translate"
 import { useAppNavigation, useAppRoute } from "@/navigators/useAppNavigation"
 import { api } from "@/services/api"
 import { formatTime } from "@/utils/date"
+import { rupees } from "@/utils/format"
 
 import { AccommodationTab } from "../components/stay/AccommodationTab"
 import { ActivityTab } from "../components/stay/ActivityTab"
-import { BillTab } from "../components/stay/BillTab"
+import { BillTab, lineTotal } from "../components/stay/BillTab"
 import { GuestTab } from "../components/stay/GuestTab"
 import { ReceiptsTab } from "../components/stay/ReceiptsTab"
+import { RemoveLineSheet } from "../components/stay/sheets/StateSheets"
 import { StayActions, stayMenu, type StaySheet } from "../components/stay/StayActions"
 import { StayHeader } from "../components/stay/StayHeader"
 import { StaySheets } from "../components/stay/StaySheets"
@@ -48,6 +50,7 @@ export const StayScreen = observer(function StayScreen() {
   const [menu, setMenu] = useState(false)
   const [unit, setUnit] = useState<BookingUnit | null>(null)
   const [receipt, setReceipt] = useState<Receipt | null>(null)
+  const [line, setLine] = useState<FolioLine | null>(null)
 
   const { booking, folio } = stay
   const can = {
@@ -174,6 +177,7 @@ export const StayScreen = observer(function StayScreen() {
       {tab === "bill" && (
         <BillTab
           folio={folio}
+          onRemoveLine={(l) => setLine(l)}
           onProvisionalReceipt={(p) =>
             folio &&
             void stay.run(
@@ -218,6 +222,19 @@ export const StayScreen = observer(function StayScreen() {
           openReceipt(r)
         }}
       />
+      {line && folio && (
+        <RemoveLineSheet
+          open
+          onClose={() => setLine(null)}
+          line={`${line.description} · ${rupees(lineTotal(line))}`}
+          onDone={async (reason, approval) => {
+            const r = await stay.run(() =>
+              api.folios.removeLine(folio.id, line.id, reason, approval),
+            )
+            if (r.ok) setLine(null)
+          }}
+        />
+      )}
     </Screen>
   )
 })

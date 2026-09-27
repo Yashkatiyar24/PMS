@@ -1,6 +1,6 @@
 import { View, type ViewStyle } from "react-native"
 
-import { ChoiceChips, Disclosure, Input, Panel, SectionLabel, Text } from "@/components"
+import { ChoiceChips, Disclosure, Input, Panel, SectionLabel, Text, showToast } from "@/components"
 import { GuestLookup } from "@/features/guests/components/GuestLookup"
 import { IdPhotoField } from "@/features/guests/components/IdPhotoField"
 import { translate, translateOr } from "@/i18n/translate"
@@ -11,7 +11,7 @@ import { ID_TYPES } from "../../types"
 
 export type GuestStepProps = {
   form: CheckInForm
-  patch: (p: Partial<CheckInForm>) => void
+  patch: (p: Partial<CheckInForm> | ((f: CheckInForm) => Partial<CheckInForm>)) => void
   photoRequired: boolean
   maxPhotoKb: number
 }
@@ -90,6 +90,14 @@ export function GuestStep({ form, patch, photoRequired, maxPhotoKb }: GuestStepP
               photo={form.photo}
               onPhoto={(photo) => patch({ photo })}
               maxKb={maxPhotoKb}
+              onIdRead={(read) => {
+                // Fills only what the desk left empty, and says so, so the digits get checked.
+                patch((f) => ({
+                  idLast4: f.idLast4 || read.idLast4,
+                  ...(read.idType ? { idType: read.idType } : {}),
+                }))
+                showToast(translate("ocr.filled", { last4: read.idLast4 }), "info", 5000)
+              }}
             />
           )}
           {photoRequired && !hasPhoto && (

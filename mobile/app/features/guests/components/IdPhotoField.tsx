@@ -5,6 +5,7 @@ import { Button, Chip, Text, showError } from "@/components"
 import { translate } from "@/i18n/translate"
 import { useAppTheme } from "@/theme/context"
 import { compressImage, fileSizeKb, pickPhoto, takePhoto, type PickedFile } from "@/utils/image"
+import { readIdFromPhoto, type IdRead } from "@/utils/ocr"
 
 export type IdPhotoFieldProps = {
   photo: PickedFile | null
@@ -12,10 +13,12 @@ export type IdPhotoFieldProps = {
   /** Compress to at most this many KB (the property's `id_photo_max_kb`). */
   maxKb: number
   label?: string
+  /** When given, the ID number is read off the photo on this phone and its last four handed back. */
+  onIdRead?: (read: IdRead) => void
 }
 
-/** Camera or gallery → compressed JPEG ready to upload. Shows its size once taken. */
-export function IdPhotoField({ photo, onPhoto, maxKb, label }: IdPhotoFieldProps) {
+/** Camera or gallery → compressed JPEG ready to upload, and optionally the ID read off it. Shows its size once taken. */
+export function IdPhotoField({ photo, onPhoto, maxKb, label, onIdRead }: IdPhotoFieldProps) {
   const { theme } = useAppTheme()
   const [busy, setBusy] = useState(false)
   const [sizeKb, setSizeKb] = useState<number | null>(null)
@@ -28,6 +31,11 @@ export function IdPhotoField({ photo, onPhoto, maxKb, label }: IdPhotoFieldProps
       const file = await compressImage(picked, maxKb)
       setSizeKb(await fileSizeKb(file.uri))
       onPhoto(file)
+      // The full-size shot reads better than the compressed upload; it stays on the phone either way.
+      if (onIdRead) {
+        const read = await readIdFromPhoto(picked.uri)
+        if (read) onIdRead(read)
+      }
     } catch (e) {
       showError(e instanceof Error ? e.message : null)
     } finally {
