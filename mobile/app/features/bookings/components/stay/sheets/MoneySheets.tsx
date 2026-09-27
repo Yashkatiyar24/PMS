@@ -54,6 +54,7 @@ export function PaySheet({
           size="lg"
           text={translate("action.takePayment")}
           disabled={paise <= 0}
+          testID="pay-submit"
           onPress={() =>
             onDone({
               amountPaise: paise,
@@ -110,6 +111,7 @@ export function ExtraSheet({
           size="lg"
           text={translate("action.add")}
           disabled={!description.trim() || paise <= 0}
+          testID="extra-submit"
           onPress={() =>
             onDone({
               amountPaise: paise,
@@ -138,6 +140,7 @@ export function ExtraSheet({
         value={description}
         onChangeText={setDescription}
         autoFocus
+        testID="extra-details"
       />
       <Input
         label={translate("stay.qty")}
@@ -145,7 +148,12 @@ export function ExtraSheet({
         onChangeText={(t) => setQty(t.replace(/\D/g, ""))}
         keyboardType="number-pad"
       />
-      <MoneyInput label={translate("stay.total")} value={amount} onChangeText={setAmount} />
+      <MoneyInput
+        label={translate("stay.total")}
+        value={amount}
+        onChangeText={setAmount}
+        testID="extra-amount"
+      />
     </Sheet>
   )
 }
@@ -196,6 +204,7 @@ export function ApprovedMoneySheet({
           size="lg"
           text={title}
           disabled={paise <= 0 || overMax || !reason.trim() || !approval.ready}
+          testID="money-submit"
           onPress={() =>
             onDone({
               amountPaise: paise,
@@ -215,6 +224,7 @@ export function ApprovedMoneySheet({
         value={amount}
         onChangeText={setAmount}
         autoFocus
+        testID="money-amount"
         error={
           overMax ? translate("stay.refundHint", { amount: rupees(maxPaise ?? 0) }) : undefined
         }
@@ -226,9 +236,14 @@ export function ApprovedMoneySheet({
           options={modeOptions(modes?.length ? modes : MODES)}
         />
       )}
-      <Input label={translate("common.reason")} value={reason} onChangeText={setReason} />
-      {approval.needsPin && <PinField value={approval.pin} onChangeText={approval.setPin} />}
-      {approval.needsPin && (
+      <Input
+        label={translate("common.reason")}
+        value={reason}
+        onChangeText={setReason}
+        testID="money-reason"
+      />
+      {!!approval.needsPin && <PinField value={approval.pin} onChangeText={approval.setPin} />}
+      {!!approval.needsPin && (
         <Text
           text={translate("approval.title")}
           size="xs"

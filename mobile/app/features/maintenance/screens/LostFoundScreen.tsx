@@ -56,11 +56,11 @@ export function LostFoundScreen() {
           />
         ))}
       </Panel>
-      {items.loading && <Loading />}
-      {items.problem && !items.data && (
+      {!!items.loading && <Loading />}
+      {!!items.problem && !items.data && (
         <ErrorState message={items.problem.message} onRetry={items.reload} />
       )}
-      {items.data && list.length === 0 && <Empty text={translate("empty.lostFound")} />}
+      {!!items.data && list.length === 0 && <Empty text={translate("empty.lostFound")} />}
       {list.length > 0 && (
         <ListCard>
           {list.map((it, i) => (
@@ -81,7 +81,7 @@ export function LostFoundScreen() {
           ))}
         </ListCard>
       )}
-      {adding && (
+      {!!adding && (
         <AddSheet
           rooms={(rooms.data ?? []).map((r) => ({ id: r.id, number: r.number }))}
           onClose={() => setAdding(false)}
@@ -91,7 +91,7 @@ export function LostFoundScreen() {
           }}
         />
       )}
-      {open && (
+      {!!open && (
         <StatusSheet
           item={open}
           onClose={() => setOpen(null)}

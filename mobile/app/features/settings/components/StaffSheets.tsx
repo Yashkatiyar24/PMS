@@ -207,7 +207,9 @@ export function CredentialsSheet({ creds, onClose }: { creds: Credentials; onClo
       <Panel>
         <KV label={translate("setup.code")} value={creds.code} strong />
         <KV label={translate("setup.email")} value={creds.email} />
-        {creds.password && <KV label={translate("login.password")} value={creds.password} strong />}
+        {!!creds.password && (
+          <KV label={translate("login.password")} value={creds.password} strong />
+        )}
       </Panel>
     </Sheet>
   )

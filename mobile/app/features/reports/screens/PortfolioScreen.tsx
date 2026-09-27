@@ -48,11 +48,11 @@ export const PortfolioScreen = observer(function PortfolioScreen() {
         }
         onBack={() => navigation.goBack()}
       />
-      {rows.loading && <Loading />}
-      {rows.problem && !rows.data && (
+      {!!rows.loading && <Loading />}
+      {!!rows.problem && !rows.data && (
         <ErrorState message={rows.problem.message} onRetry={rows.reload} />
       )}
-      {rows.data && list.length === 0 && <Empty text={translate("portfolio.none")} />}
+      {!!rows.data && list.length === 0 && <Empty text={translate("portfolio.none")} />}
       {list.map((p) => (
         <Panel key={p.propertyId}>
           <View style={$head}>

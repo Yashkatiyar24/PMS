@@ -1,5 +1,7 @@
 import {
+  BROWSER_SESSION,
   canSubmitPasswordLogin,
+  cookieOwnedByPlatform,
   clearToken,
   cookieHeader,
   loadRememberedCode,
@@ -22,6 +24,13 @@ describe("auth utils", () => {
   it("builds the Cookie header", () => {
     expect(cookieHeader("t")).toBe("pms_session=t")
     expect(cookieHeader(null)).toBeNull()
+    expect(cookieHeader(BROWSER_SESSION)).toBeNull()
+  })
+
+  it("knows when the browser keeps the cookie", () => {
+    expect(cookieOwnedByPlatform("web")).toBe(true)
+    expect(cookieOwnedByPlatform("android")).toBe(false)
+    expect(cookieOwnedByPlatform("ios")).toBe(false)
   })
 
   it("stores and clears the token", () => {

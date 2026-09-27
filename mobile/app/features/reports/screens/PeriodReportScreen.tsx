@@ -88,11 +88,11 @@ export function PeriodReportScreen() {
           </View>
         </View>
       )}
-      {report.loading && <Loading />}
-      {report.problem && !r && (
+      {!!report.loading && <Loading />}
+      {!!report.problem && !r && (
         <ErrorState message={report.problem.message} onRetry={report.reload} />
       )}
-      {r && (
+      {!!r && (
         <>
           <View style={$tiles}>
             <StatTile

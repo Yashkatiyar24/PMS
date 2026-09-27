@@ -62,11 +62,11 @@ export function InventoryScreen() {
           { value: "low", label: translate("stock.low"), count: lowCount },
         ]}
       />
-      {items.loading && <Loading />}
-      {items.problem && !items.data && (
+      {!!items.loading && <Loading />}
+      {!!items.problem && !items.data && (
         <ErrorState message={items.problem.message} onRetry={items.reload} />
       )}
-      {items.data && list.length === 0 && <Empty text={translate("empty.inventory")} />}
+      {!!items.data && list.length === 0 && <Empty text={translate("empty.inventory")} />}
       {STOCK_CATEGORIES.map((cat) => {
         const rows = list.filter((i) => i.category === cat)
         if (rows.length === 0) return null
@@ -96,7 +96,7 @@ export function InventoryScreen() {
           </View>
         )
       })}
-      {editing && (
+      {!!editing && (
         <StockItemSheet
           item={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
@@ -106,7 +106,7 @@ export function InventoryScreen() {
           }}
         />
       )}
-      {moving && (
+      {!!moving && (
         <MovementSheet
           item={moving}
           rooms={(rooms.data ?? []).map((r) => ({ id: r.id, number: r.number }))}

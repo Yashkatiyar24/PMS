@@ -1,12 +1,24 @@
 /**
  * The session token. The backend sets it as an HttpOnly cookie named `pms_session`; the app reads it from the
  * login response's `Set-Cookie` header, keeps it in the encrypted store and sends it back as a `Cookie` header.
+ * In a browser (the web build) the page can neither read nor send that cookie: the browser keeps it, and the
+ * app only remembers that it is signed in.
  */
+import { Platform } from "react-native"
+
 import { loadSecure, saveSecure } from "./storage"
 
 export const SESSION_COOKIE = "pms_session"
 const TOKEN_KEY = "session.token"
 const CODE_KEY = "login.propertyCode"
+
+/** Stands in for the token where the browser holds the cookie itself. */
+export const BROWSER_SESSION = "browser-session"
+
+/** Whether the platform's HTTP stack owns the session cookie (a browser) rather than the app. */
+export function cookieOwnedByPlatform(os: string = Platform.OS): boolean {
+  return os === "web"
+}
 
 /** Pull the session token out of one or more `Set-Cookie` header values; null when none carries it. */
 export function tokenFromSetCookie(header: string | string[] | null | undefined): string | null {
@@ -18,7 +30,7 @@ export function tokenFromSetCookie(header: string | string[] | null | undefined)
 
 /** The `Cookie` header for a request, or null when signed out. */
 export function cookieHeader(token: string | null): string | null {
-  return token ? `${SESSION_COOKIE}=${token}` : null
+  return token && token !== BROWSER_SESSION ? `${SESSION_COOKIE}=${token}` : null
 }
 
 export function loadToken(): string | null {

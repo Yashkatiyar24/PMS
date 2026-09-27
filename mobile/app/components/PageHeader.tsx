@@ -18,7 +18,7 @@ export function PageHeader({ title, subtitle, onBack, actions }: PageHeaderProps
   const { theme } = useAppTheme()
   return (
     <View style={$row}>
-      {onBack && (
+      {!!onBack && (
         <Pressable
           onPress={onBack}
           accessibilityRole="button"
@@ -40,7 +40,7 @@ export function PageHeader({ title, subtitle, onBack, actions }: PageHeaderProps
           />
         )}
       </View>
-      {actions && <View style={$actions}>{actions}</View>}
+      {!!actions && <View style={$actions}>{actions}</View>}
     </View>
   )
 }

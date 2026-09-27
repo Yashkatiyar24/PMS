@@ -108,8 +108,8 @@ export const RoomsScreen = observer(function RoomsScreen() {
           { value: "blocked", label: translate("rooms.status.blocked"), count: counts.blocked },
         ]}
       />
-      {rooms.loading && <Loading />}
-      {rooms.problem && !rooms.data && (
+      {!!rooms.loading && <Loading />}
+      {!!rooms.problem && !rooms.data && (
         <ErrorState message={rooms.problem.message} onRetry={rooms.reload} />
       )}
       {groupRooms(shown).map((g) => (
@@ -122,8 +122,8 @@ export const RoomsScreen = observer(function RoomsScreen() {
           </View>
         </View>
       ))}
-      {rooms.fromCache && <StaleLabel fetchedAt={rooms.fetchedAt} />}
-      {current && !reporting && (
+      {!!rooms.fromCache && <StaleLabel fetchedAt={rooms.fetchedAt} />}
+      {!!current && !reporting && (
         <RoomSheet
           room={current}
           housekeepers={housekeepers.data ?? []}
@@ -133,7 +133,7 @@ export const RoomsScreen = observer(function RoomsScreen() {
           onReport={() => setReporting(current)}
         />
       )}
-      {reporting && (
+      {!!reporting && (
         <ReportIssueSheet
           roomId={reporting.id}
           roomNumber={reporting.number}

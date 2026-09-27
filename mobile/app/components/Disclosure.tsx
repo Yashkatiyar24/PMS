@@ -39,7 +39,7 @@ export function Disclosure({ title, summary, defaultOpen = false, children }: Di
         </View>
         <Text text={open ? "⌃" : "⌄"} style={{ color: theme.colors.textDim, fontSize: 18 }} />
       </Pressable>
-      {open && <View style={$body}>{children}</View>}
+      {!!open && <View style={$body}>{children}</View>}
     </View>
   )
 }

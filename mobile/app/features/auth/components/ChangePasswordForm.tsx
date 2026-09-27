@@ -32,7 +32,7 @@ export const ChangePasswordForm = observer(function ChangePasswordForm({
 
   return (
     <View style={$form}>
-      {auth.lastProblem && (
+      {!!auth.lastProblem && (
         <Banner tone="danger" text={auth.lastProblem.message || translate("error.generic")} />
       )}
       <Input

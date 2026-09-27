@@ -39,7 +39,7 @@ export function PaymentStep({ form, patch, modes, consentRequired, totalPaise }:
             label: translateOr(`option.${m}`, m.toUpperCase()),
           }))}
         />
-        {consentRequired && (
+        {!!consentRequired && (
           <Switch
             value={form.consent}
             onValueChange={(consent) => patch({ consent })}

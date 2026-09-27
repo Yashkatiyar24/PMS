@@ -132,7 +132,7 @@ export function TapeGrid({ days, groups, load, onBar, onLongBar, onCell }: TapeG
                         ]}
                       />
                     ))}
-                    {l.offSale && (
+                    {!!l.offSale && (
                       <View
                         style={[
                           $blocked,

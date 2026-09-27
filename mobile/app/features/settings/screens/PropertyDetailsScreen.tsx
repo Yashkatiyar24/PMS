@@ -95,11 +95,11 @@ export function PropertyDetailsScreen() {
           />
         }
       />
-      {property.loading && !form && <Loading />}
-      {property.problem && !property.data && (
+      {!!property.loading && !form && <Loading />}
+      {!!property.problem && !property.data && (
         <ErrorState message={property.problem.message} onRetry={property.reload} />
       )}
-      {form && (
+      {!!form && (
         <>
           <PropertyPhotoCard
             photoUrl={property.data?.photoUrl}

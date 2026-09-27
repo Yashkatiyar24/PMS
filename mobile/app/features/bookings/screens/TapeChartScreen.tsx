@@ -113,9 +113,11 @@ export const TapeChartScreen = observer(function TapeChartScreen() {
         size="xxs"
         style={{ color: theme.colors.textFaint }}
       />
-      {chart.loading && <Loading />}
-      {chart.problem && !c && <ErrorState message={chart.problem.message} onRetry={chart.reload} />}
-      {c && (
+      {!!chart.loading && <Loading />}
+      {!!chart.problem && !c && (
+        <ErrorState message={chart.problem.message} onRetry={chart.reload} />
+      )}
+      {!!c && (
         <View
           style={[
             $grid,
@@ -138,7 +140,7 @@ export const TapeChartScreen = observer(function TapeChartScreen() {
           />
         </View>
       )}
-      {moving && (
+      {!!moving && (
         <MoveStaySheet
           occupancy={moving}
           lanes={lanes}

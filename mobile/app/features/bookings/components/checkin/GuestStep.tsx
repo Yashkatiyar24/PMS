@@ -100,11 +100,12 @@ export function GuestStep({ form, patch, photoRequired, maxPhotoKb }: GuestStepP
               }}
             />
           )}
-          {photoRequired && !hasPhoto && (
+          {!!photoRequired && !hasPhoto && (
             <Input
               label={translate("checkin.skipReason")}
               value={form.skipReason}
               onChangeText={(skipReason) => patch({ skipReason })}
+              testID="checkin-skip-reason"
             />
           )}
         </Disclosure>

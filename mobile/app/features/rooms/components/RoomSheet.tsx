@@ -2,6 +2,7 @@ import { useState } from "react"
 import { View, type ViewStyle } from "react-native"
 
 import {
+  afterSheetCloses,
   Banner,
   Button,
   Chip,
@@ -69,7 +70,7 @@ export function RoomSheet({
           text={translateOr(`rooms.status.${room.status}`, room.status)}
           dot
         />
-        {room.blockedReason && (
+        {!!room.blockedReason && (
           <Text text={room.blockedReason} size="xs" style={{ color: theme.colors.textDim }} />
         )}
       </View>
@@ -89,9 +90,9 @@ export function RoomSheet({
             right={
               r.occ ? (
                 <Chip
-                  tone={r.occ.state === "checked_in" ? "ok" : "brand"}
+                  tone={r.occ.state === "occupied" ? "ok" : "brand"}
                   text={
-                    r.occ.state === "checked_in"
+                    r.occ.state === "occupied"
                       ? translate("rooms.occupied")
                       : translate("rooms.reserved")
                   }
@@ -101,8 +102,9 @@ export function RoomSheet({
             onPress={
               r.occ && has("reservations.view")
                 ? () => {
+                    const id = r.occ!.bookingId
                     onClose()
-                    navigation.navigate("Stay", { id: r.occ!.bookingId })
+                    afterSheetCloses(() => navigation.navigate("Stay", { id }))
                   }
                 : undefined
             }
@@ -110,7 +112,7 @@ export function RoomSheet({
           />
         ))}
       </View>
-      {canStatus && (
+      {!!canStatus && (
         <View style={$actions}>
           {nextStatuses(room.status).map((n) => (
             <Button
@@ -139,7 +141,7 @@ export function RoomSheet({
           )}
         </View>
       )}
-      {blocking && (
+      {!!blocking && (
         <View style={$block}>
           <Input
             label={

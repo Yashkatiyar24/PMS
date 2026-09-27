@@ -2,10 +2,16 @@
  * The one HTTP client. Adds the session cookie and the CSRF header, turns every response into an `ApiResult`,
  * and tells the auth store when the server says the session is gone.
  */
+import { Platform } from "react-native"
 import { ApisauceInstance, create } from "apisauce"
 
 import Config from "@/config"
-import { cookieHeader, tokenFromSetCookie } from "@/utils/auth"
+import {
+  BROWSER_SESSION,
+  cookieHeader,
+  cookieOwnedByPlatform,
+  tokenFromSetCookie,
+} from "@/utils/auth"
 import { logWarn } from "@/utils/logger"
 
 import { badData, problemFrom, type ApiProblem } from "./problem"
@@ -22,7 +28,13 @@ export class ApiClient {
   private onUnauthorized: (() => void) | null = null
 
   constructor(baseURL: string = Config.API_URL, timeout: number = Config.API_TIMEOUT_MS) {
-    this.http = create({ baseURL, timeout, headers: { Accept: "application/json" } })
+    this.http = create({
+      baseURL,
+      timeout,
+      headers: { Accept: "application/json" },
+      // A browser sends its own cookie only when asked to; on a phone the transform below adds it.
+      withCredentials: cookieOwnedByPlatform(),
+    })
     this.http.addRequestTransform((request) => {
       const cookie = cookieHeader(this.token)
       request.headers = request.headers ?? {}
@@ -65,9 +77,19 @@ export class ApiClient {
   }
 
   /** A multipart upload with a single part named `file`, never queued. */
-  upload<T>(path: string, file: UploadFile): Promise<ApiResult<T>> {
+  async upload<T>(path: string, file: UploadFile): Promise<ApiResult<T>> {
     const form = new FormData()
-    form.append("file", { uri: file.uri, name: file.name, type: file.mimeType } as unknown as Blob)
+    if (Platform.OS === "web") {
+      // A browser needs the bytes as a Blob; it fills in the multipart boundary itself.
+      form.append("file", await (await fetch(file.uri)).blob(), file.name)
+    } else {
+      form.append("file", {
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType,
+      } as unknown as Blob)
+    }
+    // Overrides apisauce's JSON default, which would otherwise serialise the form as JSON.
     return this.run<T>(
       this.http.post<T>(path, form, { headers: { "Content-Type": "multipart/form-data" } }),
     )
@@ -107,7 +129,7 @@ export class ApiClient {
     const problem = problemFrom(response)
     if (problem) return this.failed(problem)
     const header = response.headers?.["set-cookie"] as string | string[] | undefined
-    const token = tokenFromSetCookie(header)
+    const token = cookieOwnedByPlatform() ? BROWSER_SESSION : tokenFromSetCookie(header)
     if (!token) logWarn("login response carried no session cookie")
     return ok({ body: response.data as T, token })
   }

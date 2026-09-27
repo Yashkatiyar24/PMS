@@ -77,9 +77,11 @@ export const TodayScreen = observer(function TodayScreen() {
           </>
         }
       />
-      {today.loading && <Loading />}
-      {today.problem && !t && <ErrorState message={today.problem.message} onRetry={today.reload} />}
-      {t && (
+      {!!today.loading && <Loading />}
+      {!!today.problem && !t && (
+        <ErrorState message={today.problem.message} onRetry={today.reload} />
+      )}
+      {!!t && (
         <>
           <OccupancyCard today={t} />
           {t.flaggedNoShow.length > 0 && (
@@ -121,7 +123,7 @@ export const TodayScreen = observer(function TodayScreen() {
           ) : (
             <StayList stays={staysFor(t, view, showDone)} />
           )}
-          {today.fromCache && <StaleLabel fetchedAt={today.fetchedAt} />}
+          {!!today.fromCache && <StaleLabel fetchedAt={today.fetchedAt} />}
           {has("revenue.view") && <ForecastCard from={t.date} />}
         </>
       )}

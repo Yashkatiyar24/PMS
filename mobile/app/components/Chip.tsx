@@ -19,7 +19,7 @@ export function Chip({ tone = "neutral", text, dot, style }: ChipProps) {
   const { solid, soft } = toneColors(theme.colors, tone)
   return (
     <View style={[$chip, { backgroundColor: soft }, style]}>
-      {dot && <View style={[$dot, { backgroundColor: solid }]} />}
+      {!!dot && <View style={[$dot, { backgroundColor: solid }]} />}
       <Text text={text} style={[$text, { color: solid }]} numberOfLines={1} />
     </View>
   )

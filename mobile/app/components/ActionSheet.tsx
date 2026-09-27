@@ -2,7 +2,7 @@ import { Pressable, View, type ViewStyle, type TextStyle } from "react-native"
 
 import { useAppTheme } from "@/theme/context"
 
-import { Sheet } from "./Sheet"
+import { afterSheetCloses, Sheet } from "./Sheet"
 import { Text } from "./Text"
 
 export type ActionItem = {
@@ -29,13 +29,13 @@ export function ActionSheet({ open, onClose, title, items }: ActionSheetProps) {
       <View>
         {items.map((item, i) => (
           <View key={`${item.label}-${i}`}>
-            {item.separator && <View style={[$sep, { backgroundColor: theme.colors.border }]} />}
+            {!!item.separator && <View style={[$sep, { backgroundColor: theme.colors.border }]} />}
             <Pressable
               disabled={item.disabled}
               accessibilityRole="menuitem"
               onPress={() => {
                 onClose()
-                item.onPress()
+                afterSheetCloses(item.onPress)
               }}
               style={({ pressed }) => [
                 $item,

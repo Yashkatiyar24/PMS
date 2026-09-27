@@ -97,3 +97,6 @@ GoogleService-Info.plist
 # env
 .env
 .env.local
+
+# screenshots from the web smoke (npm run smoke:web)
+e2e/web/shots/

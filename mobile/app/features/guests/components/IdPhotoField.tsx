@@ -66,8 +66,8 @@ export function IdPhotoField({ photo, onPhoto, maxKb, label, onIdRead }: IdPhoto
           onPress={() => capture("gallery")}
           disabled={busy}
         />
-        {photo && <Chip tone="ok" text={sizeKb ? `${Math.round(sizeKb)} KB` : "✓"} />}
-        {photo && (
+        {!!photo && <Chip tone="ok" text={sizeKb ? `${Math.round(sizeKb)} KB` : "✓"} />}
+        {!!photo && (
           <Button
             preset="ghost"
             size="sm"

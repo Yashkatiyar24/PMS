@@ -45,7 +45,7 @@ export function Banner({
           </Pressable>
         )}
       </View>
-      {onClose && (
+      {!!onClose && (
         <Pressable
           onPress={onClose}
           accessibilityRole="button"

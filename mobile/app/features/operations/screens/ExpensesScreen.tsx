@@ -75,19 +75,19 @@ export function ExpensesScreen() {
           />
         </View>
         <Text text={rupees(s?.totalPaise ?? 0)} style={[$big, { color: theme.colors.text }]} />
-        {s &&
+        {!!s &&
           Object.entries(s.byCategory)
             .filter(([, v]) => v > 0)
             .map(([c, v]) => (
               <KV key={c} label={translateOr(`expense.${c}`, c)} value={rupees(v)} />
             ))}
       </Panel>
-      {summary.loading && <Loading />}
-      {summary.problem && !s && (
+      {!!summary.loading && <Loading />}
+      {!!summary.problem && !s && (
         <ErrorState message={summary.problem.message} onRetry={summary.reload} />
       )}
-      {s && s.expenses.length === 0 && <Empty text={translate("empty.expenses")} />}
-      {s && s.expenses.length > 0 && (
+      {!!s && s.expenses.length === 0 && <Empty text={translate("empty.expenses")} />}
+      {!!s && s.expenses.length > 0 && (
         <ListCard>
           {s.expenses.map((e, i) => (
             <ListRow
@@ -97,7 +97,7 @@ export function ExpensesScreen() {
               subtitle={`${formatDate(e.spentOn)} · ${translateOr(`expense.${e.category}`, e.category)} · ${e.paymentMode.toUpperCase()}${e.voidReason ? ` · ${e.voidReason}` : ""}`}
               right={
                 <View style={$right}>
-                  {e.hasReceipt && (
+                  {!!e.hasReceipt && (
                     <Button
                       preset="ghost"
                       size="sm"
@@ -116,7 +116,7 @@ export function ExpensesScreen() {
           ))}
         </ListCard>
       )}
-      {adding && (
+      {!!adding && (
         <ExpenseSheet
           onClose={() => setAdding(false)}
           onDone={() => {
@@ -125,7 +125,7 @@ export function ExpensesScreen() {
           }}
         />
       )}
-      {voiding && (
+      {!!voiding && (
         <VoidExpenseSheet
           expense={voiding}
           onClose={() => setVoiding(null)}

@@ -43,7 +43,7 @@ export function Empty({
         size="sm"
         style={[$emptyText, { color: theme.colors.textDim }]}
       />
-      {actionText && onAction && (
+      {!!actionText && !!onAction && (
         <Button preset="secondary" size="sm" text={actionText} onPress={onAction} />
       )}
     </View>

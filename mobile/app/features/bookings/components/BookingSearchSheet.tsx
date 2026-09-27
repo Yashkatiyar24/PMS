@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react"
 
-import { Avatar, Chip, Empty, Input, ListCard, ListRow, Sheet } from "@/components"
+import {
+  afterSheetCloses,
+  Avatar,
+  Chip,
+  Empty,
+  Input,
+  ListCard,
+  ListRow,
+  Sheet,
+} from "@/components"
 import { translate } from "@/i18n/translate"
 import { useAppNavigation } from "@/navigators/useAppNavigation"
 import { api } from "@/services/api"
@@ -31,7 +40,7 @@ export function BookingSearchSheet({ open, onClose }: { open: boolean; onClose: 
   const openStay = (id: string) => {
     onClose()
     setQ("")
-    navigation.navigate("Stay", { id })
+    afterSheetCloses(() => navigation.navigate("Stay", { id }))
   }
 
   return (
@@ -46,8 +55,8 @@ export function BookingSearchSheet({ open, onClose }: { open: boolean; onClose: 
         onSubmitEditing={() => hits?.[0] && openStay(hits[0].id)}
         testID="search-input"
       />
-      {hits && hits.length === 0 && <Empty text={translate("search.none")} />}
-      {hits && hits.length > 0 && (
+      {!!hits && hits.length === 0 && <Empty text={translate("search.none")} />}
+      {!!hits && hits.length > 0 && (
         <ListCard>
           {hits.map((h, i) => (
             <ListRow

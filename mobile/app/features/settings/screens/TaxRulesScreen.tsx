@@ -55,7 +55,7 @@ export function TaxRulesScreen() {
           ) : undefined
         }
       />
-      {inForce && (
+      {!!inForce && (
         <Panel>
           <KV
             label={translate("setup.effectiveFrom")}
@@ -67,11 +67,11 @@ export function TaxRulesScreen() {
           ))}
         </Panel>
       )}
-      {rules.loading && <Loading />}
-      {rules.problem && !rules.data && (
+      {!!rules.loading && <Loading />}
+      {!!rules.problem && !rules.data && (
         <ErrorState message={rules.problem.message} onRetry={rules.reload} />
       )}
-      {rules.data && list.length === 0 && <Empty text={translate("empty.tax")} />}
+      {!!rules.data && list.length === 0 && <Empty text={translate("empty.tax")} />}
       {list.map((r: TaxRule, i) => (
         <Disclosure
           key={r.id}
@@ -85,7 +85,7 @@ export function TaxRulesScreen() {
           ))}
         </Disclosure>
       ))}
-      {adding && (
+      {!!adding && (
         <AddRuleSheet
           onClose={() => setAdding(false)}
           onDone={() => {

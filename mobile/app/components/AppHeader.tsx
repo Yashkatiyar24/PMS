@@ -38,7 +38,7 @@ export const AppHeader = observer(function AppHeader() {
             numberOfLines={1}
           />
         </View>
-        {desk && (
+        {!!desk && (
           <Pressable
             onPress={() => setSearch(true)}
             accessibilityRole="button"

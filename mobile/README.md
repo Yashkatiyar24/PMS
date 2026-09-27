@@ -41,6 +41,9 @@ npx expo prebuild --platform android   # first time, and after changing app.json
 npm run android                        # builds the dev client and starts Metro
 ```
 
+ID OCR on Android uses the ML Kit text model from Google Play services, which the phone downloads on first use; on a
+phone without Play services (or before the model arrives) the desk simply types the last four digits.
+
 Without `google-services.json` the build fails at the Firebase plugin; either add the file or temporarily remove
 the two `@react-native-firebase/*` entries from `app.json` `plugins` to build without push.
 
@@ -63,7 +66,27 @@ npm run lint          # eslint, zero warnings allowed
 npm test              # jest: utils, stores, offline queue, navigation linking
 npm run check         # all three
 npm run test:maestro  # Maestro smoke flows (needs a running dev build + seeded API)
+npm run smoke:web     # the whole app in Chromium against the seeded API (see below)
 ```
+
+### Browser smoke (no device needed)
+
+The same code runs on react-native-web, which is how the app is exercised end to end where no emulator or device
+is available. Push, ID OCR and the receipt WebView are phone-only; their web twins (`*.web.ts(x)`) are quiet
+no-ops or open a new tab. With the dev API allowing the web origin:
+
+```bash
+PMS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8081 \
+  mvn -f ../backend spring-boot:run -Dspring-boot.run.profiles=dev
+EXPO_PUBLIC_API_URL=http://localhost:8080 npm run web     # Metro on :8081
+npm run smoke:web                                         # screenshots in e2e/web/shots
+```
+
+`e2e/web/run.mjs` signs in as owner, staff and platform admin and walks 37 steps: walk-in check-in, add and remove
+a charge (staff needs the manager PIN; a wrong PIN is refused), payment, same-day refund and check-out, invoice,
+every tab and settings screen, new booking and cancel, notifications, and the platform property photo upload and
+removal. It borrows the web frontend's Playwright install (`cd ../frontend && npm install`); set `PMS_CHROMIUM` to
+a Chromium binary if Playwright's own is not downloaded. Each step creates its own data, so it can run again.
 
 A Husky pre-commit hook runs lint-staged (eslint + prettier) on staged files; it is installed by `npm install`
 via the `prepare` script (`git config core.hooksPath` points at `mobile/.husky`).

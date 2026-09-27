@@ -199,7 +199,7 @@ function SwitchAccessibilityLabel(props: SwitchInputProps & { role: "on" | "off"
 
   return (
     <View style={$switchAccessibilityStyle}>
-      {accessibilityMode === "text" && shouldLabelBeVisible && (
+      {accessibilityMode === "text" && !!shouldLabelBeVisible && (
         <View
           style={[
             role === "on" && $switchAccessibilityLine,
@@ -210,7 +210,7 @@ function SwitchAccessibilityLabel(props: SwitchInputProps & { role: "on" | "off"
         />
       )}
 
-      {accessibilityMode === "icon" && shouldLabelBeVisible && (
+      {accessibilityMode === "icon" && !!shouldLabelBeVisible && (
         <Image
           style={[$switchAccessibilityIcon, { tintColor: color }]}
           source={role === "off" ? iconRegistry.hidden : iconRegistry.view}

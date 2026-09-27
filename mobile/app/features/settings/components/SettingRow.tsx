@@ -26,8 +26,8 @@ export function SettingRow({ def, value, inDraft, editable, onChange, onReset }:
     <View style={[$row, { borderBottomColor: theme.colors.border }]}>
       <View style={$head}>
         <Text text={label} weight="bold" size="sm" style={{ color: theme.colors.text, flex: 1 }} />
-        {inDraft && <Chip tone="warn" text={translate("settings.edited")} />}
-        {!inDraft && changed && <Chip tone="brand" text={translate("settings.changed")} />}
+        {!!inDraft && <Chip tone="warn" text={translate("settings.edited")} />}
+        {!inDraft && !!changed && <Chip tone="brand" text={translate("settings.changed")} />}
       </View>
       {!!def.description && (
         <Text text={def.description} size="xs" style={{ color: theme.colors.textDim }} />
@@ -42,7 +42,7 @@ export function SettingRow({ def, value, inDraft, editable, onChange, onReset }:
         />
       )}
       <SettingControl def={def} value={value} disabled={!editable} onChange={onChange} />
-      {editable && changed && (
+      {!!editable && !!changed && (
         <Pressable onPress={onReset} accessibilityRole="button">
           <Text
             text={`${translate("settings.resetToDefault")} · ${String(defaultLabel(def))}`}

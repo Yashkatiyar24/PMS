@@ -41,8 +41,8 @@ export function AccommodationTab({
               subtitle={`${formatDate(u.arriveAt)} → ${formatDate(u.departAt)} · ${nightsBetween(u.arriveAt, u.departAt)} ${translate("res.nights").toLowerCase()} · ${rupees(u.ratePaise)}`}
               right={
                 <View style={$actions}>
-                  {released && <Chip tone="neutral" text={translate("stay.released")} />}
-                  {live && canEdit && !released && (
+                  {!!released && <Chip tone="neutral" text={translate("stay.released")} />}
+                  {!!live && !!canEdit && !released && (
                     <Button
                       preset="secondary"
                       size="sm"
@@ -50,7 +50,7 @@ export function AccommodationTab({
                       onPress={() => onChangeUnit(u)}
                     />
                   )}
-                  {live && canEdit && !released && booking.units.length > 1 && (
+                  {!!live && !!canEdit && !released && booking.units.length > 1 && (
                     <Button
                       preset="ghost"
                       size="sm"
@@ -83,7 +83,7 @@ export function AccommodationTab({
           </View>
         </>
       )}
-      {(booking.specialRequests || booking.notes) && (
+      {!!(booking.specialRequests || booking.notes) && (
         <Panel>
           {!!booking.specialRequests && (
             <Text

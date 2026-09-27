@@ -60,11 +60,11 @@ export function ChannelsScreen() {
         subtitle={translate("channels.subtitle")}
         onBack={() => navigation.goBack()}
       />
-      {overview.loading && <Loading />}
-      {overview.problem && !o && (
+      {!!overview.loading && <Loading />}
+      {!!overview.problem && !o && (
         <ErrorState message={overview.problem.message} onRetry={overview.reload} />
       )}
-      {o && (
+      {!!o && (
         <>
           <Panel>
             <View style={$row}>
@@ -182,7 +182,7 @@ export function ChannelsScreen() {
           />
         </>
       )}
-      {menuFor && (
+      {!!menuFor && (
         <ActionSheet
           open={!editing}
           onClose={() => setMenuFor(null)}
@@ -237,7 +237,7 @@ export function ChannelsScreen() {
           ]}
         />
       )}
-      {editing && o && (
+      {!!editing && !!o && (
         <LinkSheet
           link={editing === "new" ? null : editing}
           rooms={o.rooms}

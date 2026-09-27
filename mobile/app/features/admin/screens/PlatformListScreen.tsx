@@ -169,11 +169,11 @@ export const PlatformListScreen = observer(function PlatformListScreen() {
         placeholder={translate("admin.search")}
         autoCorrect={false}
       />
-      {properties.loading && <Loading />}
-      {properties.problem && !properties.data && (
+      {!!properties.loading && <Loading />}
+      {!!properties.problem && !properties.data && (
         <ErrorState message={properties.problem.message} onRetry={properties.reload} />
       )}
-      {properties.data && shown.length === 0 && (
+      {!!properties.data && shown.length === 0 && (
         <Empty text={all.length ? translate("admin.noMatch") : translate("admin.none")} />
       )}
       {shown.length > 0 && (
@@ -208,7 +208,7 @@ export const PlatformListScreen = observer(function PlatformListScreen() {
           ))}
         </ListCard>
       )}
-      {onboarding && (
+      {!!onboarding && (
         <OnboardSheet
           onClose={() => setOnboarding(false)}
           onDone={(r) => {
@@ -223,7 +223,7 @@ export const PlatformListScreen = observer(function PlatformListScreen() {
           }}
         />
       )}
-      {creds && <CredentialsSheet creds={creds} onClose={() => setCreds(null)} />}
+      {!!creds && <CredentialsSheet creds={creds} onClose={() => setCreds(null)} />}
     </Screen>
   )
 })

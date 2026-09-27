@@ -60,7 +60,7 @@ export function MoneySections({
           strong
         />
       </Disclosure>
-      {online?.enabled && (
+      {!!online?.enabled && (
         <Disclosure title={translate("period.online")} summary={String(online.orders.length)}>
           <ListCard>
             {online.orders.map((o, i) => (

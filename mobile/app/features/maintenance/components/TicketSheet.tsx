@@ -66,7 +66,7 @@ export function TicketSheet({ ticket, works, technicians, onClose, onSaved }: Ti
           tone={ticket.priority === "urgent" ? "danger" : "warn"}
           text={translateOr(`priority.${ticket.priority}`, ticket.priority)}
         />
-        {ticket.takesRoomOffSale && (
+        {!!ticket.takesRoomOffSale && (
           <Chip tone="danger" text={translate("rooms.status.maintenance")} />
         )}
       </View>

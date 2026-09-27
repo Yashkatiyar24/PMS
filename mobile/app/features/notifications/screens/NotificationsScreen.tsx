@@ -66,8 +66,8 @@ export const NotificationsScreen = observer(function NotificationsScreen() {
         <KV label={translate("notif.unread")} value={String(notifications.unread)} />
         <KV label={translate("common.all")} value={String(items.length)} />
       </Panel>
-      {notifications.loading && items.length === 0 && <Loading />}
-      {notifications.problem && items.length === 0 && (
+      {!!notifications.loading && items.length === 0 && <Loading />}
+      {!!notifications.problem && items.length === 0 && (
         <ErrorState
           message={notifications.problem.message}
           onRetry={() => void notifications.load()}

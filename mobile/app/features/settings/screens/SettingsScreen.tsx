@@ -80,7 +80,7 @@ export const SettingsScreen = observer(function SettingsScreen() {
         title={translate("settings.title")}
         subtitle={`${user?.name ?? ""} · ${user?.position ? translateOr(`role.${user.position}`, user.position) : ""}`}
       />
-      {user?.propertyId && (
+      {!!user?.propertyId && (
         <Input
           placeholder={translate("settings.search")}
           onFocus={() => navigation.navigate("SettingsGroup", { group: "search" })}
@@ -101,7 +101,7 @@ export const SettingsScreen = observer(function SettingsScreen() {
           </ListCard>
         </>
       )}
-      {can("MANAGER") && user?.propertyId && (
+      {can("MANAGER") && !!user?.propertyId && (
         <>
           <SectionLabel text={translate("settings.setupGroup")} />
           <ListCard>
@@ -113,7 +113,7 @@ export const SettingsScreen = observer(function SettingsScreen() {
                 last={!isSuperAdmin && i === SETUP.length - 1}
               />
             ))}
-            {isSuperAdmin && (
+            {!!isSuperAdmin && (
               <ListRow
                 title={translate("admin.title")}
                 onPress={() => navigation.navigate("PlatformList")}
@@ -123,8 +123,8 @@ export const SettingsScreen = observer(function SettingsScreen() {
           </ListCard>
         </>
       )}
-      {registry.loading && !registry.data && <Loading rows={2} />}
-      {registry.problem && !registry.data && (
+      {!!registry.loading && !registry.data && <Loading rows={2} />}
+      {!!registry.problem && !registry.data && (
         <ErrorState message={registry.problem.message} onRetry={registry.reload} />
       )}
       {groups.length > 0 && (

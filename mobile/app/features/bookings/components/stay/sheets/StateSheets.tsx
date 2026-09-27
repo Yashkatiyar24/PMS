@@ -37,6 +37,7 @@ export function CancelSheet({
           text={title}
           disabled={!ready}
           onPress={() => onDone(reason.trim(), approval.approval)}
+          testID="cancel-submit"
         />
       }
     >
@@ -46,9 +47,10 @@ export function CancelSheet({
           value={reason}
           onChangeText={setReason}
           autoFocus
+          testID="cancel-reason"
         />
       )}
-      {approval.needsPin && <PinField value={approval.pin} onChangeText={approval.setPin} />}
+      {!!approval.needsPin && <PinField value={approval.pin} onChangeText={approval.setPin} />}
     </Sheet>
   )
 }
@@ -98,7 +100,7 @@ export function CheckoutOverrideSheet({
         onChangeText={setReason}
         autoFocus
       />
-      {approval.needsPin && <PinField value={approval.pin} onChangeText={approval.setPin} />}
+      {!!approval.needsPin && <PinField value={approval.pin} onChangeText={approval.setPin} />}
     </Sheet>
   )
 }
@@ -132,7 +134,7 @@ export function ReleaseSheet({
         />
       }
     >
-      {approval.needsPin && <PinField value={approval.pin} onChangeText={approval.setPin} />}
+      {!!approval.needsPin && <PinField value={approval.pin} onChangeText={approval.setPin} />}
     </Sheet>
   )
 }
@@ -175,7 +177,7 @@ export function RemoveLineSheet({
         autoFocus
         testID="remove-line-reason"
       />
-      {approval.needsPin && <PinField value={approval.pin} onChangeText={approval.setPin} />}
+      {!!approval.needsPin && <PinField value={approval.pin} onChangeText={approval.setPin} />}
     </Sheet>
   )
 }

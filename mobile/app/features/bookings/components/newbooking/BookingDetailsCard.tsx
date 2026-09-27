@@ -30,14 +30,14 @@ export function BookingDetailsCard({
         }
         options={DESK_SOURCES.map((s) => ({ value: s, label: translateOr(`source.${s}`, s) }))}
       />
-      {isGroup && (
+      {!!isGroup && (
         <Input
           label={translate("booking.groupName")}
           value={form.groupName}
           onChangeText={(groupName) => patch({ groupName })}
         />
       )}
-      {corporate && (
+      {!!corporate && (
         <Input
           label={translate("booking.organization")}
           value={form.organization}

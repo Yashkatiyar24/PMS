@@ -92,7 +92,7 @@ export function StockItemSheet({
         onChangeText={(t) => setThreshold(t.replace(/[^\d.]/g, ""))}
         keyboardType="decimal-pad"
       />
-      {item && (
+      {!!item && (
         <Switch
           value={active}
           onValueChange={setActive}
@@ -195,7 +195,7 @@ export function MovementSheet({
         style={{ color: theme.colors.text }}
       />
       {!history && <Loading rows={1} />}
-      {history && history.length === 0 && (
+      {!!history && history.length === 0 && (
         <Text
           text={translate("empty.stockHistory")}
           size="sm"

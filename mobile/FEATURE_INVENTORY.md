@@ -11,18 +11,18 @@ data model, settings registry and background jobs.
 
 ## 0. Decisions already taken for the mobile app
 
-| Topic | Decision |
-|---|---|
-| Sign-in | **Existing flow only**: property code + email + password (`POST /api/auth/login`), and phone/email OTP (`/otp/send`, `/otp/verify`). No Google sign-in; `@react-native-google-signin` and `@react-native-firebase/auth` are **not** used. |
-| Session | Backend issues an HttpOnly cookie `pms_session`. The app reads the token from the login response's `Set-Cookie`, stores it in an encrypted MMKV instance and sends `Cookie: pms_session=…` itself. No refresh endpoint exists: `/api/auth/me` on launch/foreground; any 401 → wipe token → login. |
-| Firebase | `@react-native-firebase/app` + `messaging` only, for FCM. Token → `POST /api/notifications/push-token {platform: "android"\|"ios"}`. |
-| Backend change | One small addition: put `kind` and `link` into the FCM `data` map (today it is empty) so a tap can deep-link. Separate commit in `backend/`. |
-| Public pages | `/g/[token]` (guest self-registration) and `/book/[slug]` (public booking page) stay web-only; the app shows/copies the URLs and QR. |
-| Platform admin | Included, built last. |
-| Extra libraries (approved) | `expo-image-picker` (camera/gallery), `react-native-svg` + `react-native-qrcode-svg` (QR), `react-native-webview` + `expo-sharing` (receipts, bills, CSVs), i18next as shipped by Ignite. |
-| Deferred | On-device ID OCR (web uses tesseract.js) — photo + manual entry instead; charts drawn with plain `View`s. |
-| Location / env | App at `mobile/`; `API_BASE_URL` via Expo env; Firebase config files are gitignored placeholders. |
-| Module order | Today → Bookings (tape chart, new, check-in, stay/folio) → Guests → Rooms & housekeeping → Reports → Notifications → Settings (property, rooms, staff, tax, channels) → Operations (maintenance, lost & found, restaurant, stock, expenses, audit) → Portfolio → Platform admin. |
+| Topic                      | Decision                                                                                                                                                                                                                                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sign-in                    | **Existing flow only**: property code + email + password (`POST /api/auth/login`), and phone/email OTP (`/otp/send`, `/otp/verify`). No Google sign-in; `@react-native-google-signin` and `@react-native-firebase/auth` are **not** used.                                                         |
+| Session                    | Backend issues an HttpOnly cookie `pms_session`. The app reads the token from the login response's `Set-Cookie`, stores it in an encrypted MMKV instance and sends `Cookie: pms_session=…` itself. No refresh endpoint exists: `/api/auth/me` on launch/foreground; any 401 → wipe token → login. |
+| Firebase                   | `@react-native-firebase/app` + `messaging` only, for FCM. Token → `POST /api/notifications/push-token {platform: "android"\|"ios"}`.                                                                                                                                                              |
+| Backend change             | One small addition: put `kind` and `link` into the FCM `data` map (today it is empty) so a tap can deep-link. Separate commit in `backend/`.                                                                                                                                                      |
+| Public pages               | `/g/[token]` (guest self-registration) and `/book/[slug]` (public booking page) stay web-only; the app shows/copies the URLs and QR.                                                                                                                                                              |
+| Platform admin             | Included, built last.                                                                                                                                                                                                                                                                             |
+| Extra libraries (approved) | `expo-image-picker` (camera/gallery), `react-native-svg` + `react-native-qrcode-svg` (QR), `react-native-webview` + `expo-sharing` (receipts, bills, CSVs), i18next as shipped by Ignite.                                                                                                         |
+| Different on a phone       | On-device ID OCR uses ML Kit (Android) / Apple Vision (iOS) via `expo-text-extractor` instead of tesseract.js; charts drawn with plain `View`s.                                                                                                                                                   |
+| Location / env             | App at `mobile/`; `API_BASE_URL` via Expo env; Firebase config files are gitignored placeholders.                                                                                                                                                                                                 |
+| Module order               | Today → Bookings (tape chart, new, check-in, stay/folio) → Guests → Rooms & housekeeping → Reports → Notifications → Settings (property, rooms, staff, tax, channels) → Operations (maintenance, lost & found, restaurant, stock, expenses, audit) → Portfolio → Platform admin.                  |
 
 ---
 
@@ -34,27 +34,27 @@ integer-paise money, offline-tolerant desk, WhatsApp/SMS/email/push through an o
 
 Feature modules (web route → module):
 
-| # | Module | Web routes | Optional module flag |
-|---|---|---|---|
-| 1 | Auth & shell | `/login`, user menu, property switcher, billing gate, forced password change | — |
-| 2 | Today (front-desk dashboard) | `/` | — |
-| 3 | Bookings | `/bookings` (tape chart), `/bookings/new`, `/check-in`, `/stays/[id]`, global search | — |
-| 4 | Folio, payments, receipts | inside `/stays/[id]` | — |
-| 5 | Guests | `/guests`, `/guests/[id]`, self-registration QR | — |
-| 6 | Rooms & housekeeping | `/rooms` | — |
-| 7 | Reports | `/reports`, `/reports/period`, CSV exports | — |
-| 8 | Notifications | `/notifications`, unread badge, push | — |
-| 9 | Settings | `/settings` (registry-driven rules), `/settings/property`, `/settings/rooms`, `/settings/tax`, `/settings/staff`, `/settings/channels` | — |
-| 10 | Restaurant / POS | `/restaurant` | `restaurant` |
-| 11 | Stock inventory | `/inventory` | `inventory` |
-| 12 | Expenses | `/expenses` | `expenses` |
-| 13 | Maintenance | `/maintenance`, Report-a-problem sheet | `maintenance` |
-| 14 | Lost & found | `/lost-found` | `lost_found` |
-| 15 | Audit log | `/audit` | `audit` |
-| 16 | Portfolio (multi-property) | `/portfolio` | — |
-| 17 | Offline queue / needs attention | `/needs-attention`, OfflineBar | — |
-| 18 | Platform admin (super admin) | `/admin`, `/admin/[id]` | — |
-| — | Public (web only) | `/g/[token]`, `/book/[slug]` | — |
+| #   | Module                          | Web routes                                                                                                                             | Optional module flag |
+| --- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| 1   | Auth & shell                    | `/login`, user menu, property switcher, billing gate, forced password change                                                           | —                    |
+| 2   | Today (front-desk dashboard)    | `/`                                                                                                                                    | —                    |
+| 3   | Bookings                        | `/bookings` (tape chart), `/bookings/new`, `/check-in`, `/stays/[id]`, global search                                                   | —                    |
+| 4   | Folio, payments, receipts       | inside `/stays/[id]`                                                                                                                   | —                    |
+| 5   | Guests                          | `/guests`, `/guests/[id]`, self-registration QR                                                                                        | —                    |
+| 6   | Rooms & housekeeping            | `/rooms`                                                                                                                               | —                    |
+| 7   | Reports                         | `/reports`, `/reports/period`, CSV exports                                                                                             | —                    |
+| 8   | Notifications                   | `/notifications`, unread badge, push                                                                                                   | —                    |
+| 9   | Settings                        | `/settings` (registry-driven rules), `/settings/property`, `/settings/rooms`, `/settings/tax`, `/settings/staff`, `/settings/channels` | —                    |
+| 10  | Restaurant / POS                | `/restaurant`                                                                                                                          | `restaurant`         |
+| 11  | Stock inventory                 | `/inventory`                                                                                                                           | `inventory`          |
+| 12  | Expenses                        | `/expenses`                                                                                                                            | `expenses`           |
+| 13  | Maintenance                     | `/maintenance`, Report-a-problem sheet                                                                                                 | `maintenance`        |
+| 14  | Lost & found                    | `/lost-found`                                                                                                                          | `lost_found`         |
+| 15  | Audit log                       | `/audit`                                                                                                                               | `audit`              |
+| 16  | Portfolio (multi-property)      | `/portfolio`                                                                                                                           | —                    |
+| 17  | Offline queue / needs attention | `/needs-attention`, OfflineBar                                                                                                         | —                    |
+| 18  | Platform admin (super admin)    | `/admin`, `/admin/[id]`                                                                                                                | —                    |
+| —   | Public (web only)               | `/g/[token]`, `/book/[slug]`                                                                                                           | —                    |
 
 ---
 
@@ -64,14 +64,14 @@ Stored roles (`property_users.role`): `owner, admin, manager, receptionist, staf
 Rank: owner→`OWNER`; admin, manager→`MANAGER`; receptionist, staff→`STAFF`; others→`LIMITED`. `superAdmin` is a user
 flag independent of property roles.
 
-| Role | Permissions |
-|---|---|
-| owner, admin | all 21 |
-| manager | all except `staff.manage` |
+| Role                | Permissions                                                                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| owner, admin        | all 21                                                                                                                                   |
+| manager             | all except `staff.manage`                                                                                                                |
 | receptionist, staff | `reservations.view, reservations.create, reservations.edit, checkin, checkout, housekeeping, maintenance.report, restaurant, lost_found` |
-| housekeeping | `housekeeping, maintenance.report, inventory, lost_found` |
-| maintenance | `maintenance, maintenance.report` |
-| accountant | `reservations.view, revenue.view, refund, invoice.edit, expenses, inventory, audit.view` |
+| housekeeping        | `housekeeping, maintenance.report, inventory, lost_found`                                                                                |
+| maintenance         | `maintenance, maintenance.report`                                                                                                        |
+| accountant          | `reservations.view, revenue.view, refund, invoice.edit, expenses, inventory, audit.view`                                                 |
 
 All permissions: `reservations.view, reservations.create, reservations.edit, reservations.cancel, checkin, checkout,
 discount.apply, refund, invoice.edit, revenue.view, rooms.manage, housekeeping, maintenance, maintenance.report,
@@ -128,6 +128,7 @@ may hold PINs).
 Each entry lists the user-facing features and CRUD flows; request/response shapes are in Part B.
 
 ### 4.1 Auth & shell
+
 - Sign in with property code + email + password; platform admin signs in with email only (no code). Remember the
   last property code. OTP sign-in by phone/email (send → verify).
 - Session: `/me` gives identity, memberships, working property, rank, permissions, billing status.
@@ -138,6 +139,7 @@ Each entry lists the user-facing features and CRUD flows; request/response shape
 - Header: property name, search, unread-notification badge, user menu.
 
 ### 4.2 Today
+
 - Occupancy ring (`booked / (total − blocked)`), free-by-type list, date card.
 - Tiles with counts: Arrivals (+ arrived, "show completed"), Departures, In house, Staying on, Booked today,
   Cancelled today, Double bookings (OTA conflicts → link to Channels). No-show flagged banner.
@@ -146,6 +148,7 @@ Each entry lists the user-facing features and CRUD flows; request/response shape
 - Primary actions: Check-in, New booking.
 
 ### 4.3 Bookings
+
 - **Tape chart**: units grouped by type (rooms then dormitory beds), N days (`tape_chart_days`), per-day occupancy %
   and free count, bars coloured by state with website/OTA icons, blocked bands with reason. Pager, date jump.
   Tap empty cell → check-in (today) or new booking (future) prefilled. Move a stay (room/bed and/or arrival date)
@@ -168,6 +171,7 @@ Each entry lists the user-facing features and CRUD flows; request/response shape
   Hold-until banner for pending; "Took Ns" after check-in.
 
 ### 4.4 Folio, payments, receipts
+
 - Folio = lines (`room_charge, day_use, extra, discount, deposit, deposit_refund, forfeit, adjustment`) with
   CGST/SGST/IGST, payments (`cash, upi, card, bank, cheque, online`; refunds negative), deposit held.
   `balanceDue = total + depositHeld − paid` (computed client-side).
@@ -179,6 +183,7 @@ Each entry lists the user-facing features and CRUD flows; request/response shape
   rendering with printer profile `thermal_58 | thermal_80 | a4`.
 
 ### 4.5 Guests
+
 - In-house list (from Today: in house, arrivals, departures with people/nights left/balance) and the register
   (search by name/phone/city/email).
 - Guest profile: visits, nights, paid, outstanding; current stay; details; all stays; payments.
@@ -188,6 +193,7 @@ Each entry lists the user-facing features and CRUD flows; request/response shape
   copies the ID photo), revoke.
 
 ### 4.6 Rooms & housekeeping
+
 - Grid by building/floor: status (`clean, dirty, cleaning, inspected, blocked, maintenance`), type, occupancy
   (occupied / reserved / n of m beds / available), housekeeper, high-priority flag. Filters: All, Mine, Clean,
   Needs cleaning, Out of order. Subtitle counts.
@@ -196,6 +202,7 @@ Each entry lists the user-facing features and CRUD flows; request/response shape
   low/normal/high, note ≤300). Optimistic update with revert.
 
 ### 4.7 Reports
+
 - Daily: today's collection by mode, occupancy, arrivals/no-shows, departures, unpaid bills (list → stay), cash in
   hand per user with hand-over (manager+), deposits held. Send the daily report now (manager+).
 - Period: presets (today, yesterday, this week, this month, last month, custom): occupancy/ADR/RevPAR/revenue/
@@ -206,13 +213,15 @@ Each entry lists the user-facing features and CRUD flows; request/response shape
 - Forecast (on Today).
 
 ### 4.8 Notifications
+
 - Feed (last 50 for the property, filtered by the caller's permissions), unread count, mark all seen.
   Kinds: `check_in, room_dirty, room_ready, new_booking, booking_cancelled, checkout_reminder, payment_received,
-  payment_failed, payment_short, payment_after_expiry, maintenance, low_stock`; each has a `link` (web path).
+payment_failed, payment_short, payment_after_expiry, maintenance, low_stock`; each has a `link` (web path).
 - Push (mobile-only, backend already supports it): register FCM token per user; server fans out by role at send
   time; `push_enabled` setting per property; invalid tokens auto-deleted.
 
 ### 4.9 Settings
+
 - Rules screen generated from the registry (~70 keys in groups language, stay, reservations, day, people, guests,
   tax, receipts, money, messaging, online, platform). Control per type: BOOL, INT (₹ for `_paise`, unit suffixes,
   min/max), TIME, ENUM, LIST (ordered multi-select), TEXT (maxLength), I18N_TEXT (hi/en). Editability per `who`
@@ -229,43 +238,52 @@ Each entry lists the user-facing features and CRUD flows; request/response shape
   URL, sync now, rotate token, unlink; conflicts list.
 
 ### 4.10 Restaurant / POS (`restaurant`)
+
 - Orders (open; toggle settled): for a counter/table or an in-house guest; lines from the menu or ad-hoc;
   quantities; save. Settle: charge to a room (posts one folio line at `restaurant_tax_bp`), pay here (cash/upi/card
   → bill number), cancel with reason. Printable bill.
 - Menu (manager+): name, category, price, on/off.
 
 ### 4.11 Stock inventory (`inventory`)
+
 - Items by category (`cleaning, linen, toiletries, food, maintenance, stationery`) with unit, on hand, at laundry
   (linen), low-stock flag/threshold; All / Low filter.
 - Movements: `purchase` (unit cost), `consumption` (room), `to_laundry`/`from_laundry` (linen), `adjustment`,
   `opening`; history per item. Low-stock notification.
 
 ### 4.12 Expenses (`expenses`)
+
 - Month view: total, by category (`utilities, maintenance, salaries, cleaning, supplies, food, marketing, other`),
   list. Add (amount, date, category, vendor, mode `cash, upi, card, bank, cheque`, description, bill image/PDF).
   Void with reason. View bill via signed URL.
 
 ### 4.13 Maintenance (`maintenance`)
+
 - Tickets (open / all): room or non-room, issue, description, priority (`low, normal, high, urgent`), status
   (`open, assigned, in_progress, resolved, closed`), assignee (technicians), resolution, takes-room-off-sale.
 - Report a problem (`maintenance.report`, also from Rooms); work tickets (`maintenance`). Resolving a ticket that
   took the room off sale returns it as dirty.
 
 ### 4.14 Lost & found (`lost_found`)
+
 - Items: description, room, found at/by, status (`held, returned, disposed`), returned to, notes. Add, update status.
 
 ### 4.15 Audit log (`audit`)
+
 - Filter by date range, table, free text; entries with actor, action, before/after JSON.
 
 ### 4.16 Portfolio
+
 - One card per property the user has `revenue.view` in: occupancy, collection today, in house, arrivals,
   departures, unpaid bills; open (switch) a property.
 
 ### 4.17 Offline queue / needs attention
+
 - Offline bar (offline / syncing / n saved / n need attention); Needs-attention list of rejected writes with
   server message and "Done".
 
 ### 4.18 Platform admin (`superAdmin`)
+
 - Property list with health (billing, active, quiet ≥14 days, outbox backlog, rooms, users, staying now, 30-day
   bookings, outstanding), filters (all/trial/active/attention/quiet), sort, search, cards/list, CSV export.
 - Onboard property (org, property, city, state, phone, owner name/mobile/email, plan) → property code + owner
@@ -290,17 +308,17 @@ app hand-writes these in `app/features/<module>/types.ts` from Part B.
 
 ## 6. Parity gaps and mobile-only additions
 
-| Item | Status |
-|---|---|
-| On-device ID OCR (tesseract.js, digits-only, fills last-4/Aadhaar) | **Deferred** — manual entry + photo. Listed in FEATURE_PARITY_CHECKLIST as a known gap. |
-| Drag-and-drop on the tape chart | Replaced by long-press → Move sheet (same endpoint). |
-| Recharts occupancy bars | Drawn with plain views. |
-| Marketing landing page on `/login` | Not needed in-app. |
-| `/g/[token]`, `/book/[slug]` | Web only; app shows/copies the links and QR. |
-| Razorpay checkout in the desk app | Not present on the desk web app either (only on the public page) — nothing to port. |
-| Push notifications | Mobile-only addition (backend ready); needs `data.link` in the FCM payload for deep links. |
-| Sessions screen (`GET/DELETE /api/auth/sessions`) | Mobile-only addition; endpoints exist, web has no UI. |
-| Stale-data label on cached lists | Mobile-only addition (engineering rule 8). |
+| Item                                                               | Status                                                                                                                                                    |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| On-device ID OCR (tesseract.js, digits-only, fills last-4/Aadhaar) | `utils/ocr.ts`: ML Kit / Apple Vision on the phone, the web's `extractId` rule; fills only an empty last-4 and sets Aadhaar, then says so (`ocr.filled`). |
+| Drag-and-drop on the tape chart                                    | Replaced by long-press → Move sheet (same endpoint).                                                                                                      |
+| Recharts occupancy bars                                            | Drawn with plain views.                                                                                                                                   |
+| Marketing landing page on `/login`                                 | Not needed in-app.                                                                                                                                        |
+| `/g/[token]`, `/book/[slug]`                                       | Web only; app shows/copies the links and QR.                                                                                                              |
+| Razorpay checkout in the desk app                                  | Not present on the desk web app either (only on the public page) — nothing to port.                                                                       |
+| Push notifications                                                 | Mobile-only addition (backend ready); needs `data.link` in the FCM payload for deep links.                                                                |
+| Sessions screen (`GET/DELETE /api/auth/sessions`)                  | Mobile-only addition; endpoints exist, web has no UI.                                                                                                     |
+| Stale-data label on cached lists                                   | Mobile-only addition (engineering rule 8).                                                                                                                |
 
 ---
 
@@ -327,23 +345,24 @@ CORS: only `Content-Type` and `X-Requested-With` are allowed request headers; al
 
 ### 7.3 Status-code semantics
 
-| Status | Meaning for the client |
-|---|---|
-| `401` | No/invalid/expired/revoked session → send the user to login. Produced by Spring's entry point (**empty body**, no JSON). |
-| `403` | Signed in but refused. JSON body `{"error": "..."}`, sometimes with `"code"`. Do **not** log the user out. Causes: missing `X-Requested-With`; role/permission (`@PreAuthorize`); `ApprovalService` ("Manager approval required", "Wrong approval PIN", "Too many wrong PINs..."); billing gate (see §7.5); `mustChangePassword` (see §7.6); rate-limits on public/login endpoints ("Too many attempts; please wait a few minutes"). |
-| `402` | **Not used.** Billing problems are `403` with a message (see §7.5). |
-| `400` | `BadRequestException` / validation. Body `{"error":"..."}` or `{"error":"Validation failed","fields":{"<field>":"<message>"}}` for `@Valid` bodies. `IllegalArgumentException` → `{"error":"Invalid request"}`. |
-| `404` | `{"error":"<Entity name>"}` e.g. `{"error":"Booking"}`; public endpoints give friendly text. |
-| `409` | `ConflictException` (state machine violations, e.g. "Booking is checked_out", "Folio is settled", "Balance of ₹… is unpaid…") and DB conflicts: "That room or bed is already taken for those dates", "A room with that number already exists", "That email already belongs to someone else", generic "The change conflicts with existing data". |
-| `413` | Non-multipart body > 1 MiB → `{"error":"Request too large"}`. |
-| `500` | `{"error":"Something went wrong"}`. |
-| `204` | Successful writes with no body (`ResponseEntity<Void>`); note `DELETE /api/channels/links/{id}` returns `200` with empty body. |
+| Status | Meaning for the client                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `401`  | No/invalid/expired/revoked session → send the user to login. Produced by Spring's entry point (**empty body**, no JSON).                                                                                                                                                                                                                                                                                                             |
+| `403`  | Signed in but refused. JSON body `{"error": "..."}`, sometimes with `"code"`. Do **not** log the user out. Causes: missing `X-Requested-With`; role/permission (`@PreAuthorize`); `ApprovalService` ("Manager approval required", "Wrong approval PIN", "Too many wrong PINs..."); billing gate (see §7.5); `mustChangePassword` (see §7.6); rate-limits on public/login endpoints ("Too many attempts; please wait a few minutes"). |
+| `402`  | **Not used.** Billing problems are `403` with a message (see §7.5).                                                                                                                                                                                                                                                                                                                                                                  |
+| `400`  | `BadRequestException` / validation. Body `{"error":"..."}` or `{"error":"Validation failed","fields":{"<field>":"<message>"}}` for `@Valid` bodies. `IllegalArgumentException` → `{"error":"Invalid request"}`.                                                                                                                                                                                                                      |
+| `404`  | `{"error":"<Entity name>"}` e.g. `{"error":"Booking"}`; public endpoints give friendly text.                                                                                                                                                                                                                                                                                                                                         |
+| `409`  | `ConflictException` (state machine violations, e.g. "Booking is checked_out", "Folio is settled", "Balance of ₹… is unpaid…") and DB conflicts: "That room or bed is already taken for those dates", "A room with that number already exists", "That email already belongs to someone else", generic "The change conflicts with existing data".                                                                                      |
+| `413`  | Non-multipart body > 1 MiB → `{"error":"Request too large"}`.                                                                                                                                                                                                                                                                                                                                                                        |
+| `500`  | `{"error":"Something went wrong"}`.                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `204`  | Successful writes with no body (`ResponseEntity<Void>`); note `DELETE /api/channels/links/{id}` returns `200` with empty body.                                                                                                                                                                                                                                                                                                       |
 
 ### 7.4 Error body shape
 
 ```json
 { "error": "human readable message", "fields": { "fieldName": "message" } }
 ```
+
 `fields` is present only for bean-validation failures; otherwise omitted (Jackson `default-property-inclusion: non_null`). Special: `{"error":"Set your own password to continue","code":"password_change_required"}`.
 
 ### 7.5 Billing gate (`BillingGate` filter)
@@ -366,20 +385,21 @@ Rank mapping: `owner→OWNER`; `admin, manager→MANAGER`; `receptionist, staff�
 
 Permissions: `reservations.view, reservations.create, reservations.edit, reservations.cancel, checkin, checkout, discount.apply, refund, invoice.edit, revenue.view, rooms.manage, housekeeping, maintenance, maintenance.report, staff.manage, settings.manage, expenses, inventory, restaurant, audit.view, lost_found`.
 
-| Role | Permissions |
-|---|---|
-| owner, admin | all |
-| manager | all except `staff.manage` |
+| Role                | Permissions                                                                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| owner, admin        | all                                                                                                                                      |
+| manager             | all except `staff.manage`                                                                                                                |
 | receptionist, staff | `reservations.view, reservations.create, reservations.edit, checkin, checkout, housekeeping, maintenance.report, restaurant, lost_found` |
-| housekeeping | `housekeeping, maintenance.report, inventory, lost_found` |
-| maintenance | `maintenance, maintenance.report` |
-| accountant | `reservations.view, revenue.view, refund, invoice.edit, expenses, inventory, audit.view` |
+| housekeeping        | `housekeeping, maintenance.report, inventory, lost_found`                                                                                |
+| maintenance         | `maintenance, maintenance.report`                                                                                                        |
+| accountant          | `reservations.view, revenue.view, refund, invoice.edit, expenses, inventory, audit.view`                                                 |
 
 Modules (`properties.modules`, default all on) remove permissions when off: `restaurant→{restaurant}`, `inventory→{inventory}`, `expenses→{expenses}`, `maintenance→{maintenance, maintenance.report}`, `lost_found→{lost_found}`, `audit→{audit.view}`. The effective set is what `me.permissions` returns — drive UI visibility from it.
 
 ### 7.8 Approvals (`approverId` + `pin`)
 
 Actions that reduce a bill or override a rule accept `approverId: uuid?` and `pin: string?`. Rule (`ApprovalService.require(actor, permission, approverId, pin)`):
+
 - If the actor's own permissions include the needed permission → approved as themselves; `pin` ignored.
 - Else `pin` is required (4–6 digits) and must match the approval PIN of an **active** member of the property whose role holds that permission. If `approverId` is given and differs from the actor, only that person's PIN is checked; otherwise any holder's PIN. Returns the approver's user id, recorded on the audited change.
 - Failures: `403 Manager approval required` (no pin), `403 Wrong approval PIN`, `403 Too many wrong PINs; try again in a few minutes` (5 wrong in 15 min per actor).
@@ -388,18 +408,20 @@ Actions that reduce a bill or override a rule accept `approverId: uuid?` and `pi
 ### 7.9 Idempotency (`clientUuid`)
 
 Offline-queue replays are made safe by a client-generated UUID:
+
 - `POST /api/bookings/check-in` and `POST /api/bookings/reserve`: `clientUuid` stored in `bookings.client_uuid` (unique per property). A replay returns the existing booking (200, same shape) instead of creating another.
 - `POST /api/folios/{id}/payments` and `/refunds`: `PaymentInput.clientUuid` stored in `payments.client_uuid`; a replayed payment returns the folio unchanged.
 - Public `POST /api/public/book/{slug}`: `clientUuid` matched on `source='website'`.
-Always generate a fresh v4 UUID per logical action and reuse it on retry.
+  Always generate a fresh v4 UUID per logical action and reuse it on retry.
 
 ### 7.10 Multipart uploads
 
 `multipart/form-data` with a single part named **`file`**. Server-wide limits: 5 MB per file, 6 MB per request. Content type is verified against magic bytes (`Uploads.checked`): accepted `image/jpeg`, `image/png`, `image/webp` (and `application/pdf` for expense receipts). Additional limits:
+
 - Guest ID photo / guest photo / self-registration photo: `≤ id_photo_max_kb × 2` KB (default 600 KB) — compress client-side to `id_photo_max_kb` (default 300 KB).
 - Property photo (desk and admin): ≤ 5 MB.
 - Expense receipt: ≤ 5 MB, image or PDF.
-Files are stored in object storage and served only through short-lived signed URLs (`/api/files/**?exp=&sig=` for local storage, or S3 presigned URLs), obtained from the `*-url` endpoints; URLs expire after 5 minutes (24 h for WhatsApp attachments).
+  Files are stored in object storage and served only through short-lived signed URLs (`/api/files/**?exp=&sig=` for local storage, or S3 presigned URLs), obtained from the `*-url` endpoints; URLs expire after 5 minutes (24 h for WhatsApp attachments).
 
 ### 7.11 Public (no session) endpoints
 
@@ -423,35 +445,38 @@ Files are stored in object storage and served only through short-lived signed UR
 Records: `TargetRequest{target: string!}`, `VerifyRequest{target!, code!, deviceName?}`, `LoginRequest{email?, code?, password!, deviceName?}`, `SwitchRequest{propertyId: uuid}`.
 
 `CurrentUser` (response of `/me`):
+
 ```
 { id: uuid, name: string, superAdmin: bool, sessionId: uuid, propertyId: uuid?, role: "LIMITED"|"STAFF"|"MANAGER"|"OWNER"|null,
   memberships: [{ propertyId: uuid, propertyName: string, role: Role, position: string }],
   position: string?   // stored role: owner|admin|manager|receptionist|staff|housekeeping|accountant|maintenance
   permissions: string[], billingStatus: "trial"|"active"|"overdue"|"readonly"|"closed"|null, mustChangePassword: bool }
 ```
+
 `SessionView{id: uuid, deviceName: string, createdAt: datetime, lastSeenAt: datetime, current: bool}`.
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `POST /api/auth/otp/send` | public | `{target}` phone (10 digits, `+91` stripped) or email | `{"status":"sent"}` | Same answer for unknown targets. 3 sends per 15 min per target (400 "Too many codes requested…"); 10/min per IP (403). 400 if SMS/email provider is `off`. OTP: 6 digits, TTL 5 min, 5 verify attempts. |
-| `POST /api/auth/otp/verify` | public | `{target, code, deviceName?}` | `{"status":"ok","expiresAt":datetime}` + `Set-Cookie` | 400 "Wrong or expired code" / "Too many wrong attempts. Request a new code." |
-| `POST /api/auth/login` | public | `{email, code?, password, deviceName?}` | `{"status":"ok","expiresAt"}` + `Set-Cookie` | `code` = property code (e.g. `DH1234`, alphanumerics, case-insensitive) → property login for an active member; without `code` → platform (super admin) login by email. Wrong → 400 "Wrong property code, email or password". Lockouts 403 after 10 wrong per account+IP / 50 per IP / 100 per account in 15 min. When logging in by code the session starts in that property. |
-| `GET /api/auth/me` | any session | — | `CurrentUser` | Works in every billing state and under mustChangePassword. |
-| `POST /api/auth/switch-property` | any session | `{propertyId}` | 204 | 403 "Not a member of that property". Then re-fetch `/me`. |
-| `POST /api/auth/logout` | any session | — | 204 + clears cookie | Revokes this session. |
-| `GET /api/auth/sessions` | any session | — | `SessionView[]` | Live sessions of this user, newest activity first. |
-| `DELETE /api/auth/sessions/{id}` | any session | — | 204 | Revoke one of your own sessions. |
+| Method & path                    | Auth        | Request                                               | Response                                              | Notes                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------------------------- | ----------- | ----------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/auth/otp/send`        | public      | `{target}` phone (10 digits, `+91` stripped) or email | `{"status":"sent"}`                                   | Same answer for unknown targets. 3 sends per 15 min per target (400 "Too many codes requested…"); 10/min per IP (403). 400 if SMS/email provider is `off`. OTP: 6 digits, TTL 5 min, 5 verify attempts.                                                                                                                                                                       |
+| `POST /api/auth/otp/verify`      | public      | `{target, code, deviceName?}`                         | `{"status":"ok","expiresAt":datetime}` + `Set-Cookie` | 400 "Wrong or expired code" / "Too many wrong attempts. Request a new code."                                                                                                                                                                                                                                                                                                  |
+| `POST /api/auth/login`           | public      | `{email, code?, password, deviceName?}`               | `{"status":"ok","expiresAt"}` + `Set-Cookie`          | `code` = property code (e.g. `DH1234`, alphanumerics, case-insensitive) → property login for an active member; without `code` → platform (super admin) login by email. Wrong → 400 "Wrong property code, email or password". Lockouts 403 after 10 wrong per account+IP / 50 per IP / 100 per account in 15 min. When logging in by code the session starts in that property. |
+| `GET /api/auth/me`               | any session | —                                                     | `CurrentUser`                                         | Works in every billing state and under mustChangePassword.                                                                                                                                                                                                                                                                                                                    |
+| `POST /api/auth/switch-property` | any session | `{propertyId}`                                        | 204                                                   | 403 "Not a member of that property". Then re-fetch `/me`.                                                                                                                                                                                                                                                                                                                     |
+| `POST /api/auth/logout`          | any session | —                                                     | 204 + clears cookie                                   | Revokes this session.                                                                                                                                                                                                                                                                                                                                                         |
+| `GET /api/auth/sessions`         | any session | —                                                     | `SessionView[]`                                       | Live sessions of this user, newest activity first.                                                                                                                                                                                                                                                                                                                            |
+| `DELETE /api/auth/sessions/{id}` | any session | —                                                     | 204                                                   | Revoke one of your own sessions.                                                                                                                                                                                                                                                                                                                                              |
 
 ### 8.2 Health — `HealthController`
 
-| Method & path | Auth | Response |
-|---|---|---|
-| `GET /api/health` | public | `{"status":"ok"}` (500 if DB down) |
+| Method & path             | Auth   | Response                           |
+| ------------------------- | ------ | ---------------------------------- |
+| `GET /api/health`         | public | `{"status":"ok"}` (500 if DB down) |
 | `GET /actuator/health/**` | public | Spring actuator liveness/readiness |
 
 ### 8.3 Bookings — `BookingController` (`/api/bookings`, class default `STAFF`)
 
 **Booking** (the response of almost every endpoint here):
+
 ```
 { id: uuid, guestId: uuid, guestName: string, guestPhone: string, state: BookingState, source: BookingSource,
   arriveAt: datetime, departAt: datetime, checkedInAt: datetime?, checkedOutAt: datetime?,
@@ -463,9 +488,11 @@ Records: `TargetRequest{target: string!}`, `VerifyRequest{target!, code!, device
 Unit   { id: uuid, roomId: uuid, roomNumber: string, bedId: uuid?, bedLabel: string?, ratePaise: long, arriveAt: datetime, departAt: datetime, autoAssigned: bool }
 Member { id: uuid?, name: string, adult: bool, idType: IdType?, idLast4: string?, unitId: uuid? }
 ```
+
 `BookingState`: `pending | reserved | checked_in | checked_out | no_show | cancelled`. `BookingSource`: `walk_in | phone | direct | travel_agent | corporate | group | other | website | ota` (desk may send the first seven). `IdType`: `aadhaar | voter | dl | passport | other`.
 
 Request records:
+
 ```
 UnitRequest        { roomId: uuid, bedId: uuid?, ratePaise: long? }       // ratePaise = price override → needs discount.apply
 GuestInput         { name!, phone, city, address, nationality, idType, idLast4, passportNo, visaNo, visaExpiry: date, notes, email, state, country }
@@ -484,30 +511,31 @@ ChangeUnitInput    { target: UnitRequest!, approverId?, pin? }
 MoveInput          { unitId: uuid?, roomId: uuid?, bedId: uuid?, arriveOn: date? }
 DetailsInput       { details: Details?, notes: string? }
 ```
+
 Response records: `SearchHit{id, state, arriveAt, departAt, guestName, phone, units: string}`; `Activity{at: datetime, table: string, action: string, userName: string?}`; `FreeUnit{roomId, bedId?, roomNumber, bedLabel?, roomTypeId, typeName, ratePaise, dormitory: bool, status: RoomStatus, building: string, floor: int}`.
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `GET /api/bookings/today` | `PERM_reservations.view` | — | `{date: date, arrivals: Booking[], arrived: Booking[], inHouse: Booking[], departures: Booking[], flaggedNoShow: Booking[], booked: Booking[], cancelled: Booking[], freeByType: [{type_name, free}], channelConflicts: int, totalUnits: int, blockedUnits: int, bookedUnits: int}` | The dashboard call. `arrivals` = reserved/pending arriving today; `booked`/`cancelled` = created/cancelled today. |
-| `GET /api/bookings/tape-chart?start=date&days=int` | `PERM_reservations.view` | — | `{start: date, days: int, units: [{room_id, number, floor, status, blocked_reason, type_name, is_dormitory, bed_id, label}], occupancy: [{unit_id, room_id, bed_id, arrive_at, depart_at, booking_id, state, source, guest_name}]}` | `days` clamped 1..60, default `tape_chart_days`. Raw snake_case rows. |
-| `GET /api/bookings/search?q=` | `PERM_reservations.view` | — | `SearchHit[]` (≤ 8) | Name ilike, phone (≥4 digits), or booking-id prefix. `q` < 2 chars → `[]`. |
-| `GET /api/bookings/availability?arrive=datetime&depart=datetime` | `PERM_reservations.view` | — | `FreeUnit[]` | Free rooms/beds for the whole span; advisory (DB constraint decides). |
-| `GET /api/bookings/{id}` | `PERM_reservations.view` | — | `Booking` | 404 `{"error":"Booking"}` |
-| `GET /api/bookings/{id}/activity` | `PERM_reservations.view` | — | `Activity[]` (≤ 60, newest first) | From audit log across booking, units, folio, lines, payments, receipts. |
-| `POST /api/bookings/check-in` | `PERM_checkin` | `CheckInRequest` | `Booking` (state `checked_in`) | Walk-in. Departure = `departAt` or `nights` (default 1) at `checkout_time`. 400s: consent required (if `consent_required`), no units, ID photo required (if `id_photo_required` and guest has none and no `idPhotoSkippedReason`). Any `ratePaise` needs `discount.apply` (403 otherwise). Creates folio, room charges, deposit line, advance payment. Notifies housekeeping (`check_in`). |
-| `POST /api/bookings/reserve` | `PERM_reservations.create` | `ReservationRequest` | `Booking` (`reserved`, or `pending` when `tentative`) | `tentative` → `holdUntil = now + tentative_hold_hours`; rooms auto-released when it lapses. Empty `units` → auto-assign from `roomTypeId`. Advance recorded with `advanceMode`. Sends WhatsApp confirmation (if not tentative). |
-| `POST /api/bookings/{id}/arrive` | `PERM_checkin` | — | `Booking` (`checked_in`) | reserved/pending → checked_in. 409 if room off-sale (blocked/maintenance). |
-| `POST /api/bookings/{id}/check-out` | `PERM_checkout` | `CheckOutInput?` | `Booking` (`checked_out`) | Only from `checked_in`. Early departure lowers bill → needs discount approval (403 with amount). Unpaid balance → 409 unless `overrideReason` + approval → folio `written_off`. Overpaid → 409 "refund first". Rooms → `dirty`. |
-| `PATCH /api/bookings/{id}/dates` | `PERM_reservations.edit` | `DatesInput` | `Booking` | Change departure. Earlier than current → approval (`discount.apply`). 409 for checked_out/cancelled/no_show. |
-| `PATCH /api/bookings/{id}/units/{unitId}` | `PERM_reservations.edit` | `ChangeUnitInput` | `Booking` | Room/bed transfer for remaining nights; `target.ratePaise` needs approval. |
-| `POST /api/bookings/{id}/move` | `PERM_reservations.edit` | `MoveInput` | `Booking` | Calendar drag: shift arrival date (reserved/pending only, not into past) and/or move one unit. |
-| `POST /api/bookings/{id}/cancel` | `PERM_reservations.edit` (+ `reservations.cancel` approval) | `ReasonInput` | `Booking` (`cancelled`) | Only reserved/pending. `reason` required. Releases units and removes room charges (any advance stays on the folio as credit to refund via `/refunds`); notifies `booking_cancelled`; WhatsApp to opted-in guest when `whatsapp_guest_updates`. |
-| `POST /api/bookings/{id}/no-show` | `PERM_reservations.edit` (+ `reservations.cancel` approval) | `Approval?` | `Booking` (`no_show`) | Only reserved/pending. Applies `noshow_policy` (`forfeit` keeps advance as `forfeit` line; `refund` refunds cash; `partial` keeps `noshow_partial_pct`). |
-| `POST /api/bookings/{id}/confirm` | `PERM_reservations.edit` | — | `Booking` (`reserved`) | Only from `pending`. Sends confirmation message. |
-| `PATCH /api/bookings/{id}` | `PERM_reservations.edit` | `DetailsInput` | `Booking` | Update special requests / group / organisation / GSTIN / notes. |
-| `POST /api/bookings/{id}/units` | `PERM_reservations.edit` | `UnitRequest` | `Booking` | Add another room/bed for the remaining nights. |
-| `POST /api/bookings/{id}/units/{unitId}/release` | `PERM_reservations.edit` (+ `discount.apply` approval) | `Approval?` | `Booking` | Release one unit early (part of a group leaves). |
-| `PUT /api/bookings/{id}/members` | `PERM_reservations.edit` | `Member[]` | `Booking` | Replace the party list (names for the police register, `unitId` = where they sleep). Updates `memberCount`, `adults`, `children`. |
+| Method & path                                                    | Auth                                                        | Request              | Response                                                                                                                                                                                                                                                                            | Notes                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------------------------------------------------- | ----------------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /api/bookings/today`                                        | `PERM_reservations.view`                                    | —                    | `{date: date, arrivals: Booking[], arrived: Booking[], inHouse: Booking[], departures: Booking[], flaggedNoShow: Booking[], booked: Booking[], cancelled: Booking[], freeByType: [{type_name, free}], channelConflicts: int, totalUnits: int, blockedUnits: int, bookedUnits: int}` | The dashboard call. `arrivals` = reserved/pending arriving today; `booked`/`cancelled` = created/cancelled today.                                                                                                                                                                                                                                                                          |
+| `GET /api/bookings/tape-chart?start=date&days=int`               | `PERM_reservations.view`                                    | —                    | `{start: date, days: int, units: [{room_id, number, floor, status, blocked_reason, type_name, is_dormitory, bed_id, label}], occupancy: [{unit_id, room_id, bed_id, arrive_at, depart_at, booking_id, state, source, guest_name}]}`                                                 | `days` clamped 1..60, default `tape_chart_days`. Raw snake_case rows.                                                                                                                                                                                                                                                                                                                      |
+| `GET /api/bookings/search?q=`                                    | `PERM_reservations.view`                                    | —                    | `SearchHit[]` (≤ 8)                                                                                                                                                                                                                                                                 | Name ilike, phone (≥4 digits), or booking-id prefix. `q` < 2 chars → `[]`.                                                                                                                                                                                                                                                                                                                 |
+| `GET /api/bookings/availability?arrive=datetime&depart=datetime` | `PERM_reservations.view`                                    | —                    | `FreeUnit[]`                                                                                                                                                                                                                                                                        | Free rooms/beds for the whole span; advisory (DB constraint decides).                                                                                                                                                                                                                                                                                                                      |
+| `GET /api/bookings/{id}`                                         | `PERM_reservations.view`                                    | —                    | `Booking`                                                                                                                                                                                                                                                                           | 404 `{"error":"Booking"}`                                                                                                                                                                                                                                                                                                                                                                  |
+| `GET /api/bookings/{id}/activity`                                | `PERM_reservations.view`                                    | —                    | `Activity[]` (≤ 60, newest first)                                                                                                                                                                                                                                                   | From audit log across booking, units, folio, lines, payments, receipts.                                                                                                                                                                                                                                                                                                                    |
+| `POST /api/bookings/check-in`                                    | `PERM_checkin`                                              | `CheckInRequest`     | `Booking` (state `checked_in`)                                                                                                                                                                                                                                                      | Walk-in. Departure = `departAt` or `nights` (default 1) at `checkout_time`. 400s: consent required (if `consent_required`), no units, ID photo required (if `id_photo_required` and guest has none and no `idPhotoSkippedReason`). Any `ratePaise` needs `discount.apply` (403 otherwise). Creates folio, room charges, deposit line, advance payment. Notifies housekeeping (`check_in`). |
+| `POST /api/bookings/reserve`                                     | `PERM_reservations.create`                                  | `ReservationRequest` | `Booking` (`reserved`, or `pending` when `tentative`)                                                                                                                                                                                                                               | `tentative` → `holdUntil = now + tentative_hold_hours`; rooms auto-released when it lapses. Empty `units` → auto-assign from `roomTypeId`. Advance recorded with `advanceMode`. Sends WhatsApp confirmation (if not tentative).                                                                                                                                                            |
+| `POST /api/bookings/{id}/arrive`                                 | `PERM_checkin`                                              | —                    | `Booking` (`checked_in`)                                                                                                                                                                                                                                                            | reserved/pending → checked_in. 409 if room off-sale (blocked/maintenance).                                                                                                                                                                                                                                                                                                                 |
+| `POST /api/bookings/{id}/check-out`                              | `PERM_checkout`                                             | `CheckOutInput?`     | `Booking` (`checked_out`)                                                                                                                                                                                                                                                           | Only from `checked_in`. Early departure lowers bill → needs discount approval (403 with amount). Unpaid balance → 409 unless `overrideReason` + approval → folio `written_off`. Overpaid → 409 "refund first". Rooms → `dirty`.                                                                                                                                                            |
+| `PATCH /api/bookings/{id}/dates`                                 | `PERM_reservations.edit`                                    | `DatesInput`         | `Booking`                                                                                                                                                                                                                                                                           | Change departure. Earlier than current → approval (`discount.apply`). 409 for checked_out/cancelled/no_show.                                                                                                                                                                                                                                                                               |
+| `PATCH /api/bookings/{id}/units/{unitId}`                        | `PERM_reservations.edit`                                    | `ChangeUnitInput`    | `Booking`                                                                                                                                                                                                                                                                           | Room/bed transfer for remaining nights; `target.ratePaise` needs approval.                                                                                                                                                                                                                                                                                                                 |
+| `POST /api/bookings/{id}/move`                                   | `PERM_reservations.edit`                                    | `MoveInput`          | `Booking`                                                                                                                                                                                                                                                                           | Calendar drag: shift arrival date (reserved/pending only, not into past) and/or move one unit.                                                                                                                                                                                                                                                                                             |
+| `POST /api/bookings/{id}/cancel`                                 | `PERM_reservations.edit` (+ `reservations.cancel` approval) | `ReasonInput`        | `Booking` (`cancelled`)                                                                                                                                                                                                                                                             | Only reserved/pending. `reason` required. Releases units and removes room charges (any advance stays on the folio as credit to refund via `/refunds`); notifies `booking_cancelled`; WhatsApp to opted-in guest when `whatsapp_guest_updates`.                                                                                                                                             |
+| `POST /api/bookings/{id}/no-show`                                | `PERM_reservations.edit` (+ `reservations.cancel` approval) | `Approval?`          | `Booking` (`no_show`)                                                                                                                                                                                                                                                               | Only reserved/pending. Applies `noshow_policy` (`forfeit` keeps advance as `forfeit` line; `refund` refunds cash; `partial` keeps `noshow_partial_pct`).                                                                                                                                                                                                                                   |
+| `POST /api/bookings/{id}/confirm`                                | `PERM_reservations.edit`                                    | —                    | `Booking` (`reserved`)                                                                                                                                                                                                                                                              | Only from `pending`. Sends confirmation message.                                                                                                                                                                                                                                                                                                                                           |
+| `PATCH /api/bookings/{id}`                                       | `PERM_reservations.edit`                                    | `DetailsInput`       | `Booking`                                                                                                                                                                                                                                                                           | Update special requests / group / organisation / GSTIN / notes.                                                                                                                                                                                                                                                                                                                            |
+| `POST /api/bookings/{id}/units`                                  | `PERM_reservations.edit`                                    | `UnitRequest`        | `Booking`                                                                                                                                                                                                                                                                           | Add another room/bed for the remaining nights.                                                                                                                                                                                                                                                                                                                                             |
+| `POST /api/bookings/{id}/units/{unitId}/release`                 | `PERM_reservations.edit` (+ `discount.apply` approval)      | `Approval?`          | `Booking`                                                                                                                                                                                                                                                                           | Release one unit early (part of a group leaves).                                                                                                                                                                                                                                                                                                                                           |
+| `PUT /api/bookings/{id}/members`                                 | `PERM_reservations.edit`                                    | `Member[]`           | `Booking`                                                                                                                                                                                                                                                                           | Replace the party list (names for the police register, `unitId` = where they sleep). Updates `memberCount`, `adults`, `children`.                                                                                                                                                                                                                                                          |
 
 ### 8.4 Folios (bills) — `FolioController` (`/api/folios`, class default `STAFF`)
 
@@ -528,20 +556,21 @@ CreditNoteRequest { amountPaise: long, reason: string, approverId?, pin? }
 Receipt { id: uuid, folioId: uuid, kind: "invoice"|"donation"|"credit_note"|"provisional"|"pos_bill", number: string, fy: string (e.g. "2026-27"), amountPaise: long,
           snapshot: object (immutable copy of what was printed), referencesReceiptId: uuid?, issuedAt: datetime, pdfKey: string? }
 ```
+
 Derived: `balanceDue = totalPaise + depositHeldPaise − paidPaise`. `total` excludes deposits.
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `GET /api/folios/{id}` | `PERM_reservations.view` | — | `Folio` | |
-| `GET /api/folios/by-booking/{bookingId}` | `PERM_reservations.view` | — | `Folio` | |
-| `POST /api/folios/{id}/lines` | STAFF (+ `discount.apply` approval for `discount`/`adjustment`) | `LineRequest` | `Folio` | 400 unknown kind / qty<1 / blank description; discounts must be negative with a reason. Tax computed server-side. |
-| `DELETE /api/folios/{id}/lines/{lineId}` | STAFF (+ `discount.apply` approval) | `RemoveLineRequest` (body on DELETE) | `Folio` | |
-| `POST /api/folios/{id}/payments` | STAFF | `PaymentInput` | `Folio` | 400 amount ≤0 / mode not enabled; 409 folio not open. Idempotent via `clientUuid`. Notifies `payment_received`; WhatsApp to opted-in guest if enabled. |
-| `POST /api/folios/{id}/refunds` | `STAFF or PERM_refund` (+ `refund` approval) | `RefundRequest` | `Folio` | Reason required; cannot exceed `paidPaise`. `payment.mode == "online"` refunds through the gateway (`PaymentService.refund`). |
-| `GET /api/folios/{id}/receipts` | `PERM_reservations.view` | — | `Receipt[]` | |
-| `POST /api/folios/{id}/receipts/invoice` | `STAFF or PERM_invoice.edit` | — | `Receipt` | Kind `invoice`, or `donation` when donation mode is on and CA-confirmed. Number from `receipt_number_format`. Queues WhatsApp `checkout_receipt` with PDF. |
-| `POST /api/folios/{id}/receipts/provisional?amountPaise=long` | STAFF | query param | `Receipt` | Receipt for money just received (advance). `amountPaise` > 0. |
-| `POST /api/folios/receipts/{receiptId}/credit-note` | `STAFF or PERM_invoice.edit` (+ `invoice.edit` approval) | `CreditNoteRequest` | `Receipt` (kind `credit_note`, `referencesReceiptId` = invoice) | 400 unless target is invoice/donation, amount>0, reason present, ≤ remaining invoice amount. |
+| Method & path                                                 | Auth                                                            | Request                              | Response                                                        | Notes                                                                                                                                                      |
+| ------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------ | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/folios/{id}`                                        | `PERM_reservations.view`                                        | —                                    | `Folio`                                                         |                                                                                                                                                            |
+| `GET /api/folios/by-booking/{bookingId}`                      | `PERM_reservations.view`                                        | —                                    | `Folio`                                                         |                                                                                                                                                            |
+| `POST /api/folios/{id}/lines`                                 | STAFF (+ `discount.apply` approval for `discount`/`adjustment`) | `LineRequest`                        | `Folio`                                                         | 400 unknown kind / qty<1 / blank description; discounts must be negative with a reason. Tax computed server-side.                                          |
+| `DELETE /api/folios/{id}/lines/{lineId}`                      | STAFF (+ `discount.apply` approval)                             | `RemoveLineRequest` (body on DELETE) | `Folio`                                                         |                                                                                                                                                            |
+| `POST /api/folios/{id}/payments`                              | STAFF                                                           | `PaymentInput`                       | `Folio`                                                         | 400 amount ≤0 / mode not enabled; 409 folio not open. Idempotent via `clientUuid`. Notifies `payment_received`; WhatsApp to opted-in guest if enabled.     |
+| `POST /api/folios/{id}/refunds`                               | `STAFF or PERM_refund` (+ `refund` approval)                    | `RefundRequest`                      | `Folio`                                                         | Reason required; cannot exceed `paidPaise`. `payment.mode == "online"` refunds through the gateway (`PaymentService.refund`).                              |
+| `GET /api/folios/{id}/receipts`                               | `PERM_reservations.view`                                        | —                                    | `Receipt[]`                                                     |                                                                                                                                                            |
+| `POST /api/folios/{id}/receipts/invoice`                      | `STAFF or PERM_invoice.edit`                                    | —                                    | `Receipt`                                                       | Kind `invoice`, or `donation` when donation mode is on and CA-confirmed. Number from `receipt_number_format`. Queues WhatsApp `checkout_receipt` with PDF. |
+| `POST /api/folios/{id}/receipts/provisional?amountPaise=long` | STAFF                                                           | query param                          | `Receipt`                                                       | Receipt for money just received (advance). `amountPaise` > 0.                                                                                              |
+| `POST /api/folios/receipts/{receiptId}/credit-note`           | `STAFF or PERM_invoice.edit` (+ `invoice.edit` approval)        | `CreditNoteRequest`                  | `Receipt` (kind `credit_note`, `referencesReceiptId` = invoice) | 400 unless target is invoice/donation, amount>0, reason present, ≤ remaining invoice amount.                                                               |
 
 ### 8.5 Online payments (desk view) — `PaymentController` (`/api/payments/online`, `PERM_revenue.view`)
 
@@ -550,10 +579,10 @@ Order { id: uuid, bookingId: uuid, guestName: string, gatewayOrderId: string, am
         gatewayPaymentId: string?, paymentId: uuid?, failureReason: string?, createdAt: datetime, updatedAt: datetime }
 ```
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `GET /api/payments/online?from=date&to=date` | `PERM_revenue.view` | — | `{enabled: bool, orders: Order[]}` | Orders created in the range (≤500). |
-| `POST /api/payments/online/{id}/check` | `PERM_revenue.view` | — | `Order` | Ask the gateway now and apply the result. 400 if gateway not set up. |
+| Method & path                                | Auth                | Request | Response                           | Notes                                                                |
+| -------------------------------------------- | ------------------- | ------- | ---------------------------------- | -------------------------------------------------------------------- |
+| `GET /api/payments/online?from=date&to=date` | `PERM_revenue.view` | —       | `{enabled: bool, orders: Order[]}` | Orders created in the range (≤500).                                  |
+| `POST /api/payments/online/{id}/check`       | `PERM_revenue.view` | —       | `Order`                            | Ask the gateway now and apply the result. 400 if gateway not set up. |
 
 ### 8.6 Guests — `GuestController` (`/api/guests`, class default `STAFF`)
 
@@ -564,19 +593,20 @@ GuestInput { name!, phone (10 digits or empty), city, address, nationality, idTy
 Stay    { bookingId, state, arriveAt, departAt, units: string, totalPaise, paidPaise, balancePaise, source }
 Profile { guest: Guest, current: Stay?, stays: Stay[], payments: [{receivedAt, mode, amountPaise, refund: bool, bookingId}], visits: int, nights: long, spentPaise: long, outstandingPaise: long }
 ```
+
 Validation: any 12-digit number anywhere → 400 "Do not enter a full Aadhaar number; only the last 4 digits".
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `GET /api/guests?phone=` or `?q=` | `PERM_reservations.view` | — | `Guest[]` | `phone` exact lookup, else free-text search. |
-| `GET /api/guests/{id}` | `PERM_reservations.view` | — | `Guest` | |
-| `POST /api/guests` | STAFF | `GuestInput` | `Guest` | |
-| `PUT /api/guests/{id}` | STAFF | `GuestInput` | `Guest` | |
-| `POST /api/guests/{id}/id-photo` | STAFF | multipart `file` (jpeg/png/webp) | `Guest` | ID document photo. |
-| `GET /api/guests/{id}/id-photo-url` | `PERM_checkin` | — | `{"url": string}` | Signed URL, ~5 min. Access is audited. |
-| `GET /api/guests/{id}/profile` | `PERM_reservations.view` | — | `Profile` | |
-| `POST /api/guests/{id}/photo` | STAFF | multipart `file` | `Guest` | Guest's face photo. |
-| `GET /api/guests/{id}/photo-url` | `PERM_checkin` | — | `{"url": string}` | |
+| Method & path                       | Auth                     | Request                          | Response          | Notes                                        |
+| ----------------------------------- | ------------------------ | -------------------------------- | ----------------- | -------------------------------------------- |
+| `GET /api/guests?phone=` or `?q=`   | `PERM_reservations.view` | —                                | `Guest[]`         | `phone` exact lookup, else free-text search. |
+| `GET /api/guests/{id}`              | `PERM_reservations.view` | —                                | `Guest`           |                                              |
+| `POST /api/guests`                  | STAFF                    | `GuestInput`                     | `Guest`           |                                              |
+| `PUT /api/guests/{id}`              | STAFF                    | `GuestInput`                     | `Guest`           |                                              |
+| `POST /api/guests/{id}/id-photo`    | STAFF                    | multipart `file` (jpeg/png/webp) | `Guest`           | ID document photo.                           |
+| `GET /api/guests/{id}/id-photo-url` | `PERM_checkin`           | —                                | `{"url": string}` | Signed URL, ~5 min. Access is audited.       |
+| `GET /api/guests/{id}/profile`      | `PERM_reservations.view` | —                                | `Profile`         |                                              |
+| `POST /api/guests/{id}/photo`       | STAFF                    | multipart `file`                 | `Guest`           | Guest's face photo.                          |
+| `GET /api/guests/{id}/photo-url`    | `PERM_checkin`           | —                                | `{"url": string}` |                                              |
 
 ### 8.7 Rooms & housekeeping — `InventoryController` (`/api`, class default `STAFF`; `SEES_ROOMS` = `STAFF or PERM_housekeeping or PERM_maintenance or PERM_reservations.view`)
 
@@ -595,21 +625,21 @@ Person { id: uuid, name: string, role: string }
 BedInput { label: string?, active: bool? }
 ```
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `GET /api/room-types` | SEES_ROOMS | — | `RoomType[]` | |
-| `POST /api/room-types` | MANAGER | `RoomTypeInput` | `RoomType` | |
-| `PUT /api/room-types/{id}` | MANAGER | `RoomTypeInput` | `RoomType` | |
-| `GET /api/rooms` | SEES_ROOMS | — | `Room[]` | Includes current occupancy per room/bed. |
-| `GET /api/rooms/{id}` | SEES_ROOMS | — | `Room` | |
-| `POST /api/rooms` | MANAGER | `RoomInput` | `Room` | 409 duplicate number. |
-| `POST /api/rooms/bulk` | MANAGER | `BulkRoomsInput` | `Room[]` | Creates numbers in the range. |
-| `PUT /api/rooms/{id}` | MANAGER | `RoomInput` | `Room` | |
-| `PATCH /api/rooms/{id}/status` | `PERM_housekeeping or PERM_maintenance` | `StatusInput` | `Room` | Housekeeping cycle; `blocked`/`maintenance` take the room off sale with `reason`/`until`. clean/inspected clears assignment & resets priority; notifies `room_ready` (to checkin) / `room_dirty` (to housekeeping). |
-| `PATCH /api/rooms/{id}/housekeeping` | `PERM_housekeeping` | `HousekeepingInput` | `Room` | Assign cleaner, priority, note. |
-| `GET /api/housekeepers` | `PERM_housekeeping` | — | `Person[]` | Members who can clean. |
-| `POST /api/rooms/{id}/beds` | MANAGER | `BedInput{label}` | `Room` | Dormitory bed. |
-| `PATCH /api/beds/{id}` | MANAGER | `BedInput{active}` | `Room` | Activate/deactivate a bed (`active` omitted ⇒ true). |
+| Method & path                        | Auth                                    | Request             | Response     | Notes                                                                                                                                                                                                               |
+| ------------------------------------ | --------------------------------------- | ------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/room-types`                | SEES_ROOMS                              | —                   | `RoomType[]` |                                                                                                                                                                                                                     |
+| `POST /api/room-types`               | MANAGER                                 | `RoomTypeInput`     | `RoomType`   |                                                                                                                                                                                                                     |
+| `PUT /api/room-types/{id}`           | MANAGER                                 | `RoomTypeInput`     | `RoomType`   |                                                                                                                                                                                                                     |
+| `GET /api/rooms`                     | SEES_ROOMS                              | —                   | `Room[]`     | Includes current occupancy per room/bed.                                                                                                                                                                            |
+| `GET /api/rooms/{id}`                | SEES_ROOMS                              | —                   | `Room`       |                                                                                                                                                                                                                     |
+| `POST /api/rooms`                    | MANAGER                                 | `RoomInput`         | `Room`       | 409 duplicate number.                                                                                                                                                                                               |
+| `POST /api/rooms/bulk`               | MANAGER                                 | `BulkRoomsInput`    | `Room[]`     | Creates numbers in the range.                                                                                                                                                                                       |
+| `PUT /api/rooms/{id}`                | MANAGER                                 | `RoomInput`         | `Room`       |                                                                                                                                                                                                                     |
+| `PATCH /api/rooms/{id}/status`       | `PERM_housekeeping or PERM_maintenance` | `StatusInput`       | `Room`       | Housekeeping cycle; `blocked`/`maintenance` take the room off sale with `reason`/`until`. clean/inspected clears assignment & resets priority; notifies `room_ready` (to checkin) / `room_dirty` (to housekeeping). |
+| `PATCH /api/rooms/{id}/housekeeping` | `PERM_housekeeping`                     | `HousekeepingInput` | `Room`       | Assign cleaner, priority, note.                                                                                                                                                                                     |
+| `GET /api/housekeepers`              | `PERM_housekeeping`                     | —                   | `Person[]`   | Members who can clean.                                                                                                                                                                                              |
+| `POST /api/rooms/{id}/beds`          | MANAGER                                 | `BedInput{label}`   | `Room`       | Dormitory bed.                                                                                                                                                                                                      |
+| `PATCH /api/beds/{id}`               | MANAGER                                 | `BedInput{active}`  | `Room`       | Activate/deactivate a bed (`active` omitted ⇒ true).                                                                                                                                                                |
 
 ### 8.8 Settings — `SettingsController` (`/api/settings`, class default `STAFF`)
 
@@ -619,11 +649,11 @@ SettingDef { key: string, group: string, type: "BOOL"|"INT"|"TIME"|"ENUM"|"TEXT"
 RegistryView { definitions: SettingDef[], groups: { language, stay, reservations, day, people, guests, tax, receipts, money, messaging, online, platform → label } }
 ```
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `GET /api/settings/registry` | LIMITED | — | `RegistryView` | Static; render the settings screen from it. |
-| `GET /api/settings` | LIMITED | — | `{ <key>: value, ... }` | Resolved values (defaults merged). See §9.6 for keys. |
-| `PATCH /api/settings` | MANAGER | `{ <key>: value | null, ... }` | resolved map | Partial; `null` resets to default. Each key is validated (type, range, options) and gated by its `who` (MANAGER < OWNER < SUPER_ADMIN) → 400/403. |
+| Method & path                | Auth    | Request         | Response                | Notes                                                 |
+| ---------------------------- | ------- | --------------- | ----------------------- | ----------------------------------------------------- |
+| `GET /api/settings/registry` | LIMITED | —               | `RegistryView`          | Static; render the settings screen from it.           |
+| `GET /api/settings`          | LIMITED | —               | `{ <key>: value, ... }` | Resolved values (defaults merged). See §9.6 for keys. |
+| `PATCH /api/settings`        | MANAGER | `{ <key>: value | null, ... }`            | resolved map                                          | Partial; `null` resets to default. Each key is validated (type, range, options) and gated by its `who` (MANAGER < OWNER < SUPER_ADMIN) → 400/403. |
 
 ### 8.9 Notifications & push — `NotificationController` (`/api/notifications`, class `LIMITED`)
 
@@ -633,11 +663,11 @@ Feed { items: Item[], unread: int }
 TokenInput { token: string!, platform: string? (default "web"; use "android"/"ios") }
 ```
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `GET /api/notifications` | LIMITED | — | `Feed` | Last 50 items for this property whose `permission` is null or in the caller's permissions. `unread` = newer than the caller's `seen_at`. |
-| `POST /api/notifications/seen` | LIMITED | — | 204 | Marks everything seen (per user per property). |
-| `POST /api/notifications/push-token` | LIMITED | `TokenInput` | 204 | Registers/refreshes an FCM device token for the **user** (not property). Upsert on token; ≤ 4096 chars. Call after every login and on token refresh. Invalid tokens are deleted automatically when FCM rejects them. |
+| Method & path                        | Auth    | Request      | Response | Notes                                                                                                                                                                                                                |
+| ------------------------------------ | ------- | ------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/notifications`             | LIMITED | —            | `Feed`   | Last 50 items for this property whose `permission` is null or in the caller's permissions. `unread` = newer than the caller's `seen_at`.                                                                             |
+| `POST /api/notifications/seen`       | LIMITED | —            | 204      | Marks everything seen (per user per property).                                                                                                                                                                       |
+| `POST /api/notifications/push-token` | LIMITED | `TokenInput` | 204      | Registers/refreshes an FCM device token for the **user** (not property). Upsert on token; ≤ 4096 chars. Call after every login and on token refresh. Invalid tokens are deleted automatically when FCM rejects them. |
 
 Notification `kind` values: `check_in, room_dirty, room_ready, new_booking, booking_cancelled, checkout_reminder, payment_received, payment_failed, payment_short, payment_after_expiry, maintenance, low_stock`. `link` values are desk-app routes: `/stays/{bookingId}`, `/rooms`, `/maintenance`, `/inventory`, etc. — map them to mobile screens.
 
@@ -650,15 +680,15 @@ Invited = Member fields flattened + { password: string }     // @JsonUnwrapped; 
 RoleInput { role }   PinInput { pin: "\\d{4,6}" }   PasswordInput { email?: string, currentPassword?: string, password!: string }
 ```
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `GET /api/users` | MANAGER | — | `Member[]` | Members of the working property. |
-| `POST /api/users` | `PERM_staff.manage` | `InviteInput` | `Invited` | Creates or attaches a user with a generated first password (`must_change_password`). Only an owner may grant `owner`/`admin` (403). |
-| `POST /api/users/{id}/password` | `PERM_staff.manage` | — | `{"password": string}` | Reset to a new generated password. 400 for yourself; 403 if the person also works at another property. |
-| `PATCH /api/users/{id}/role` | `PERM_staff.manage` | `RoleInput` | `Member` | 400 unknown role / own role. |
-| `DELETE /api/users/{id}` | `PERM_staff.manage` | — | 204 | Deactivate membership; revokes their sessions at this property. Cannot deactivate yourself. |
-| `POST /api/users/{id}/pin` | LIMITED | `PinInput` | 204 | Set approval PIN for yourself, or anyone if OWNER (403 otherwise). Only approver roles may hold a PIN (400). |
-| `POST /api/users/me/password` | USER | `PasswordInput` | 204 | Set your own password (≥8 chars, ≤128, not common). `currentPassword` required if one exists. Optionally sets `email`. Clears `mustChangePassword`; revokes your other sessions. Allowed even under the forced-change gate. |
+| Method & path                   | Auth                | Request         | Response               | Notes                                                                                                                                                                                                                       |
+| ------------------------------- | ------------------- | --------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/users`                | MANAGER             | —               | `Member[]`             | Members of the working property.                                                                                                                                                                                            |
+| `POST /api/users`               | `PERM_staff.manage` | `InviteInput`   | `Invited`              | Creates or attaches a user with a generated first password (`must_change_password`). Only an owner may grant `owner`/`admin` (403).                                                                                         |
+| `POST /api/users/{id}/password` | `PERM_staff.manage` | —               | `{"password": string}` | Reset to a new generated password. 400 for yourself; 403 if the person also works at another property.                                                                                                                      |
+| `PATCH /api/users/{id}/role`    | `PERM_staff.manage` | `RoleInput`     | `Member`               | 400 unknown role / own role.                                                                                                                                                                                                |
+| `DELETE /api/users/{id}`        | `PERM_staff.manage` | —               | 204                    | Deactivate membership; revokes their sessions at this property. Cannot deactivate yourself.                                                                                                                                 |
+| `POST /api/users/{id}/pin`      | LIMITED             | `PinInput`      | 204                    | Set approval PIN for yourself, or anyone if OWNER (403 otherwise). Only approver roles may hold a PIN (400).                                                                                                                |
+| `POST /api/users/me/password`   | USER                | `PasswordInput` | 204                    | Set your own password (≥8 chars, ≤128, not common). `currentPassword` required if one exists. Optionally sets `email`. Clears `mustChangePassword`; revokes your other sessions. Allowed even under the forced-change gate. |
 
 ### 8.11 Property — `PropertyController` (`/api/property`, class default `STAFF`)
 
@@ -667,17 +697,17 @@ Property { id, name, address, city, state, phone, email?, gstin?, trustRegNo?, r
 PropertyInput { name, address, city, state, phone, email, gstin, trustRegNo, reg12a, reg80g, timezone }
 ```
 
-| Method & path | Auth | Request | Response |
-|---|---|---|---|
-| `GET /api/property` | LIMITED | — | `Property` |
-| `PUT /api/property` | MANAGER | `PropertyInput` | `Property` |
-| `POST /api/property/photo` | MANAGER | multipart `file` (≤5 MB image) | `Property` |
-| `DELETE /api/property/photo` | MANAGER | — | `Property` |
+| Method & path                | Auth    | Request                        | Response   |
+| ---------------------------- | ------- | ------------------------------ | ---------- |
+| `GET /api/property`          | LIMITED | —                              | `Property` |
+| `PUT /api/property`          | MANAGER | `PropertyInput`                | `Property` |
+| `POST /api/property/photo`   | MANAGER | multipart `file` (≤5 MB image) | `Property` |
+| `DELETE /api/property/photo` | MANAGER | —                              | `Property` |
 
 ### 8.12 Portfolio — `PortfolioController` (`/api/portfolio`, `USER`)
 
-| Method & path | Auth | Response |
-|---|---|---|
+| Method & path        | Auth | Response                                                                                                                                                                                                                                                 |
+| -------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /api/portfolio` | USER | `[{propertyId, propertyName, current: bool, occupancyPct: long, collectedPaise: long, outstandingPaise: long, inHouse: int, arrivals: int, departures: int, totalUnits: int, bookedUnits: int}]` — one row per membership whose role has `revenue.view`. |
 
 ### 8.13 Admin back office — `AdminController` (`/api/admin`, `SUPER_ADMIN`; also gated in `SecurityConfig`; never billing-gated)
@@ -693,48 +723,48 @@ NewPropertyResult { orgId, propertyId, ownerId, ownerPhone, ownerEmail, code, ow
 BillingInput { billingStatus: trial|active|overdue|readonly|closed }  PlanInput { planCode }  ModulesInput { modules: string[] }  ActiveInput { active }  NotesInput { notes (≤4000) }
 ```
 
-| Method & path | Request | Response |
-|---|---|---|
-| `GET /api/admin/properties` | — | `PropertyHealth[]` |
-| `GET /api/admin/properties/{id}` | — | `PropertyHealth` |
-| `GET /api/admin/properties/{id}/team` | — | `Member[]` |
-| `GET /api/admin/plans` | — | `Plan[]` (seeded: basic 20 rooms ₹499, standard 60 rooms ₹999, large ₹1,499) |
-| `POST /api/admin/properties` | `NewPropertyInput` | `NewPropertyResult` |
-| `POST /api/admin/properties/{id}/photo` | multipart `file` | `PropertyHealth` |
-| `DELETE /api/admin/properties/{id}/photo` | — | `PropertyHealth` |
-| `PATCH /api/admin/properties/{id}/active` | `ActiveInput` | `PropertyHealth` |
-| `PATCH /api/admin/properties/{id}/notes` | `NotesInput` | `PropertyHealth` |
-| `PATCH /api/admin/properties/{id}/modules` | `ModulesInput` | 204 (400 unknown module) |
-| `POST /api/admin/properties/{id}/team/{userId}/password` | — | `NewPassword` (403 for a super admin) |
-| `GET /api/admin/properties/{id}/activity` | — | `[{...audit rows}]` — 403 unless owner granted support access (`support_access_until` in the future) |
-| `PATCH /api/admin/organisations/{id}/billing` | `BillingInput` | 204 |
-| `PATCH /api/admin/organisations/{id}/plan` | `PlanInput` | 204 |
+| Method & path                                            | Request            | Response                                                                                             |
+| -------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `GET /api/admin/properties`                              | —                  | `PropertyHealth[]`                                                                                   |
+| `GET /api/admin/properties/{id}`                         | —                  | `PropertyHealth`                                                                                     |
+| `GET /api/admin/properties/{id}/team`                    | —                  | `Member[]`                                                                                           |
+| `GET /api/admin/plans`                                   | —                  | `Plan[]` (seeded: basic 20 rooms ₹499, standard 60 rooms ₹999, large ₹1,499)                         |
+| `POST /api/admin/properties`                             | `NewPropertyInput` | `NewPropertyResult`                                                                                  |
+| `POST /api/admin/properties/{id}/photo`                  | multipart `file`   | `PropertyHealth`                                                                                     |
+| `DELETE /api/admin/properties/{id}/photo`                | —                  | `PropertyHealth`                                                                                     |
+| `PATCH /api/admin/properties/{id}/active`                | `ActiveInput`      | `PropertyHealth`                                                                                     |
+| `PATCH /api/admin/properties/{id}/notes`                 | `NotesInput`       | `PropertyHealth`                                                                                     |
+| `PATCH /api/admin/properties/{id}/modules`               | `ModulesInput`     | 204 (400 unknown module)                                                                             |
+| `POST /api/admin/properties/{id}/team/{userId}/password` | —                  | `NewPassword` (403 for a super admin)                                                                |
+| `GET /api/admin/properties/{id}/activity`                | —                  | `[{...audit rows}]` — 403 unless owner granted support access (`support_access_until` in the future) |
+| `PATCH /api/admin/organisations/{id}/billing`            | `BillingInput`     | 204                                                                                                  |
+| `PATCH /api/admin/organisations/{id}/plan`               | `PlanInput`        | 204                                                                                                  |
 
 ### 8.14 Audit — `AuditController` (`/api/audit`, `PERM_audit.view`)
 
 `Entry { id: uuid, at: datetime, userName: string?, table: string, rowId: string, action: string, before: string? (JSON text), after: string? (JSON text) }`
 
-| Method & path | Request | Response |
-|---|---|---|
-| `GET /api/audit?from=date&to=date&table=&userId=&q=` | query | `Entry[]` (≤300, newest first); 400 if `to < from` |
-| `GET /api/audit/tables` | — | `string[]` distinct table names |
+| Method & path                                        | Request | Response                                           |
+| ---------------------------------------------------- | ------- | -------------------------------------------------- |
+| `GET /api/audit?from=date&to=date&table=&userId=&q=` | query   | `Entry[]` (≤300, newest first); 400 if `to < from` |
+| `GET /api/audit/tables`                              | —       | `string[]` distinct table names                    |
 
 ### 8.15 Reports — `ReportController` (`/api/reports`, class default `STAFF`)
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `GET /api/reports/daily?date=` | `PERM_revenue.view` | optional business date | `{businessDate, from, to, collections: [{mode, amount, count}], collectedPaise, cashByUser: [{name, amount}], arrivals: int, departures: int, noShows: int, occupiedUnits: long, sellableUnits: long, occupancyPct: long, outstandingCount: long, outstandingPaise: long, depositsHeldPaise: long}` | Business day runs `business_day_start` → same hour next day. |
-| `POST /api/reports/daily/send?date=` | MANAGER | — | same map as `/daily` | Queues WhatsApp/email report to owners/managers now. |
-| `GET /api/reports/forecast?from=date&days=14` | `PERM_revenue.view` | — | `{from, to, units, roomNights, occupancyPct, adrPaise, revparPaise, revenuePaise, nights: [{date, sold, revenuePaise, occupancyPct}]}` | |
-| `GET /api/reports/month?month=YYYY-MM` | `PERM_revenue.view` | — | `{month, taxableByRate: [{tax_rate_bp, taxable, cgst, sgst, igst}], revenuePaise, taxPaise, nightsSold, occupancyPct, payments: [{mode, received, refunded}], creditNotes: {count, amount}}` | |
-| `GET /api/reports/month.csv?month=` | `PERM_revenue.view` | — | `text/csv` attachment | GSTR-1 style rows. |
-| `GET /api/reports/period?from=date&to=date` | `PERM_revenue.view` | — | `{from, to, days, occupancy: {units, availableNights, nightsSold, occupancyPct, roomRevenuePaise, adrPaise, revparPaise}, revenue: {lines: [{item, taxable, tax}], totalPaise, taxPaise}, tax: [{tax_rate_bp, taxable, cgst, sgst, igst}], bookings: {made, arrivals, departures, cancellations, noShows}, sources: [{source, bookings, nights, billed}], payments: [{mode, received, refunded, count}], outstanding: {count, amountPaise}, expenses: {byCategory: [{category, amount}], totalPaise}, net: {revenuePaise, expensesPaise, netPaise}, housekeeping: {status: [{status, rooms}], cleaned: [{name, rooms}]}, maintenance: {opened, resolved, avg_hours, open_now, urgent_now}, guests: [{id, name, phone, city, stays, nights, paid}]}` | The all-in-one report. |
-| `GET /api/reports/period.csv?from&to` | `PERM_revenue.view` | — | `text/csv` (`section,item,field,value`) | |
-| `GET /api/reports/outstanding` | `PERM_reservations.view` | — | `[{folio_id, booking_id, guest_name, phone, state, arrive_at, depart_at, due_paise}]` | Open folios with money owed. |
-| `GET /api/reports/cash-in-hand` | `PERM_revenue.view` | — | `[{user_id, name, cash_paise, last_handover_at}]` | Cash each user holds since last handover. |
-| `POST /api/reports/cash-handover` | MANAGER | `{userId: uuid? (default self), notes: string?}` | `{handoverId: uuid, amountPaise: long, amount: "₹…"}` | Marks that user's cash payments handed over. |
-| `GET /api/reports/police-register?from&to` | MANAGER | — | `{from, to, columns: string[], rows: [{id, name, address, city, nationality, id_type, id_last4, phone, arrive_at, depart_at, adults, children, purpose, units, members}]}` | Columns from `register_template`. |
-| `GET /api/reports/police-register.csv?from&to` | MANAGER | — | `text/csv` attachment (UTF-8 BOM) | |
+| Method & path                                  | Auth                     | Request                                          | Response                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Notes                                                        |
+| ---------------------------------------------- | ------------------------ | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `GET /api/reports/daily?date=`                 | `PERM_revenue.view`      | optional business date                           | `{businessDate, from, to, collections: [{mode, amount, count}], collectedPaise, cashByUser: [{name, amount}], arrivals: int, departures: int, noShows: int, occupiedUnits: long, sellableUnits: long, occupancyPct: long, outstandingCount: long, outstandingPaise: long, depositsHeldPaise: long}`                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Business day runs `business_day_start` → same hour next day. |
+| `POST /api/reports/daily/send?date=`           | MANAGER                  | —                                                | same map as `/daily`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Queues WhatsApp/email report to owners/managers now.         |
+| `GET /api/reports/forecast?from=date&days=14`  | `PERM_revenue.view`      | —                                                | `{from, to, units, roomNights, occupancyPct, adrPaise, revparPaise, revenuePaise, nights: [{date, sold, revenuePaise, occupancyPct}]}`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |                                                              |
+| `GET /api/reports/month?month=YYYY-MM`         | `PERM_revenue.view`      | —                                                | `{month, taxableByRate: [{tax_rate_bp, taxable, cgst, sgst, igst}], revenuePaise, taxPaise, nightsSold, occupancyPct, payments: [{mode, received, refunded}], creditNotes: {count, amount}}`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |                                                              |
+| `GET /api/reports/month.csv?month=`            | `PERM_revenue.view`      | —                                                | `text/csv` attachment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | GSTR-1 style rows.                                           |
+| `GET /api/reports/period?from=date&to=date`    | `PERM_revenue.view`      | —                                                | `{from, to, days, occupancy: {units, availableNights, nightsSold, occupancyPct, roomRevenuePaise, adrPaise, revparPaise}, revenue: {lines: [{item, taxable, tax}], totalPaise, taxPaise}, tax: [{tax_rate_bp, taxable, cgst, sgst, igst}], bookings: {made, arrivals, departures, cancellations, noShows}, sources: [{source, bookings, nights, billed}], payments: [{mode, received, refunded, count}], outstanding: {count, amountPaise}, expenses: {byCategory: [{category, amount}], totalPaise}, net: {revenuePaise, expensesPaise, netPaise}, housekeeping: {status: [{status, rooms}], cleaned: [{name, rooms}]}, maintenance: {opened, resolved, avg_hours, open_now, urgent_now}, guests: [{id, name, phone, city, stays, nights, paid}]}` | The all-in-one report.                                       |
+| `GET /api/reports/period.csv?from&to`          | `PERM_revenue.view`      | —                                                | `text/csv` (`section,item,field,value`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |                                                              |
+| `GET /api/reports/outstanding`                 | `PERM_reservations.view` | —                                                | `[{folio_id, booking_id, guest_name, phone, state, arrive_at, depart_at, due_paise}]`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Open folios with money owed.                                 |
+| `GET /api/reports/cash-in-hand`                | `PERM_revenue.view`      | —                                                | `[{user_id, name, cash_paise, last_handover_at}]`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Cash each user holds since last handover.                    |
+| `POST /api/reports/cash-handover`              | MANAGER                  | `{userId: uuid? (default self), notes: string?}` | `{handoverId: uuid, amountPaise: long, amount: "₹…"}`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Marks that user's cash payments handed over.                 |
+| `GET /api/reports/police-register?from&to`     | MANAGER                  | —                                                | `{from, to, columns: string[], rows: [{id, name, address, city, nationality, id_type, id_last4, phone, arrive_at, depart_at, adults, children, purpose, units, members}]}`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Columns from `register_template`.                            |
+| `GET /api/reports/police-register.csv?from&to` | MANAGER                  | —                                                | `text/csv` attachment (UTF-8 BOM)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |                                                              |
 
 ### 8.16 Restaurant / POS — `RestaurantController` (`/api/restaurant`, class `PERM_restaurant`)
 
@@ -747,18 +777,18 @@ Order { id, bookingId?, guestName?, units?: string, tableLabel, status: "open"|"
 LinesInput { lines: LineInput[] }  PostInput { bookingId? }  PayInput { mode: PaymentMode, reference? }  CancelInput { reason }
 ```
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `GET /api/restaurant/menu` | `PERM_restaurant` | — | `MenuItem[]` | |
-| `POST /api/restaurant/menu` | `MANAGER and PERM_restaurant` | `MenuInput` | `MenuItem` | |
-| `PUT /api/restaurant/menu/{id}` | `MANAGER and PERM_restaurant` | `MenuInput` | `MenuItem` | |
-| `GET /api/restaurant/orders?all=false` | `PERM_restaurant` | — | `Order[]` | Open orders; `all=true` also settled since yesterday (≤200). |
-| `POST /api/restaurant/orders` | `PERM_restaurant` | `OrderInput` | `Order` | |
-| `PUT /api/restaurant/orders/{id}/lines` | `PERM_restaurant` | `LinesInput` | `Order` | Replace lines (open orders only, 409 otherwise). |
-| `POST /api/restaurant/orders/{id}/post` | `PERM_restaurant` | `PostInput?` | `Order` (`posted`) | Post to an in-house (`checked_in`) stay's folio as one `extra` line, category `restaurant`, at `restaurant_tax_bp`. `bookingId` from body or the order; 400 if neither / order empty. |
-| `POST /api/restaurant/orders/{id}/pay` | `PERM_restaurant` | `PayInput` | `Order` (`paid`, with `billNumber`) | Counter payment; creates a `payments` row with `pos_order_id`. |
-| `POST /api/restaurant/orders/{id}/cancel` | `PERM_restaurant` | `CancelInput` | `Order` (`cancelled`) | |
-| `GET /api/restaurant/orders/{id}/bill` | `PERM_restaurant` | — | `text/html` | Printable bill. |
+| Method & path                             | Auth                          | Request       | Response                            | Notes                                                                                                                                                                                 |
+| ----------------------------------------- | ----------------------------- | ------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/restaurant/menu`                | `PERM_restaurant`             | —             | `MenuItem[]`                        |                                                                                                                                                                                       |
+| `POST /api/restaurant/menu`               | `MANAGER and PERM_restaurant` | `MenuInput`   | `MenuItem`                          |                                                                                                                                                                                       |
+| `PUT /api/restaurant/menu/{id}`           | `MANAGER and PERM_restaurant` | `MenuInput`   | `MenuItem`                          |                                                                                                                                                                                       |
+| `GET /api/restaurant/orders?all=false`    | `PERM_restaurant`             | —             | `Order[]`                           | Open orders; `all=true` also settled since yesterday (≤200).                                                                                                                          |
+| `POST /api/restaurant/orders`             | `PERM_restaurant`             | `OrderInput`  | `Order`                             |                                                                                                                                                                                       |
+| `PUT /api/restaurant/orders/{id}/lines`   | `PERM_restaurant`             | `LinesInput`  | `Order`                             | Replace lines (open orders only, 409 otherwise).                                                                                                                                      |
+| `POST /api/restaurant/orders/{id}/post`   | `PERM_restaurant`             | `PostInput?`  | `Order` (`posted`)                  | Post to an in-house (`checked_in`) stay's folio as one `extra` line, category `restaurant`, at `restaurant_tax_bp`. `bookingId` from body or the order; 400 if neither / order empty. |
+| `POST /api/restaurant/orders/{id}/pay`    | `PERM_restaurant`             | `PayInput`    | `Order` (`paid`, with `billNumber`) | Counter payment; creates a `payments` row with `pos_order_id`.                                                                                                                        |
+| `POST /api/restaurant/orders/{id}/cancel` | `PERM_restaurant`             | `CancelInput` | `Order` (`cancelled`)               |                                                                                                                                                                                       |
+| `GET /api/restaurant/orders/{id}/bill`    | `PERM_restaurant`             | —             | `text/html`                         | Printable bill.                                                                                                                                                                       |
 
 ### 8.17 Expenses — `ExpenseController` (`/api/expenses`, `PERM_expenses`)
 
@@ -768,13 +798,13 @@ ExpenseInput { spentOn: date, category: utilities|maintenance|salaries|cleaning|
 Summary { from, to, totalPaise, byCategory: {category: long} (all 8 keys), expenses: Expense[] }
 ```
 
-| Method & path | Request | Response |
-|---|---|---|
-| `GET /api/expenses?from=date&to=date` | — | `Summary` |
-| `POST /api/expenses` | `ExpenseInput` | `Expense` |
-| `POST /api/expenses/{id}/void` | `{reason}` | `Expense` |
-| `POST /api/expenses/{id}/receipt` | multipart `file` (image or PDF ≤5 MB) | `Expense` |
-| `GET /api/expenses/{id}/receipt-url` | — | `{"url"}` |
+| Method & path                         | Request                               | Response  |
+| ------------------------------------- | ------------------------------------- | --------- |
+| `GET /api/expenses?from=date&to=date` | —                                     | `Summary` |
+| `POST /api/expenses`                  | `ExpenseInput`                        | `Expense` |
+| `POST /api/expenses/{id}/void`        | `{reason}`                            | `Expense` |
+| `POST /api/expenses/{id}/receipt`     | multipart `file` (image or PDF ≤5 MB) | `Expense` |
+| `GET /api/expenses/{id}/receipt-url`  | —                                     | `{"url"}` |
 
 ### 8.18 Stock / supplies — `StockController` (`/api/inventory`, `PERM_inventory`)
 
@@ -786,14 +816,14 @@ Movement { id, kind, qtyChange: decimal, unitCostPaise?, roomNumber?, note, byNa
 PeriodRow { itemId, name, category, unit, opening, purchases, consumption, adjustments, laundry, closing, purchaseCostPaise }
 ```
 
-| Method & path | Request | Response |
-|---|---|---|
-| `GET /api/inventory/items` | — | `Item[]` |
-| `POST /api/inventory/items` | `ItemInput` | `Item` |
-| `PUT /api/inventory/items/{id}` | `ItemInput` | `Item` |
-| `POST /api/inventory/items/{id}/movements` | `MovementInput` | `Item` (notifies `low_stock` when crossing threshold) |
-| `GET /api/inventory/items/{id}/movements` | — | `Movement[]` |
-| `GET /api/inventory/period?from=date&to=date` | — | `PeriodRow[]` |
+| Method & path                                 | Request         | Response                                              |
+| --------------------------------------------- | --------------- | ----------------------------------------------------- |
+| `GET /api/inventory/items`                    | —               | `Item[]`                                              |
+| `POST /api/inventory/items`                   | `ItemInput`     | `Item`                                                |
+| `PUT /api/inventory/items/{id}`               | `ItemInput`     | `Item`                                                |
+| `POST /api/inventory/items/{id}/movements`    | `MovementInput` | `Item` (notifies `low_stock` when crossing threshold) |
+| `GET /api/inventory/items/{id}/movements`     | —               | `Movement[]`                                          |
+| `GET /api/inventory/period?from=date&to=date` | —               | `PeriodRow[]`                                         |
 
 ### 8.19 Maintenance & lost-and-found — `MaintenanceController` (`/api`)
 
@@ -806,15 +836,15 @@ Item { id, roomId?, roomNumber?, description, foundAt: datetime, foundByName, st
 ItemInput { roomId?, description!, notes? }   ItemUpdate { status?, returnedTo?, notes? }
 ```
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `GET /api/maintenance?all=false` | `PERM_maintenance or PERM_maintenance.report` | — | `Ticket[]` | Open ones; `all=true` includes resolved/closed. |
-| `POST /api/maintenance` | `PERM_maintenance.report` | `TicketInput` | `Ticket` | Notifies `maintenance` role. |
-| `PATCH /api/maintenance/{id}` | `PERM_maintenance` | `TicketUpdate` | `Ticket` | Resolving/closing a ticket that took the room off sale puts it back (`dirty`). |
-| `GET /api/maintenance/technicians` | `PERM_maintenance` | — | `Person[]` | |
-| `GET /api/lost-found` | `PERM_lost_found` | — | `Item[]` | |
-| `POST /api/lost-found` | `PERM_lost_found` | `ItemInput` | `Item` | |
-| `PATCH /api/lost-found/{id}` | `PERM_lost_found` | `ItemUpdate` | `Item` | |
+| Method & path                      | Auth                                          | Request        | Response   | Notes                                                                          |
+| ---------------------------------- | --------------------------------------------- | -------------- | ---------- | ------------------------------------------------------------------------------ |
+| `GET /api/maintenance?all=false`   | `PERM_maintenance or PERM_maintenance.report` | —              | `Ticket[]` | Open ones; `all=true` includes resolved/closed.                                |
+| `POST /api/maintenance`            | `PERM_maintenance.report`                     | `TicketInput`  | `Ticket`   | Notifies `maintenance` role.                                                   |
+| `PATCH /api/maintenance/{id}`      | `PERM_maintenance`                            | `TicketUpdate` | `Ticket`   | Resolving/closing a ticket that took the room off sale puts it back (`dirty`). |
+| `GET /api/maintenance/technicians` | `PERM_maintenance`                            | —              | `Person[]` |                                                                                |
+| `GET /api/lost-found`              | `PERM_lost_found`                             | —              | `Item[]`   |                                                                                |
+| `POST /api/lost-found`             | `PERM_lost_found`                             | `ItemInput`    | `Item`     |                                                                                |
+| `PATCH /api/lost-found/{id}`       | `PERM_lost_found`                             | `ItemUpdate`   | `Item`     |                                                                                |
 
 ### 8.20 Channels / OTA calendars — `ChannelController` (`/api/channels`, `MANAGER`)
 
@@ -824,17 +854,18 @@ Conflict { id, channel, roomNumber, arriveOn: date, departOn: date, summary, con
 Overview { bookingSlug?: string, onlineBookingEnabled: bool, links: Link[], conflicts: Conflict[], rooms: [{id, number, typeName}] }
 LinkInput { roomId: uuid, channel: string, importUrl?: string }
 ```
+
 Export URL for an OTA: `{apiUrl}/api/public/calendar/{exportToken}.ics`.
 
-| Method & path | Request | Response | Notes |
-|---|---|---|---|
-| `GET /api/channels` | — | `Overview` | |
-| `POST /api/channels/links` | `LinkInput` | `Link` | Syncs immediately if `importUrl` set. |
-| `PATCH /api/channels/links/{id}` | `LinkInput{importUrl}` | `Link` | |
-| `POST /api/channels/links/{id}/rotate` | — | `Link` | New export token. |
-| `POST /api/channels/links/{id}/sync` | — | `Link` | Pull the OTA calendar now. |
-| `DELETE /api/channels/links/{id}` | — | 200 empty | |
-| `POST /api/channels/booking-page` | — | `{"slug": string}` | Creates the public booking-page slug if missing. Public page: `{appUrl}/book/{slug}`. |
+| Method & path                          | Request                | Response           | Notes                                                                                 |
+| -------------------------------------- | ---------------------- | ------------------ | ------------------------------------------------------------------------------------- |
+| `GET /api/channels`                    | —                      | `Overview`         |                                                                                       |
+| `POST /api/channels/links`             | `LinkInput`            | `Link`             | Syncs immediately if `importUrl` set.                                                 |
+| `PATCH /api/channels/links/{id}`       | `LinkInput{importUrl}` | `Link`             |                                                                                       |
+| `POST /api/channels/links/{id}/rotate` | —                      | `Link`             | New export token.                                                                     |
+| `POST /api/channels/links/{id}/sync`   | —                      | `Link`             | Pull the OTA calendar now.                                                            |
+| `DELETE /api/channels/links/{id}`      | —                      | 200 empty          |                                                                                       |
+| `POST /api/channels/booking-page`      | —                      | `{"slug": string}` | Creates the public booking-page slug if missing. Public page: `{appUrl}/book/{slug}`. |
 
 ### 8.21 Public booking page & OTA export — `PublicChannelController` (`/api/public`, no session, rate-limited, `Cache-Control: no-store`)
 
@@ -847,30 +878,30 @@ Confirmation { reference: string (first 8 chars of booking id, upper), guestName
 VerifyInput { orderId, paymentId, signature }   FailureInput { orderId, reason? }   SimulateInput { orderId, succeed: bool }
 ```
 
-| Method & path | Request | Response | Notes |
-|---|---|---|---|
-| `GET /api/public/calendar/{token}[.ics]` | — | `text/calendar` | One room's busy nights for an OTA. 404 unknown token. |
-| `GET /api/public/book/{slug}` | — | `Page` | 404 when slug unknown/inactive or `online_booking_enabled=false`. |
-| `GET /api/public/book/{slug}/availability?arrive=date&depart=date` | — | `Offer[]` | |
-| `POST /api/public/book/{slug}` | `OnlineRequest` | `Confirmation` | Source `website`. 5/min per IP. Validations: consent (if required), 10-digit phone, dates within `online_booking_days_ahead` / `online_booking_max_nights`, capacity, ≤3 open bookings per phone, ≤40 website bookings per property per day (409). With payment: state `pending`, `holdUntil = now + online_payment_hold_minutes`, `payment` holds the gateway checkout (advance = `online_payment_advance_pct` of total, min ₹1). |
-| `POST /api/public/book/{slug}/payments/verify` | `VerifyInput` | `Confirmation` | Verifies Razorpay signature and fetches the payment; booking becomes `reserved`. 403 bad signature. |
-| `POST /api/public/book/{slug}/payments/failed` | `FailureInput` | 204 | Records a failed/abandoned checkout. |
-| `POST /api/public/book/{slug}/payments/retry` | `FailureInput{orderId}` | `Checkout` | New order for the same held booking; 409 if already paid. 10/min per IP. |
-| `POST /api/public/book/{slug}/payments/simulate` | `SimulateInput` | `{orderId, paymentId, signature}` | Dev only (console gateway); 404 otherwise. |
-| `POST /api/public/payments/webhook` | raw Razorpay event, header `X-Razorpay-Signature` | 204 | Server-to-server; 403 bad signature. |
+| Method & path                                                      | Request                                           | Response                          | Notes                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------ | ------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/public/calendar/{token}[.ics]`                           | —                                                 | `text/calendar`                   | One room's busy nights for an OTA. 404 unknown token.                                                                                                                                                                                                                                                                                                                                                                              |
+| `GET /api/public/book/{slug}`                                      | —                                                 | `Page`                            | 404 when slug unknown/inactive or `online_booking_enabled=false`.                                                                                                                                                                                                                                                                                                                                                                  |
+| `GET /api/public/book/{slug}/availability?arrive=date&depart=date` | —                                                 | `Offer[]`                         |                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `POST /api/public/book/{slug}`                                     | `OnlineRequest`                                   | `Confirmation`                    | Source `website`. 5/min per IP. Validations: consent (if required), 10-digit phone, dates within `online_booking_days_ahead` / `online_booking_max_nights`, capacity, ≤3 open bookings per phone, ≤40 website bookings per property per day (409). With payment: state `pending`, `holdUntil = now + online_payment_hold_minutes`, `payment` holds the gateway checkout (advance = `online_payment_advance_pct` of total, min ₹1). |
+| `POST /api/public/book/{slug}/payments/verify`                     | `VerifyInput`                                     | `Confirmation`                    | Verifies Razorpay signature and fetches the payment; booking becomes `reserved`. 403 bad signature.                                                                                                                                                                                                                                                                                                                                |
+| `POST /api/public/book/{slug}/payments/failed`                     | `FailureInput`                                    | 204                               | Records a failed/abandoned checkout.                                                                                                                                                                                                                                                                                                                                                                                               |
+| `POST /api/public/book/{slug}/payments/retry`                      | `FailureInput{orderId}`                           | `Checkout`                        | New order for the same held booking; 409 if already paid. 10/min per IP.                                                                                                                                                                                                                                                                                                                                                           |
+| `POST /api/public/book/{slug}/payments/simulate`                   | `SimulateInput`                                   | `{orderId, paymentId, signature}` | Dev only (console gateway); 404 otherwise.                                                                                                                                                                                                                                                                                                                                                                                         |
+| `POST /api/public/payments/webhook`                                | raw Razorpay event, header `X-Razorpay-Signature` | 204                               | Server-to-server; 403 bad signature.                                                                                                                                                                                                                                                                                                                                                                                               |
 
 ### 8.22 Receipt printing — `PrintController` (`/api/receipts`, class default `STAFF`)
 
-| Method & path | Auth | Response | Notes |
-|---|---|---|---|
-| `GET /api/receipts/{id}/html?profile=` | `PERM_reservations.view` | `text/html` | `profile` ∈ `thermal_58 | thermal_80 | a4` (default `printer_profile`). `{id}` = receipt id. |
-| `GET /api/receipts/{id}/pdf?profile=` | `PERM_reservations.view` | `application/pdf` (inline, `receipt.pdf`) | Also stores the PDF and sets `receipts.pdf_key`. |
+| Method & path                          | Auth                     | Response                                  | Notes                                            |
+| -------------------------------------- | ------------------------ | ----------------------------------------- | ------------------------------------------------ |
+| `GET /api/receipts/{id}/html?profile=` | `PERM_reservations.view` | `text/html`                               | `profile` ∈ `thermal_58                          | thermal_80 | a4`(default`printer_profile`). `{id}` = receipt id. |
+| `GET /api/receipts/{id}/pdf?profile=`  | `PERM_reservations.view` | `application/pdf` (inline, `receipt.pdf`) | Also stores the PDF and sets `receipts.pdf_key`. |
 
 ### 8.23 Signed files — `FilesController`
 
-| Method & path | Auth | Response |
-|---|---|---|
-| `GET /api/files/{key...}?exp=<epoch>&sig=<hmac>` | public (signature is the credential) | image (`image/jpeg|png|webp`) inline, or PDF as attachment; `Cache-Control: no-store`. 403 "Link expired or invalid". Only used with local storage; with S3 the `*-url` endpoints return presigned bucket URLs. Never construct these URLs yourself. |
+| Method & path                                    | Auth                                 | Response           |
+| ------------------------------------------------ | ------------------------------------ | ------------------ |
+| `GET /api/files/{key...}?exp=<epoch>&sig=<hmac>` | public (signature is the credential) | image (`image/jpeg | png | webp`) inline, or PDF as attachment; `Cache-Control: no-store`. 403 "Link expired or invalid". Only used with local storage; with S3 the `*-url` endpoints return presigned bucket URLs. Never construct these URLs yourself. |
 
 ### 8.24 Guest self-registration — desk side `SelfRegistrationController` (`/api/registrations`, `STAFF`) and guest side `PublicRegistrationController` (`/api/public/registration`)
 
@@ -881,15 +912,15 @@ Submission { name, phone, city, address, nationality, idType, idLast4, passportN
 GuestForm { propertyName, language, askPhoto: bool, askConsent: bool, consentText: string, alreadyDone: bool }
 ```
 
-| Method & path | Auth | Request | Response | Notes |
-|---|---|---|---|---|
-| `POST /api/registrations` | STAFF | `{bookingId?: uuid}` or empty | `NewLink` | Valid for `self_registration_minutes` (default 30). Show the QR / share the URL. 400 if `self_registration_enabled=false`. |
-| `GET /api/registrations/{id}` | STAFF | — | `SelfRegistration` | Poll while the QR is on screen. |
-| `POST /api/registrations/{id}/apply` | STAFF | `GuestInput?` (desk-corrected copy; empty body keeps the guest's words) | `{"guestId": uuid}` | Creates/updates the guest record and copies the ID photo. 400 if already applied. |
-| `POST /api/registrations/{id}/revoke` | STAFF | — | `SelfRegistration` | |
-| `GET /api/public/registration/{token}` | public | — | `GuestForm` | 404 for unknown/expired/revoked/used token. |
-| `POST /api/public/registration/{token}` | public | `Submission` | `{"status":"received"}` | Only from `open`. |
-| `POST /api/public/registration/{token}/photo` | public | multipart `file` | `{"status":"received"}` | Guest's own ID photo. |
+| Method & path                                 | Auth   | Request                                                                 | Response                | Notes                                                                                                                      |
+| --------------------------------------------- | ------ | ----------------------------------------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/registrations`                     | STAFF  | `{bookingId?: uuid}` or empty                                           | `NewLink`               | Valid for `self_registration_minutes` (default 30). Show the QR / share the URL. 400 if `self_registration_enabled=false`. |
+| `GET /api/registrations/{id}`                 | STAFF  | —                                                                       | `SelfRegistration`      | Poll while the QR is on screen.                                                                                            |
+| `POST /api/registrations/{id}/apply`          | STAFF  | `GuestInput?` (desk-corrected copy; empty body keeps the guest's words) | `{"guestId": uuid}`     | Creates/updates the guest record and copies the ID photo. 400 if already applied.                                          |
+| `POST /api/registrations/{id}/revoke`         | STAFF  | —                                                                       | `SelfRegistration`      |                                                                                                                            |
+| `GET /api/public/registration/{token}`        | public | —                                                                       | `GuestForm`             | 404 for unknown/expired/revoked/used token.                                                                                |
+| `POST /api/public/registration/{token}`       | public | `Submission`                                                            | `{"status":"received"}` | Only from `open`.                                                                                                          |
+| `POST /api/public/registration/{token}/photo` | public | multipart `file`                                                        | `{"status":"received"}` | Guest's own ID photo.                                                                                                      |
 
 ### 8.25 Tax rules — `TaxRuleController` (`/api/tax-rules`, `MANAGER`)
 
@@ -899,11 +930,11 @@ TaxRuleView { id, effectiveFrom: date, rules: TaxRules }
 AddInput { effectiveFrom: date!, rules: TaxRules! }
 ```
 
-| Method & path | Auth | Request | Response |
-|---|---|---|---|
-| `GET /api/tax-rules` | MANAGER | — | `TaxRuleView[]` |
-| `GET /api/tax-rules/in-force?date=` | MANAGER | — | `TaxRules` (default when none) |
-| `POST /api/tax-rules` | OWNER | `AddInput` | `TaxRuleView` |
+| Method & path                       | Auth    | Request    | Response                       |
+| ----------------------------------- | ------- | ---------- | ------------------------------ |
+| `GET /api/tax-rules`                | MANAGER | —          | `TaxRuleView[]`                |
+| `GET /api/tax-rules/in-force?date=` | MANAGER | —          | `TaxRules` (default when none) |
+| `POST /api/tax-rules`               | OWNER   | `AddInput` | `TaxRuleView`                  |
 
 ---
 
@@ -913,32 +944,32 @@ All tenant tables carry `property_id` and are protected by Postgres Row Level Se
 
 ### 9.1 Enums (Postgres types + check constraints)
 
-| Enum | Values |
-|---|---|
-| `user_role` | `owner, manager, staff, admin, receptionist, housekeeping, accountant, maintenance` |
-| `room_status` | `clean, dirty, blocked, cleaning, inspected, maintenance` |
-| `booking_state` | `reserved, checked_in, checked_out, no_show, cancelled, pending` |
-| `booking_source` | `walk_in, phone, other, website, ota, direct, travel_agent, corporate, group` |
-| `id_type` | `aadhaar, voter, dl, passport, other` |
-| `folio_status` | `open, settled, written_off` |
-| `folio_line_kind` | `room_charge, day_use, extra, discount, deposit, deposit_refund, forfeit, adjustment` |
-| `payment_mode` | `cash, upi, card, bank, cheque, online` |
-| `receipt_kind` | `invoice, donation, credit_note, provisional, pos_bill` |
-| `outbox_channel` | `whatsapp, sms, email, push` |
-| `outbox_status` | `pending, sent, failed, dead` |
-| `billing_status` | `trial, active, overdue, readonly, closed` |
-| `approval_status` | `pending, approved, rejected` (table `approvals`, currently unused by the API) |
-| rooms.hk_priority | `low, normal, high` |
-| maintenance_tickets.priority / status | `low, normal, high, urgent` / `open, assigned, in_progress, resolved, closed` |
-| lost_found_items.status | `held, returned, disposed` |
-| expenses.category / payment_mode | `utilities, maintenance, salaries, cleaning, supplies, food, marketing, other` / `cash, upi, card, bank, cheque` |
-| inventory_items.category | `cleaning, linen, toiletries, food, maintenance, stationery` |
-| inventory_movements.kind | `opening, purchase, consumption, adjustment, to_laundry, from_laundry` |
-| pos_orders.status | `open, posted, paid, cancelled` |
-| payment_orders.status | `created, paid, failed, expired` |
-| channel_links.channel | `airbnb, booking_com, makemytrip, agoda, expedia, other` |
-| guest_registrations.state | `open, submitted, applied, revoked` |
-| properties.modules (text[]) | subset of `restaurant, inventory, expenses, maintenance, lost_found, audit` |
+| Enum                                  | Values                                                                                                           |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `user_role`                           | `owner, manager, staff, admin, receptionist, housekeeping, accountant, maintenance`                              |
+| `room_status`                         | `clean, dirty, blocked, cleaning, inspected, maintenance`                                                        |
+| `booking_state`                       | `reserved, checked_in, checked_out, no_show, cancelled, pending`                                                 |
+| `booking_source`                      | `walk_in, phone, other, website, ota, direct, travel_agent, corporate, group`                                    |
+| `id_type`                             | `aadhaar, voter, dl, passport, other`                                                                            |
+| `folio_status`                        | `open, settled, written_off`                                                                                     |
+| `folio_line_kind`                     | `room_charge, day_use, extra, discount, deposit, deposit_refund, forfeit, adjustment`                            |
+| `payment_mode`                        | `cash, upi, card, bank, cheque, online`                                                                          |
+| `receipt_kind`                        | `invoice, donation, credit_note, provisional, pos_bill`                                                          |
+| `outbox_channel`                      | `whatsapp, sms, email, push`                                                                                     |
+| `outbox_status`                       | `pending, sent, failed, dead`                                                                                    |
+| `billing_status`                      | `trial, active, overdue, readonly, closed`                                                                       |
+| `approval_status`                     | `pending, approved, rejected` (table `approvals`, currently unused by the API)                                   |
+| rooms.hk_priority                     | `low, normal, high`                                                                                              |
+| maintenance_tickets.priority / status | `low, normal, high, urgent` / `open, assigned, in_progress, resolved, closed`                                    |
+| lost_found_items.status               | `held, returned, disposed`                                                                                       |
+| expenses.category / payment_mode      | `utilities, maintenance, salaries, cleaning, supplies, food, marketing, other` / `cash, upi, card, bank, cheque` |
+| inventory_items.category              | `cleaning, linen, toiletries, food, maintenance, stationery`                                                     |
+| inventory_movements.kind              | `opening, purchase, consumption, adjustment, to_laundry, from_laundry`                                           |
+| pos_orders.status                     | `open, posted, paid, cancelled`                                                                                  |
+| payment_orders.status                 | `created, paid, failed, expired`                                                                                 |
+| channel_links.channel                 | `airbnb, booking_com, makemytrip, agoda, expedia, other`                                                         |
+| guest_registrations.state             | `open, submitted, applied, revoked`                                                                              |
+| properties.modules (text[])           | subset of `restaurant, inventory, expenses, maintenance, lost_found, audit`                                      |
 
 ### 9.2 Platform tables
 
@@ -991,74 +1022,74 @@ All tenant tables carry `property_id` and are protected by Postgres Row Level Se
 
 ### 9.6 Settings registry (`SettingsRegistry.ALL`) — key, type, default, minimum role to change
 
-| Group | Key | Type | Default | Who | Options / range |
-|---|---|---|---|---|---|
-| language | `languages` | LIST | `["hi","en"]` | OWNER | hi, en |
-| language | `guest_language` | ENUM | `hi` | MANAGER | hi, en |
-| stay | `checkin_time` | TIME | `12:00` | MANAGER | |
-| stay | `checkout_time` | TIME | `10:00` | MANAGER | |
-| stay | `billing_mode` | ENUM | `night` | OWNER | night, 24h |
-| stay | `late_grace_minutes` | INT | 60 | MANAGER | 0..720 |
-| stay | `late_checkout_policy` | ENUM | `half_day` | MANAGER | none, half_day, full_day |
-| stay | `day_use_allowed` | BOOL | true | MANAGER | |
-| stay | `day_use_rate_pct` | INT | 50 | MANAGER | 0..100 |
-| stay | `dorm_whole_room_allowed` | BOOL | false | OWNER | |
-| stay | `tape_chart_days` | INT | 14 | MANAGER | 7..60 |
-| stay | `dirty_rooms_assignable` | BOOL | true | MANAGER | |
-| reservations | `noshow_hour` | TIME | `18:00` | MANAGER | |
-| reservations | `noshow_policy` | ENUM | `forfeit` | OWNER | forfeit, refund, partial |
-| reservations | `noshow_partial_pct` | INT | 50 | OWNER | 0..100 |
-| reservations | `tentative_hold_hours` | INT | 24 | MANAGER | 1..720 |
-| day | `business_day_start` | TIME | `21:00` | OWNER | |
-| day | `report_channel` | ENUM | `both` | OWNER | whatsapp, email, both |
-| people | `approval_mode` | ENUM | `pin` | OWNER | pin, queue |
-| people | `staff_edit_window` | ENUM | `business_day` | OWNER | business_day, hours_24, none |
-| people | `session_days` | INT | 30 | OWNER | 1..365 |
-| guests | `id_photo_required` | BOOL | true | MANAGER | |
-| guests | `id_photo_max_kb` | INT | 300 | OWNER | 50..2000 |
-| guests | `id_photo_retention_days` | INT | 730 | OWNER | 30..3650 |
-| guests | `register_requires_all_names` | BOOL | true | MANAGER | |
-| guests | `register_template` | LIST | serial,name,address,nationality,id,arrival,departure,unit,adults,children,members,purpose | MANAGER | + phone |
-| guests | `consent_required` | BOOL | true | OWNER | |
-| guests | `self_registration_enabled` | BOOL | true | MANAGER | |
-| guests | `self_registration_minutes` | INT | 30 | MANAGER | 5..240 |
-| guests | `self_registration_photo` | BOOL | true | MANAGER | |
-| guests | `consent_text` | I18N_TEXT | `{en:..., hi:...}` | OWNER | |
-| tax | `tax_exempt` | BOOL | false | OWNER | |
-| tax | `religious_precinct` | BOOL | false | OWNER | |
-| tax | `exemption_threshold_paise` | INT | 100000 | OWNER | 0..100000000 |
-| tax | `donation_mode` | BOOL | false | OWNER | |
-| tax | `donation_mode_ca_confirmed` | BOOL | false | OWNER | |
-| tax | `restaurant_tax_bp` | INT | 500 | OWNER | 0..2800 |
-| tax | `rates_include_tax` | BOOL | false | OWNER | |
-| tax | `igst_for_interstate_b2b` | BOOL | false | OWNER | |
-| receipts | `receipt_prefix` | TEXT | `""` | OWNER | ≤5 |
-| receipts | `receipt_number_format` | TEXT | `{PREFIX}/{FY}/{SEQ:4}` | OWNER | ≤24 |
-| receipts | `receipt_header` / `receipt_footer` | TEXT | `""` | MANAGER | ≤300 |
-| receipts | `receipt_terms` | TEXT | `""` | MANAGER | ≤500 |
-| receipts | `receipt_logo_key` | TEXT | `""` | MANAGER | ≤200 |
-| receipts | `offline_receipt_mode` | ENUM | `provisional` | OWNER | provisional, device_block |
-| receipts | `offline_block_size` | INT | 20 | OWNER | 5..200 |
-| receipts | `offline_cache_days` | INT | 7 | OWNER | 1..30 |
-| receipts | `printer_profile` | ENUM | `thermal_58` | MANAGER | thermal_58, thermal_80, a4 |
-| money | `upi_vpa` | TEXT | `""` | OWNER | ≤100 |
-| money | `upi_payee_name` | TEXT | `""` | OWNER | ≤100 |
-| money | `payment_modes` | LIST | cash,upi,card,bank,cheque | MANAGER | same |
-| money | `deposit_default_paise` | INT | 0 | MANAGER | 0..10000000 |
-| messaging | `whatsapp_enabled` | BOOL | true | OWNER | |
-| messaging | `whatsapp_guest_updates` | BOOL | false | OWNER | |
-| messaging | `push_enabled` | BOOL | true | OWNER | |
-| messaging | `checkout_reminder_minutes` | INT | 60 | MANAGER | 0..720 (0 = off) |
-| online | `online_booking_enabled` | BOOL | false | OWNER | |
-| online | `online_booking_max_nights` | INT | 7 | MANAGER | 1..30 |
-| online | `online_booking_days_ahead` | INT | 180 | MANAGER | 7..365 |
-| online | `online_payment` | ENUM | `off` | OWNER | off, optional, required |
-| online | `online_payment_advance_pct` | INT | 100 | OWNER | 10..100 |
-| online | `online_payment_hold_minutes` | INT | 30 | OWNER | 10..240 |
-| platform | `support_access_until` | TEXT | `""` | OWNER | ISO timestamp |
-| platform | `org_data_retention_days` | INT | 90 | SUPER_ADMIN | 30..3650 |
-| platform | `grace_banner_days` | INT | 15 | SUPER_ADMIN | 0..365 |
-| platform | `grace_readonly_days` | INT | 45 | SUPER_ADMIN | 0..365 |
+| Group        | Key                                 | Type      | Default                                                                                   | Who         | Options / range              |
+| ------------ | ----------------------------------- | --------- | ----------------------------------------------------------------------------------------- | ----------- | ---------------------------- |
+| language     | `languages`                         | LIST      | `["hi","en"]`                                                                             | OWNER       | hi, en                       |
+| language     | `guest_language`                    | ENUM      | `hi`                                                                                      | MANAGER     | hi, en                       |
+| stay         | `checkin_time`                      | TIME      | `12:00`                                                                                   | MANAGER     |                              |
+| stay         | `checkout_time`                     | TIME      | `10:00`                                                                                   | MANAGER     |                              |
+| stay         | `billing_mode`                      | ENUM      | `night`                                                                                   | OWNER       | night, 24h                   |
+| stay         | `late_grace_minutes`                | INT       | 60                                                                                        | MANAGER     | 0..720                       |
+| stay         | `late_checkout_policy`              | ENUM      | `half_day`                                                                                | MANAGER     | none, half_day, full_day     |
+| stay         | `day_use_allowed`                   | BOOL      | true                                                                                      | MANAGER     |                              |
+| stay         | `day_use_rate_pct`                  | INT       | 50                                                                                        | MANAGER     | 0..100                       |
+| stay         | `dorm_whole_room_allowed`           | BOOL      | false                                                                                     | OWNER       |                              |
+| stay         | `tape_chart_days`                   | INT       | 14                                                                                        | MANAGER     | 7..60                        |
+| stay         | `dirty_rooms_assignable`            | BOOL      | true                                                                                      | MANAGER     |                              |
+| reservations | `noshow_hour`                       | TIME      | `18:00`                                                                                   | MANAGER     |                              |
+| reservations | `noshow_policy`                     | ENUM      | `forfeit`                                                                                 | OWNER       | forfeit, refund, partial     |
+| reservations | `noshow_partial_pct`                | INT       | 50                                                                                        | OWNER       | 0..100                       |
+| reservations | `tentative_hold_hours`              | INT       | 24                                                                                        | MANAGER     | 1..720                       |
+| day          | `business_day_start`                | TIME      | `21:00`                                                                                   | OWNER       |                              |
+| day          | `report_channel`                    | ENUM      | `both`                                                                                    | OWNER       | whatsapp, email, both        |
+| people       | `approval_mode`                     | ENUM      | `pin`                                                                                     | OWNER       | pin, queue                   |
+| people       | `staff_edit_window`                 | ENUM      | `business_day`                                                                            | OWNER       | business_day, hours_24, none |
+| people       | `session_days`                      | INT       | 30                                                                                        | OWNER       | 1..365                       |
+| guests       | `id_photo_required`                 | BOOL      | true                                                                                      | MANAGER     |                              |
+| guests       | `id_photo_max_kb`                   | INT       | 300                                                                                       | OWNER       | 50..2000                     |
+| guests       | `id_photo_retention_days`           | INT       | 730                                                                                       | OWNER       | 30..3650                     |
+| guests       | `register_requires_all_names`       | BOOL      | true                                                                                      | MANAGER     |                              |
+| guests       | `register_template`                 | LIST      | serial,name,address,nationality,id,arrival,departure,unit,adults,children,members,purpose | MANAGER     | + phone                      |
+| guests       | `consent_required`                  | BOOL      | true                                                                                      | OWNER       |                              |
+| guests       | `self_registration_enabled`         | BOOL      | true                                                                                      | MANAGER     |                              |
+| guests       | `self_registration_minutes`         | INT       | 30                                                                                        | MANAGER     | 5..240                       |
+| guests       | `self_registration_photo`           | BOOL      | true                                                                                      | MANAGER     |                              |
+| guests       | `consent_text`                      | I18N_TEXT | `{en:..., hi:...}`                                                                        | OWNER       |                              |
+| tax          | `tax_exempt`                        | BOOL      | false                                                                                     | OWNER       |                              |
+| tax          | `religious_precinct`                | BOOL      | false                                                                                     | OWNER       |                              |
+| tax          | `exemption_threshold_paise`         | INT       | 100000                                                                                    | OWNER       | 0..100000000                 |
+| tax          | `donation_mode`                     | BOOL      | false                                                                                     | OWNER       |                              |
+| tax          | `donation_mode_ca_confirmed`        | BOOL      | false                                                                                     | OWNER       |                              |
+| tax          | `restaurant_tax_bp`                 | INT       | 500                                                                                       | OWNER       | 0..2800                      |
+| tax          | `rates_include_tax`                 | BOOL      | false                                                                                     | OWNER       |                              |
+| tax          | `igst_for_interstate_b2b`           | BOOL      | false                                                                                     | OWNER       |                              |
+| receipts     | `receipt_prefix`                    | TEXT      | `""`                                                                                      | OWNER       | ≤5                           |
+| receipts     | `receipt_number_format`             | TEXT      | `{PREFIX}/{FY}/{SEQ:4}`                                                                   | OWNER       | ≤24                          |
+| receipts     | `receipt_header` / `receipt_footer` | TEXT      | `""`                                                                                      | MANAGER     | ≤300                         |
+| receipts     | `receipt_terms`                     | TEXT      | `""`                                                                                      | MANAGER     | ≤500                         |
+| receipts     | `receipt_logo_key`                  | TEXT      | `""`                                                                                      | MANAGER     | ≤200                         |
+| receipts     | `offline_receipt_mode`              | ENUM      | `provisional`                                                                             | OWNER       | provisional, device_block    |
+| receipts     | `offline_block_size`                | INT       | 20                                                                                        | OWNER       | 5..200                       |
+| receipts     | `offline_cache_days`                | INT       | 7                                                                                         | OWNER       | 1..30                        |
+| receipts     | `printer_profile`                   | ENUM      | `thermal_58`                                                                              | MANAGER     | thermal_58, thermal_80, a4   |
+| money        | `upi_vpa`                           | TEXT      | `""`                                                                                      | OWNER       | ≤100                         |
+| money        | `upi_payee_name`                    | TEXT      | `""`                                                                                      | OWNER       | ≤100                         |
+| money        | `payment_modes`                     | LIST      | cash,upi,card,bank,cheque                                                                 | MANAGER     | same                         |
+| money        | `deposit_default_paise`             | INT       | 0                                                                                         | MANAGER     | 0..10000000                  |
+| messaging    | `whatsapp_enabled`                  | BOOL      | true                                                                                      | OWNER       |                              |
+| messaging    | `whatsapp_guest_updates`            | BOOL      | false                                                                                     | OWNER       |                              |
+| messaging    | `push_enabled`                      | BOOL      | true                                                                                      | OWNER       |                              |
+| messaging    | `checkout_reminder_minutes`         | INT       | 60                                                                                        | MANAGER     | 0..720 (0 = off)             |
+| online       | `online_booking_enabled`            | BOOL      | false                                                                                     | OWNER       |                              |
+| online       | `online_booking_max_nights`         | INT       | 7                                                                                         | MANAGER     | 1..30                        |
+| online       | `online_booking_days_ahead`         | INT       | 180                                                                                       | MANAGER     | 7..365                       |
+| online       | `online_payment`                    | ENUM      | `off`                                                                                     | OWNER       | off, optional, required      |
+| online       | `online_payment_advance_pct`        | INT       | 100                                                                                       | OWNER       | 10..100                      |
+| online       | `online_payment_hold_minutes`       | INT       | 30                                                                                        | OWNER       | 10..240                      |
+| platform     | `support_access_until`              | TEXT      | `""`                                                                                      | OWNER       | ISO timestamp                |
+| platform     | `org_data_retention_days`           | INT       | 90                                                                                        | SUPER_ADMIN | 30..3650                     |
+| platform     | `grace_banner_days`                 | INT       | 15                                                                                        | SUPER_ADMIN | 0..365                       |
+| platform     | `grace_readonly_days`               | INT       | 45                                                                                        | SUPER_ADMIN | 0..365                       |
 
 ---
 
@@ -1066,14 +1097,14 @@ All tenant tables carry `property_id` and are protected by Postgres Row Level Se
 
 All jobs run per active property inside its tenant context and record `job_runs(name, key)` so restarts/multiple instances never repeat work. Disabled with `pms.jobs.enabled=false`.
 
-| Job | Schedule | What it does (mobile-relevant effects) |
-|---|---|---|
-| `OutboxWorker` | every 5 s (`pms.jobs.outbox-poll-ms`) | Sends pending `outbox` rows (whatsapp/sms/email/push) with retries; `dead` rows alert the ops email. **Push tokens rejected by FCM (`UNREGISTERED`/`INVALID_ARGUMENT`) are deleted** — re-register on next app start. |
-| `FrontDeskJob` | every 5 min (`:15`) | `payments.reconcileWaiting()` (asks gateway about `created`/`failed` orders older than 5 min or past hold); `bookings.expireHolds()` (pending bookings past `hold_until` → `cancelled`, reason "Hold expired", notification `booking_cancelled`); checkout reminders `checkout_reminder_minutes` before `depart_at` (notification `checkout_reminder` to `checkout` holders, WhatsApp to opted-in guests if `whatsapp_guest_updates`). |
-| `NoShowJob` | every 15 min | After `noshow_hour` local time, sets `flagged_noshow_at` on `reserved` bookings that should have arrived today (they appear in `today.flaggedNoShow`). The desk then calls `/no-show` or `/arrive`. |
-| `DailyReportJob` | every 15 min | After `business_day_start`, once per property per business date: computes `/reports/daily`, stores `daily_reports`, queues WhatsApp template `daily_summary_owner` and/or email to owners/admins/managers per `report_channel`. |
-| `ChannelSyncJob` | every 15 min (`:07:30`) | Pulls each `channel_links.import_url` iCal, creates/moves/cancels `source='ota'` bookings; unresolvable overlaps become `channel_stays.conflict` (surfaced as `today.channelConflicts` and `/api/channels` `conflicts`). |
-| `PhotoPurgeJob` | daily 03:30 / 03:45 | Deletes guest ID photos and self-registration photos older than `id_photo_retention_days` after checkout; purges old OTP codes and dead sessions. |
+| Job              | Schedule                              | What it does (mobile-relevant effects)                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OutboxWorker`   | every 5 s (`pms.jobs.outbox-poll-ms`) | Sends pending `outbox` rows (whatsapp/sms/email/push) with retries; `dead` rows alert the ops email. **Push tokens rejected by FCM (`UNREGISTERED`/`INVALID_ARGUMENT`) are deleted** — re-register on next app start.                                                                                                                                                                                                                  |
+| `FrontDeskJob`   | every 5 min (`:15`)                   | `payments.reconcileWaiting()` (asks gateway about `created`/`failed` orders older than 5 min or past hold); `bookings.expireHolds()` (pending bookings past `hold_until` → `cancelled`, reason "Hold expired", notification `booking_cancelled`); checkout reminders `checkout_reminder_minutes` before `depart_at` (notification `checkout_reminder` to `checkout` holders, WhatsApp to opted-in guests if `whatsapp_guest_updates`). |
+| `NoShowJob`      | every 15 min                          | After `noshow_hour` local time, sets `flagged_noshow_at` on `reserved` bookings that should have arrived today (they appear in `today.flaggedNoShow`). The desk then calls `/no-show` or `/arrive`.                                                                                                                                                                                                                                    |
+| `DailyReportJob` | every 15 min                          | After `business_day_start`, once per property per business date: computes `/reports/daily`, stores `daily_reports`, queues WhatsApp template `daily_summary_owner` and/or email to owners/admins/managers per `report_channel`.                                                                                                                                                                                                        |
+| `ChannelSyncJob` | every 15 min (`:07:30`)               | Pulls each `channel_links.import_url` iCal, creates/moves/cancels `source='ota'` bookings; unresolvable overlaps become `channel_stays.conflict` (surfaced as `today.channelConflicts` and `/api/channels` `conflicts`).                                                                                                                                                                                                               |
+| `PhotoPurgeJob`  | daily 03:30 / 03:45                   | Deletes guest ID photos and self-registration photos older than `id_photo_retention_days` after checkout; purges old OTP codes and dead sessions.                                                                                                                                                                                                                                                                                      |
 
 ### 10.1 Push notifications (FCM) — payload and registration
 

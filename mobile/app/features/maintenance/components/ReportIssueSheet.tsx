@@ -72,7 +72,7 @@ export function ReportIssueSheet({ roomId, roomNumber, onClose, onDone }: Report
         onChange={setPriority}
         options={PRIORITIES.map((p) => ({ value: p, label: translateOr(`priority.${p}`, p) }))}
       />
-      {roomId && (
+      {!!roomId && (
         <Switch
           value={offSale}
           onValueChange={setOffSale}

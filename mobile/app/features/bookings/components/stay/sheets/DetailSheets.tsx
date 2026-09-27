@@ -211,8 +211,8 @@ export function UnitSheet({
       }
     >
       {!free && <Loading rows={2} />}
-      {free && free.length === 0 && <Text text={translate("stay.noneFree")} />}
-      {free && free.length > 0 && <UnitPicker units={free} selected={[]} onToggle={onDone} />}
+      {!!free && free.length === 0 && <Text text={translate("stay.noneFree")} />}
+      {!!free && free.length > 0 && <UnitPicker units={free} selected={[]} onToggle={onDone} />}
     </Sheet>
   )
 }

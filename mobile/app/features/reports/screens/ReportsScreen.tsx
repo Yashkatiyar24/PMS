@@ -91,9 +91,11 @@ export const ReportsScreen = observer(function ReportsScreen() {
           />
         }
       />
-      {daily.loading && <Loading />}
-      {daily.problem && !d && <ErrorState message={daily.problem.message} onRetry={daily.reload} />}
-      {d && (
+      {!!daily.loading && <Loading />}
+      {!!daily.problem && !d && (
+        <ErrorState message={daily.problem.message} onRetry={daily.reload} />
+      )}
+      {!!d && (
         <>
           <Panel>
             <Text

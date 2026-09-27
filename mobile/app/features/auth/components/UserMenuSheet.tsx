@@ -80,7 +80,7 @@ export const UserMenuSheet = observer(function UserMenuSheet({
   return (
     <>
       <ActionSheet
-        open={open && !changing}
+        open={!!open && !changing}
         onClose={onClose}
         title={auth.user?.name ?? ""}
         items={items}

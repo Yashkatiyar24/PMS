@@ -130,7 +130,7 @@ export const StayScreen = observer(function StayScreen() {
           text={translate("checkin.elapsed", { seconds: params.checkedInSeconds })}
         />
       )}
-      {booking.state === "pending" && booking.holdUntil && (
+      {booking.state === "pending" && !!booking.holdUntil && (
         <Banner
           tone="warn"
           text={translate("stay.holdUntil", { time: formatTime(booking.holdUntil) })}
@@ -222,7 +222,7 @@ export const StayScreen = observer(function StayScreen() {
           openReceipt(r)
         }}
       />
-      {line && folio && (
+      {!!line && !!folio && (
         <RemoveLineSheet
           open
           onClose={() => setLine(null)}

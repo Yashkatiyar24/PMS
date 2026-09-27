@@ -1,0 +1,69 @@
+# flow: login → walk-in check-in → add a charge → remove it with a reason (owner needs no PIN).
+# The same journey the web build runs in e2e/web/run.mjs; it takes the first free Non-AC room.
+appId: ${MAESTRO_APP_ID}
+env:
+  PROPERTY_CODE: SRD1001
+  EMAIL: owner@pms.local
+  PASSWORD: password123
+onFlowStart:
+  - runFlow: ../shared/_OnFlowStart.yaml
+---
+- runFlow: ../shared/_Login.yaml
+- tapOn:
+    id: "today-checkin"
+- tapOn:
+    id: "guest-phone"
+- inputText: "9876500001"
+- tapOn:
+    id: "guest-name"
+- inputText: "Maestro Charge"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Non-AC Room · ₹800"
+- tapOn: "Non-AC Room · ₹800"
+- tapOn:
+    text: "10[0-9]"
+    index: 0
+- runFlow:
+    when:
+      visible:
+        id: "checkin-skip-reason"
+    commands:
+      - tapOn:
+          id: "checkin-skip-reason"
+      - inputText: "Guest forgot ID"
+      - hideKeyboard
+- runFlow:
+    when:
+      visible: "I have told the guest why their details are being recorded."
+    commands:
+      - tapOn: "I have told the guest why their details are being recorded."
+- tapOn:
+    id: "checkin-submit"
+- extendedWaitUntil:
+    visible:
+      id: "stay-menu"
+    timeout: 20000
+- tapOn:
+    id: "stay-menu"
+- tapOn: "Add charge"
+- tapOn:
+    id: "extra-details"
+- inputText: "Thali"
+- tapOn:
+    id: "extra-amount"
+- inputText: "150"
+- hideKeyboard
+- tapOn:
+    id: "extra-submit"
+- tapOn: "Bill"
+- assertVisible: "Thali"
+- tapOn:
+    id: "remove-line-.*"
+- tapOn:
+    id: "remove-line-reason"
+- inputText: "Entered by mistake"
+- hideKeyboard
+- tapOn:
+    id: "remove-line-submit"
+- assertNotVisible: "Thali"

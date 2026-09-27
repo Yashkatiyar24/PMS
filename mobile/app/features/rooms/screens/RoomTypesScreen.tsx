@@ -50,11 +50,11 @@ export function RoomTypesScreen() {
         onBack={() => navigation.goBack()}
         actions={<Button size="sm" text={translate("action.add")} onPress={() => setMenu(true)} />}
       />
-      {types.loading && <Loading />}
-      {types.problem && !types.data && (
+      {!!types.loading && <Loading />}
+      {!!types.problem && !types.data && (
         <ErrorState message={types.problem.message} onRetry={types.reload} />
       )}
-      {types.data && list.length === 0 && (
+      {!!types.data && list.length === 0 && (
         <Empty
           text={translate("empty.roomTypes")}
           actionText={translate("setup.addRoomType")}
@@ -106,7 +106,7 @@ export function RoomTypesScreen() {
           },
         ]}
       />
-      {type && (
+      {!!type && (
         <RoomTypeSheet
           type={type === "new" ? null : type}
           onClose={() => setType(null)}
@@ -116,7 +116,7 @@ export function RoomTypesScreen() {
           }}
         />
       )}
-      {addingRooms && (
+      {!!addingRooms && (
         <AddRoomsSheet
           types={list}
           onClose={() => setAddingRooms(false)}
@@ -126,7 +126,7 @@ export function RoomTypesScreen() {
           }}
         />
       )}
-      {currentRoom && (
+      {!!currentRoom && (
         <RoomEditSheet
           room={currentRoom}
           types={list}

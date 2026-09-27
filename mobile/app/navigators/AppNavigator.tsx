@@ -41,13 +41,13 @@ const AppStack = observer(function AppStack() {
       }}
     >
       {!signedIn && <Stack.Screen name="Login" component={LoginScreen} />}
-      {signedIn && mustChange && (
+      {!!signedIn && !!mustChange && (
         <Stack.Screen name="ForcePasswordChange" component={ForcePasswordChangeScreen} />
       )}
-      {signedIn && !mustChange && closed && (
+      {!!signedIn && !mustChange && !!closed && (
         <Stack.Screen name="BillingClosed" component={BillingClosedScreen} />
       )}
-      {signedIn && !mustChange && !closed && <Stack.Screen name="Main" component={MainTabs} />}
+      {!!signedIn && !mustChange && !closed && <Stack.Screen name="Main" component={MainTabs} />}
     </Stack.Navigator>
   )
 })

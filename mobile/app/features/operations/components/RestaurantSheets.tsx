@@ -97,7 +97,7 @@ export function SettleSheet({
         label={translate("pos.status.cancelled")}
         labelPosition="right"
       />
-      {cancelling && (
+      {!!cancelling && (
         <>
           <Input label={translate("common.reason")} value={reason} onChangeText={setReason} />
           <Button
@@ -159,7 +159,7 @@ export function DishSheet({
       <Input label={translate("checkin.name")} value={name} onChangeText={setName} autoFocus />
       <Input label={translate("stay.category")} value={category} onChangeText={setCategory} />
       <MoneyInput label={translate("setup.rate")} value={price} onChangeText={setPrice} />
-      {dish && (
+      {!!dish && (
         <Switch
           value={active}
           onValueChange={setActive}

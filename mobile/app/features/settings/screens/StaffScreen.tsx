@@ -109,14 +109,14 @@ export function StaffScreen() {
           ) : undefined
         }
       />
-      {code && (
+      {!!code && (
         <Panel>
           <KV label={translate("setup.code")} value={code} strong />
           <KV label="" value={translate("setup.codeHint")} />
         </Panel>
       )}
-      {staff.loading && <Loading />}
-      {staff.problem && !staff.data && (
+      {!!staff.loading && <Loading />}
+      {!!staff.problem && !staff.data && (
         <ErrorState message={staff.problem.message} onRetry={staff.reload} />
       )}
       {list.length > 0 && (
@@ -144,7 +144,7 @@ export function StaffScreen() {
           ))}
         </ListCard>
       )}
-      {menuFor && (
+      {!!menuFor && (
         <ActionSheet
           open={!sheet}
           onClose={() => setMenuFor(null)}
@@ -185,7 +185,7 @@ export function StaffScreen() {
           }}
         />
       )}
-      {sheet === "role" && menuFor && (
+      {sheet === "role" && !!menuFor && (
         <RoleSheet
           member={menuFor}
           onClose={() => {
@@ -199,7 +199,7 @@ export function StaffScreen() {
           }}
         />
       )}
-      {sheet === "pin" && menuFor && (
+      {sheet === "pin" && !!menuFor && (
         <PinSheet
           member={menuFor}
           onClose={() => {
@@ -213,7 +213,7 @@ export function StaffScreen() {
           }}
         />
       )}
-      {creds && <CredentialsSheet creds={creds} onClose={() => setCreds(null)} />}
+      {!!creds && <CredentialsSheet creds={creds} onClose={() => setCreds(null)} />}
     </Screen>
   )
 }

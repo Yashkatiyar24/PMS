@@ -31,8 +31,8 @@ export const OtpLoginForm = observer(function OtpLoginForm() {
         editable={!sent}
         testID="otp-target"
       />
-      {sent && <Banner tone="ok" text={translate("mobile.codeSent")} />}
-      {sent && (
+      {!!sent && <Banner tone="ok" text={translate("mobile.codeSent")} />}
+      {!!sent && (
         <Input
           label={translate("mobile.enterCode")}
           value={code}

@@ -52,7 +52,7 @@ export function ListRow({
         )}
       </View>
       {right}
-      {showChevron && <Text text="›" style={[$chev, { color: theme.colors.textFaint }]} />}
+      {!!showChevron && <Text text="›" style={[$chev, { color: theme.colors.textFaint }]} />}
     </>
   )
   const $line: ViewStyle = last

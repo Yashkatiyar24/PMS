@@ -138,7 +138,7 @@ export function PlatformPropertyScreen() {
           label={translate("admin.lastActivity")}
           value={p.lastActivityAt ? formatDateTime(p.lastActivityAt) : translate("admin.never")}
         />
-        {p.supportAccess && <Chip tone="ok" text={translate("admin.supportAccess")} />}
+        {!!p.supportAccess && <Chip tone="ok" text={translate("admin.supportAccess")} />}
       </Panel>
       <PropertyPhotoCard
         photoUrl={p.photoUrl}
@@ -214,7 +214,7 @@ export function PlatformPropertyScreen() {
         />
       </Disclosure>
       <Disclosure title={translate("admin.activity")}>
-        {activity.problem && (
+        {!!activity.problem && (
           <Text text={activity.problem.message} size="xs" style={{ color: theme.colors.textDim }} />
         )}
         {(activity.data ?? []).slice(0, 30).map((a, i) => (
@@ -225,7 +225,7 @@ export function PlatformPropertyScreen() {
           />
         ))}
       </Disclosure>
-      {creds && <CredentialsSheet creds={creds} onClose={() => setCreds(null)} />}
+      {!!creds && <CredentialsSheet creds={creds} onClose={() => setCreds(null)} />}
     </Screen>
   )
 }

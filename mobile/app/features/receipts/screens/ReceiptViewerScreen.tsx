@@ -1,16 +1,17 @@
 import { useState } from "react"
 import { View, type ViewStyle } from "react-native"
-import WebView from "react-native-webview"
 
-import { Button, Loading, PageHeader, Screen, showError } from "@/components"
+import { Button, PageHeader, Screen, showError } from "@/components"
 import { translate } from "@/i18n/translate"
 import { useAppNavigation, useAppRoute } from "@/navigators/useAppNavigation"
 import { api } from "@/services/api"
 import { shareBytes } from "@/utils/files"
 
+import { ReceiptFrame } from "../components/ReceiptFrame"
+
 /**
- * Receipts, POS bills and other printables the API renders as HTML. The WebView carries the session cookie so
- * the API host serves the page; Share fetches the PDF twin when there is one.
+ * Receipts, POS bills and other printables the API renders as HTML, shown by `ReceiptFrame`; Share fetches the
+ * PDF twin when there is one.
  */
 export function ReceiptViewerScreen() {
   const navigation = useAppNavigation()
@@ -47,20 +48,10 @@ export function ReceiptViewerScreen() {
           }
         />
       </View>
-      <WebView
-        source={{
-          uri: api.client.url(params.path),
-          headers: cookie ? { Cookie: cookie } : undefined,
-        }}
-        sharedCookiesEnabled
-        startInLoadingState
-        renderLoading={() => <Loading rows={2} />}
-        style={$web}
-      />
+      <ReceiptFrame url={api.client.url(params.path)} cookie={cookie} />
     </Screen>
   )
 }
 
 const $content: ViewStyle = { flex: 1 }
 const $header: ViewStyle = { paddingHorizontal: 16 }
-const $web: ViewStyle = { flex: 1 }

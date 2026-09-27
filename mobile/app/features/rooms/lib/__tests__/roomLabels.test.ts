@@ -58,7 +58,7 @@ describe("room helpers", () => {
     expect(occupancySummary(room({}))).toEqual({ key: "available" })
     expect(
       occupancySummary(
-        room({ occupancy: { state: "checked_in", bookingId: "b", guestName: "A", departAt: "x" } }),
+        room({ occupancy: { state: "occupied", bookingId: "b", guestName: "A", departAt: "x" } }),
       ).key,
     ).toBe("occupied")
     expect(
@@ -73,7 +73,7 @@ describe("room helpers", () => {
           id: "2",
           label: "B2",
           active: true,
-          occupancy: { state: "checked_in", bookingId: "b", guestName: "A", departAt: "x" },
+          occupancy: { state: "occupied", bookingId: "b", guestName: "A", departAt: "x" },
         },
         { id: "3", label: "B3", active: false, occupancy: null },
       ],

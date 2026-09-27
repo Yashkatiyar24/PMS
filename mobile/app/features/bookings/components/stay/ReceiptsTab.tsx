@@ -38,7 +38,7 @@ export function ReceiptsTab({ receipts, canCreditNote, onCreditNote }: ReceiptsT
                 text={translate("action.print")}
                 onPress={() => open(r)}
               />
-              {canCreditNote && (r.kind === "invoice" || r.kind === "donation") && (
+              {!!canCreditNote && (r.kind === "invoice" || r.kind === "donation") && (
                 <Button
                   preset="ghost"
                   size="sm"

@@ -38,7 +38,7 @@ differently on a phone (noted) · ❌ deferred (noted). Web-only pages meant for
 - [x] New booking: guest lookup, dates, room type or particular units, group multi-select, adults/children, source + group/company/GSTIN, city, requests, tentative hold, WhatsApp, advance + mode, consent; availability re-queried on date change; validation order as web
 - [x] Walk-in check-in: lookup/new guest, ID type/last 4/address/city, ID photo (camera/gallery, compressed to `id_photo_max_kb`), skip reason, adults/children/nights, room type → free unit (dirty dot), advance/deposit/mode, consent, WhatsApp; "To collect" total; validation order; queued offline; "Took Ns"
 - [x] Self-registration QR: create link, show QR, poll 2 s, apply submission into the form, new code, expiry
-- [❌] On-device ID OCR (tesseract.js on web) — deferred; manual last-4 entry + photo
+- [◐] On-device ID OCR — web uses tesseract.js; mobile uses ML Kit (Android) / Apple Vision (iOS) through `utils/ocr.ts`, same `extractId` rule, fills only an empty last-4 and sets Aadhaar, then shows `ocr.filled`
 - [x] Stay: reference, state/payment chips, phone link, facts strip
 - [x] State actions: Confirm (pending), Mark arrived, Take payment, Check out (unpaid/early → override sheet with reason + PIN), Invoice
 - [x] Overflow: Add extra, Give discount, Refund, Invoice, Edit details, Party, Add room, Mark no-show, Cancel
@@ -51,7 +51,7 @@ differently on a phone (noted) · ❌ deferred (noted). Web-only pages meant for
 - [x] Take payment (modes from `payment_modes`, queued offline, idempotent)
 - [x] Add extra (categories), discount (negative line + reason), refund (≤ paid, mode, reason), credit note against an invoice
 - [x] Invoice / donation receipt, provisional receipt for a payment
-- [ ] Remove a bill line (`DELETE /lines/{id}`) — the API exists (`api.folios.removeLine`); the web app has no UI for it either
+- [x] Remove a bill line: ✕ on added charges (room charges follow the dates), reason + approval PIN (`discount.apply`) → `DELETE /lines/{id}`; added to the web stay page too
 
 ## Guests
 
@@ -103,7 +103,7 @@ differently on a phone (noted) · ❌ deferred (noted). Web-only pages meant for
 - [x] Portfolio cards with totals; open switches property
 - [x] Platform list: tiles, filters (all/trial/active/attention/quiet), search, CSV export, onboard property → credentials
 - [x] Platform property: tiles, details, plan, billing, on/off, modules, team + reset password, notes, recent changes
-- [ ] Platform property photo upload/remove — API wired (`api.admin.uploadPhoto/removePhoto`); no UI yet on mobile
+- [x] Platform property photo upload/remove (`PropertyPhotoCard`, shared with Property details; compressed to 600 KB / 1600 px)
 
 ## Cross-cutting
 
@@ -121,5 +121,16 @@ differently on a phone (noted) · ❌ deferred (noted). Web-only pages meant for
 
 ## Verified in this repository
 
-- `npm run typecheck`, `npm run lint` (0 warnings) and `npm test` (utils, stores, queue, linking, form builders) pass.
-- Maestro flows under `.maestro/flows` are written for the seeded dev property; they need a device or simulator and were not executed in the CI container that built this.
+- `npm run typecheck`, `npm run lint` (0 warnings) and `npm test` (utils incl. OCR, stores, queue, linking, form
+  builders) pass; `npx expo export --platform android` bundles.
+- Runtime: `npm run smoke:web` drives the app (react-native-web in Chromium) against the real API on the seeded dev
+  database — 37/37 steps across owner, staff (PIN) and platform admin, repeatable on the same database. Bugs it
+  found and that are fixed: occupied rooms labelled "Reserved" (the API sends `occupied`), empty strings rendered
+  outside `<Text>` (a crash on a phone; now caught by `react/jsx-no-leaked-render`), menus that navigate while
+  their sheet is still closing, and a compile error in the backend push payload.
+- Backend `mvn test`: 146 tests pass (including the push-payload fix).
+- The web stay page's remove-charge sheet was checked the same way (staff: disabled until the PIN, then
+  `200 DELETE`), and the web's own `npm run ui-check` passes.
+- Not run here: native Android/iOS builds, the Maestro flows (`.maestro/flows`, incl. `remove-charge.yaml`), push
+  delivery and ML Kit OCR. This container has no emulator support (no KVM) and its network policy blocks
+  `dl.google.com`, where the Android SDK comes from.

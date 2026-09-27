@@ -66,8 +66,7 @@ export function occupancySummary(room: Room): {
     const taken = active.filter((b) => b.occupancy).length
     return { key: "beds", taken, total: active.length }
   }
-  if (room.occupancy)
-    return { key: room.occupancy.state === "checked_in" ? "occupied" : "reserved" }
+  if (room.occupancy) return { key: room.occupancy.state }
   return { key: "available" }
 }
 

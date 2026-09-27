@@ -45,7 +45,7 @@ export function MoveStaySheet({ occupancy, lanes, onClose, onMove }: MoveStayShe
         />
       }
     >
-      {canMoveDates && (
+      {!!canMoveDates && (
         <DateField
           label={translate("mobile.newArrival")}
           value={arriveOn}

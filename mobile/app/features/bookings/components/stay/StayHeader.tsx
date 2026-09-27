@@ -30,7 +30,7 @@ export function StayHeader({ booking, folio }: { booking: Booking; folio: Folio 
         <Chip tone={stateTone(booking.state)} text={stateLabel(booking.state)} dot />
         <Chip tone={paymentTone(booking.paymentStatus)} text={payLabel} />
       </View>
-      {booking.groupName && (
+      {!!booking.groupName && (
         <Text text={booking.guestName} size="sm" style={{ color: theme.colors.textDim }} />
       )}
       {!!booking.guestPhone && (

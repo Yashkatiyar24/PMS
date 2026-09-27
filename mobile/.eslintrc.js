@@ -27,6 +27,8 @@ module.exports = {
   ],
   rules: {
     "prettier/prettier": "error",
+    // `{name && <X/>}` renders "" when name is empty, which crashes React Native outside <Text>.
+    "react/jsx-no-leaked-render": ["error", { validStrategies: ["coerce", "ternary"] }],
     // typescript-eslint
     "@typescript-eslint/array-type": 0,
     "@typescript-eslint/ban-ts-comment": 0,

@@ -71,7 +71,7 @@ export function SelfRegistrationQr({ bookingId = null, onReceived }: SelfRegistr
         size="xs"
         style={{ color: theme.colors.textDim }}
       />
-      {state === "waiting" && link && (
+      {state === "waiting" && !!link && (
         <Pressable
           onPress={() => showToast(link.url, "info", 6000)}
           accessibilityRole="imagebutton"

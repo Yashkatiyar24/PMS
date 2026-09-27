@@ -19,6 +19,18 @@ export type SheetProps = {
   locked?: boolean
 }
 
+/** How long a sheet takes to slide away. */
+const DISMISS_MS = 320
+
+/**
+ * Run `next` once a sheet that is closing has slid away. Use it when closing a sheet leads to another screen or
+ * sheet: iOS will not present one while a modal is still dismissing, and in a browser a screen hidden
+ * mid-animation leaves the invisible modal on top, swallowing every tap.
+ */
+export function afterSheetCloses(next: () => void): void {
+  setTimeout(next, DISMISS_MS)
+}
+
 /** The bottom sheet every secondary form lives in (the web's `Sheet`). */
 export function Sheet({ open, onClose, title, description, children, footer, locked }: SheetProps) {
   const { theme } = useAppTheme()
@@ -73,7 +85,7 @@ export function Sheet({ open, onClose, title, description, children, footer, loc
           >
             {children}
           </ScrollView>
-          {footer && <View style={$footer}>{footer}</View>}
+          {!!footer && <View style={$footer}>{footer}</View>}
         </View>
       </KeyboardAvoidingView>
     </Modal>

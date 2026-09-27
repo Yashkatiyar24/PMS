@@ -5,10 +5,17 @@
  *  - `queue`: offline writes waiting to be sent.
  * Swapping the storage library means changing only this file.
  */
+import { Platform } from "react-native"
 import { MMKV } from "react-native-mmkv"
 
 export const storage = new MMKV()
-const secure = new MMKV({ id: "pms-secure", encryptionKey: "pms-secure-v1" })
+// A browser's MMKV is localStorage and cannot encrypt; the web build holds no token there anyway (the browser keeps
+// the HttpOnly cookie), only the remembered property code.
+const secure = new MMKV(
+  Platform.OS === "web"
+    ? { id: "pms-secure" }
+    : { id: "pms-secure", encryptionKey: "pms-secure-v1" },
+)
 const queue = new MMKV({ id: "pms-queue" })
 
 /** Read a string, or null when missing or unreadable. */

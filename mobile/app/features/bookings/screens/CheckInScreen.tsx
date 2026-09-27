@@ -102,13 +102,13 @@ export function CheckInScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <PageHeader title={translate("action.checkIn")} onBack={() => navigation.goBack()} />
-        {form.registration && (
+        {!!form.registration && (
           <Banner tone="ok" text={translate("selfreg.received", { name: form.name })} />
         )}
         {settingBool(settings, "self_registration_enabled", true) && !form.registration && (
           <SelfRegistrationQr onReceived={applySubmission} />
         )}
-        {loading && <Loading />}
+        {!!loading && <Loading />}
         {!loading && (
           <>
             <GuestStep
@@ -148,7 +148,7 @@ export function CheckInScreen() {
           value={`${rupees(total)}${form.unitLabel ? ` · ${form.unitLabel}` : ""}`}
           strong
         />
-        {missing && <Banner tone="info" text={translate(missing as "checkin.need.name")} />}
+        {!!missing && <Banner tone="info" text={translate(missing as "checkin.need.name")} />}
         <Button
           size="lg"
           text={translate("checkin.submit")}

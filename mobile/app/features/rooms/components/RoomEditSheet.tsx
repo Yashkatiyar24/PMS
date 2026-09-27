@@ -87,7 +87,7 @@ export function RoomEditSheet({
         label={translate("setup.roomInUse")}
         labelPosition="right"
       />
-      {isDorm && (
+      {!!isDorm && (
         <>
           <Text
             text={translate("setup.beds")}

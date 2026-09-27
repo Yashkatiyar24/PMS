@@ -43,8 +43,8 @@ export function ForecastCard({ from }: { from: string }) {
         }
       />
       <Panel>
-        {!f && forecast.loading && <Loading rows={1} />}
-        {f && (
+        {!f && !!forecast.loading && <Loading rows={1} />}
+        {!!f && (
           <>
             <View style={$tiles}>
               <StatTile

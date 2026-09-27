@@ -130,7 +130,7 @@ export function NewBookingScreen() {
             ) : undefined
           }
         />
-        {roomTypes.loading && !roomTypes.data && <Loading rows={1} />}
+        {!!roomTypes.loading && !roomTypes.data && <Loading rows={1} />}
         <RoomAndDatesCard
           form={form}
           patch={patch}
@@ -154,7 +154,7 @@ export function NewBookingScreen() {
               label: translateOr(`option.${m}`, m.toUpperCase()),
             }))}
           />
-          {consentRequired && (
+          {!!consentRequired && (
             <Switch
               value={form.consent}
               onValueChange={(consent) => patch({ consent })}
@@ -175,7 +175,7 @@ export function NewBookingScreen() {
         ]}
       >
         <KV label={translate("stay.total")} value={rupees(total)} strong />
-        {missing && <Banner tone="info" text={translate(missing as "checkin.need.name")} />}
+        {!!missing && <Banner tone="info" text={translate(missing as "checkin.need.name")} />}
         <Button
           size="lg"
           text={translate("booking.create")}

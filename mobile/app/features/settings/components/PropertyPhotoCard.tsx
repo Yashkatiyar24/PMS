@@ -78,7 +78,7 @@ export function PropertyPhotoCard<T>({
           disabled={busy}
           onPress={() => void add("gallery")}
         />
-        {photoUrl && (
+        {!!photoUrl && (
           <Button
             preset="ghost"
             size="sm"

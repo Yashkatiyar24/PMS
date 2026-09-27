@@ -116,11 +116,11 @@ export const SettingsGroupScreen = observer(function SettingsGroupScreen() {
             autoFocus
           />
         )}
-        {(registry.loading || values.loading) && !registry.data && <Loading />}
-        {registry.problem && !registry.data && (
+        {!!(registry.loading || values.loading) && !registry.data && <Loading />}
+        {!!registry.problem && !registry.data && (
           <ErrorState message={registry.problem.message} onRetry={registry.reload} />
         )}
-        {registry.data && defs.length === 0 && (
+        {!!registry.data && defs.length === 0 && (
           <Text
             text={translate("settings.noResults", { q })}
             size="sm"

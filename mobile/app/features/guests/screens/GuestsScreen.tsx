@@ -77,7 +77,7 @@ export const GuestsScreen = observer(function GuestsScreen() {
           { value: "all", label: translate("guests.all") },
         ]}
       />
-      {view === "inHouse" && t && (
+      {view === "inHouse" && !!t && (
         <Panel>
           <KV label={translate("today.inHouse")} value={String(inHouse.length)} />
           <KV label={translate("today.departures")} value={String(t.departures.length)} />
@@ -90,12 +90,12 @@ export const GuestsScreen = observer(function GuestsScreen() {
           />
         </Panel>
       )}
-      {view === "inHouse" && today.loading && <Loading />}
-      {view === "inHouse" && today.problem && !t && (
+      {view === "inHouse" && !!today.loading && <Loading />}
+      {view === "inHouse" && !!today.problem && !t && (
         <ErrorState message={today.problem.message} onRetry={today.reload} />
       )}
       {view === "inHouse" &&
-        t &&
+        !!t &&
         (inHouse.length === 0 ? (
           <Empty text={translate("guests.noneStaying")} />
         ) : (
@@ -110,7 +110,7 @@ export const GuestsScreen = observer(function GuestsScreen() {
             ))}
           </ListCard>
         ))}
-      {view === "inHouse" && today.fromCache && <StaleLabel fetchedAt={today.fetchedAt} />}
+      {view === "inHouse" && !!today.fromCache && <StaleLabel fetchedAt={today.fetchedAt} />}
       {view === "all" && (
         <>
           <Input
@@ -121,8 +121,8 @@ export const GuestsScreen = observer(function GuestsScreen() {
             returnKeyType="search"
           />
           {results === null && <Loading rows={2} />}
-          {results && results.length === 0 && <Empty text={translate("search.none")} />}
-          {results && results.length > 0 && (
+          {!!results && results.length === 0 && <Empty text={translate("search.none")} />}
+          {!!results && results.length > 0 && (
             <ListCard>
               {results.map((g, i) => (
                 <ListRow
@@ -161,7 +161,7 @@ function StayingRow({
       subtitle={`${units} · ${translate("guests.party", { n: b.adults + b.children })} · ${translate("guests.nightsLeft")} ${nightsLeft} · ${translate("guests.until", { date: formatDate(b.departAt) })}${b.checkedInAt && isToday(b.checkedInAt) ? ` · ${translate("guests.arrivedAt", { time: formatTime(b.checkedInAt) })}` : ""}`}
       right={
         <View style={$chips}>
-          {leavingToday && <Chip tone="warn" text={translate("today.departures")} />}
+          {!!leavingToday && <Chip tone="warn" text={translate("today.departures")} />}
           <Chip
             tone={b.balanceDuePaise > 0 ? "danger" : "ok"}
             text={b.balanceDuePaise > 0 ? rupees(b.balanceDuePaise) : translate("stay.paid")}

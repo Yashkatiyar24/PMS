@@ -67,7 +67,7 @@ export function UnitPicker({
                     },
                   ]}
                 >
-                  {showStatus && dirty && (
+                  {!!showStatus && !!dirty && (
                     <View style={[$dot, { backgroundColor: theme.colors.palette.warn }]} />
                   )}
                   <Text

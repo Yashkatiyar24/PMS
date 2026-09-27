@@ -54,7 +54,7 @@ export function RoomStep({ form, patch, rooms, roomTypes }: RoomStepProps) {
             label: `${t.name} · ${rupees(t.baseRatePaise)}`,
           }))}
         />
-        {form.roomTypeId && (
+        {!!form.roomTypeId && (
           <UnitPicker
             units={free}
             roomTypeIds={[form.roomTypeId]}

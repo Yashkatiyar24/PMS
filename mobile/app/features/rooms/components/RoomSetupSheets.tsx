@@ -84,7 +84,7 @@ export function RoomTypeSheet({
         value={amenities}
         onChangeText={setAmenities}
       />
-      {type && (
+      {!!type && (
         <Switch
           value={active}
           onValueChange={setActive}

@@ -103,11 +103,11 @@ export function RestaurantScreen() {
             label={translate("pos.showSettled")}
             labelPosition="right"
           />
-          {orders.loading && <Loading />}
-          {orders.problem && !orders.data && (
+          {!!orders.loading && <Loading />}
+          {!!orders.problem && !orders.data && (
             <ErrorState message={orders.problem.message} onRetry={orders.reload} />
           )}
-          {orders.data && list.length === 0 && <Empty text={translate("empty.orders")} />}
+          {!!orders.data && list.length === 0 && <Empty text={translate("empty.orders")} />}
           {list.length > 0 && (
             <ListCard>
               {list.map((o, i) => (
@@ -148,8 +148,8 @@ export function RestaurantScreen() {
       )}
       {tab === "menu" && (
         <>
-          {menu.data && menu.data.length === 0 && <Empty text={translate("empty.menu")} />}
-          {menu.data && menu.data.length > 0 && (
+          {!!menu.data && menu.data.length === 0 && <Empty text={translate("empty.menu")} />}
+          {!!menu.data && menu.data.length > 0 && (
             <ListCard>
               {menu.data.map((m, i) => (
                 <ListRow
@@ -166,7 +166,7 @@ export function RestaurantScreen() {
           )}
         </>
       )}
-      {editingOrder && (
+      {!!editingOrder && (
         <OrderSheet
           order={editingOrder === "new" ? null : editingOrder}
           menu={menu.data ?? []}
@@ -178,7 +178,7 @@ export function RestaurantScreen() {
           }}
         />
       )}
-      {settling && (
+      {!!settling && (
         <SettleSheet
           order={settling}
           inHouse={inHouse}
@@ -194,7 +194,7 @@ export function RestaurantScreen() {
           }}
         />
       )}
-      {dish && (
+      {!!dish && (
         <DishSheet
           dish={dish === "new" ? null : dish}
           onClose={() => setDish(null)}

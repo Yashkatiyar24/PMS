@@ -59,7 +59,7 @@ export function StayActions({
   const s = booking.state
   return (
     <View style={$row}>
-      {s === "pending" && can.edit && (
+      {s === "pending" && !!can.edit && (
         <Button
           text={translate("stay.confirm")}
           onPress={onConfirm}
@@ -67,7 +67,7 @@ export function StayActions({
           style={$grow}
         />
       )}
-      {(s === "reserved" || s === "pending") && can.checkin && (
+      {(s === "reserved" || s === "pending") && !!can.checkin && (
         <Button
           preset={s === "pending" ? "secondary" : "primary"}
           text={translate("action.arrive")}
@@ -76,7 +76,7 @@ export function StayActions({
           style={$grow}
         />
       )}
-      {s === "checked_in" && folio && (
+      {s === "checked_in" && !!folio && (
         <>
           <Button
             text={translate("action.takePayment")}
@@ -85,7 +85,7 @@ export function StayActions({
             style={$grow}
             testID="stay-pay"
           />
-          {can.checkout && (
+          {!!can.checkout && (
             <Button
               preset={due > 0 ? "secondary" : "primary"}
               text={translate("action.checkOut")}
@@ -97,7 +97,7 @@ export function StayActions({
           )}
         </>
       )}
-      {s === "checked_out" && folio && can.invoice && (
+      {s === "checked_out" && !!folio && !!can.invoice && (
         <Button
           text={translate("stay.invoice")}
           onPress={onInvoice}

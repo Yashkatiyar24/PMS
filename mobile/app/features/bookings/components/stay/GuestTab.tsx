@@ -31,7 +31,7 @@ export function GuestTab({ booking }: { booking: Booking }) {
           value={g.idType ? translateOr(`id.${g.idType}`, g.idType) : "—"}
         />
         <KV label={translate("checkin.idLast4")} value={g.idLast4 ? `•••• ${g.idLast4}` : "—"} />
-        {booking.organization && (
+        {!!booking.organization && (
           <KV
             label={translate("stay.company")}
             value={`${booking.organization}${booking.billingGstin ? ` · ${booking.billingGstin}` : ""}`}

@@ -84,11 +84,11 @@ export function MaintenanceScreen() {
           { value: "all", label: translate("common.all") },
         ]}
       />
-      {tickets.loading && <Loading />}
-      {tickets.problem && !tickets.data && (
+      {!!tickets.loading && <Loading />}
+      {!!tickets.problem && !tickets.data && (
         <ErrorState message={tickets.problem.message} onRetry={tickets.reload} />
       )}
-      {tickets.data && list.length === 0 && <Empty text={translate("empty.maintenance")} />}
+      {!!tickets.data && list.length === 0 && <Empty text={translate("empty.maintenance")} />}
       {list.length > 0 && (
         <ListCard>
           {list.map((t, i) => (
@@ -115,7 +115,7 @@ export function MaintenanceScreen() {
           ))}
         </ListCard>
       )}
-      {open && (
+      {!!open && (
         <TicketSheet
           ticket={open}
           works={works}
@@ -128,7 +128,7 @@ export function MaintenanceScreen() {
         />
       )}
       <Sheet
-        open={reporting && !pickRoom}
+        open={!!reporting && !pickRoom}
         onClose={() => setReporting(false)}
         title={translate("maint.report")}
         description={translate("res.col.room")}
@@ -151,7 +151,7 @@ export function MaintenanceScreen() {
           ))}
         </View>
       </Sheet>
-      {pickRoom && (
+      {!!pickRoom && (
         <ReportIssueSheet
           roomId={pickRoom.id}
           roomNumber={pickRoom.number}

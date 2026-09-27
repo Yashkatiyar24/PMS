@@ -20,7 +20,12 @@ export type RoomType = {
 export type RoomTypeInput = Omit<RoomType, "id">
 
 /** Who is in a unit now: a guest in the house, or a reservation arriving before tonight is over. */
-export type Occupancy = { state: string; bookingId: string; guestName: string; departAt: string }
+export type Occupancy = {
+  state: "occupied" | "reserved"
+  bookingId: string
+  guestName: string
+  departAt: string
+}
 
 export type Bed = { id: string; label: string; active: boolean; occupancy: Occupancy | null }
 

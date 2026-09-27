@@ -109,7 +109,7 @@ export function GuestScreen() {
           style={$tile}
         />
       </View>
-      {p.current && (
+      {!!p.current && (
         <>
           <SectionLabel text={translate("guests.current")} />
           <ListCard>
@@ -133,7 +133,7 @@ export function GuestScreen() {
         {!!g.notes && <KV label={translate("guests.notes")} value={g.notes} />}
         {has("checkin") && (
           <View style={$actions}>
-            {g.hasPhoto && (
+            {!!g.hasPhoto && (
               <Button
                 preset="secondary"
                 size="sm"
@@ -141,7 +141,7 @@ export function GuestScreen() {
                 onPress={() => openPhoto("photo")}
               />
             )}
-            {g.hasIdPhoto && (
+            {!!g.hasIdPhoto && (
               <Button
                 preset="secondary"
                 size="sm"
@@ -194,7 +194,7 @@ export function GuestScreen() {
           </ListCard>
         </>
       )}
-      {editing && (
+      {!!editing && (
         <GuestEditSheet
           guest={g}
           onClose={() => setEditing(false)}
@@ -207,7 +207,7 @@ export function GuestScreen() {
         />
       )}
       <Sheet open={!!photoUrl} onClose={() => setPhotoUrl(null)} title={translate("guests.photo")}>
-        {photoUrl && (
+        {!!photoUrl && (
           <Image
             source={{ uri: photoUrl }}
             style={$photo}

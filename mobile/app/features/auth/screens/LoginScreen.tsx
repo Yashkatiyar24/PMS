@@ -53,7 +53,7 @@ export const LoginScreen = observer(function LoginScreen() {
             { value: "otp", label: translate("mobile.otpTab") },
           ]}
         />
-        {auth.lastProblem && (
+        {!!auth.lastProblem && (
           <Banner tone="danger" text={auth.lastProblem.message || translate("error.generic")} />
         )}
 

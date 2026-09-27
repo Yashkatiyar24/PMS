@@ -74,11 +74,11 @@ export function AuditScreen() {
           returnKeyType="search"
         />
       </Panel>
-      {entries.loading && <Loading />}
-      {entries.problem && !entries.data && (
+      {!!entries.loading && <Loading />}
+      {!!entries.problem && !entries.data && (
         <ErrorState message={entries.problem.message} onRetry={entries.reload} />
       )}
-      {entries.data && entries.data.length === 0 && <Empty text={translate("empty.audit")} />}
+      {!!entries.data && entries.data.length === 0 && <Empty text={translate("empty.audit")} />}
       {entries.data?.map((e) => (
         <Disclosure
           key={e.id}
@@ -86,14 +86,14 @@ export function AuditScreen() {
           summary={`${formatDateTime(e.at)} · ${e.userName ? translate("res.by", { name: e.userName }) : translate("res.system")}`}
         >
           <Text text={e.rowId} size="xxs" style={[$mono, { color: theme.colors.textFaint }]} />
-          {e.before && (
+          {!!e.before && (
             <Text
               text={`${translate("audit.before")}\n${pretty(e.before)}`}
               size="xxs"
               style={[$mono, { color: theme.colors.textDim }]}
             />
           )}
-          {e.after && (
+          {!!e.after && (
             <Text
               text={`${translate("audit.after")}\n${pretty(e.after)}`}
               size="xxs"

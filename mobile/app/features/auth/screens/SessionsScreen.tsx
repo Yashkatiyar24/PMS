@@ -38,12 +38,12 @@ export function SessionsScreen() {
       contentContainerStyle={{ padding: 16, gap: 12 }}
     >
       <PageHeader title={translate("mobile.sessions")} onBack={() => navigation.goBack()} />
-      {sessions.loading && <Loading />}
-      {sessions.problem && !sessions.data && (
+      {!!sessions.loading && <Loading />}
+      {!!sessions.problem && !sessions.data && (
         <ErrorState message={sessions.problem.message} onRetry={sessions.reload} />
       )}
-      {sessions.data && sessions.data.length === 0 && <Empty />}
-      {sessions.data && sessions.data.length > 0 && (
+      {!!sessions.data && sessions.data.length === 0 && <Empty />}
+      {!!sessions.data && sessions.data.length > 0 && (
         <ListCard>
           {sessions.data.map((s, i) => (
             <ListRow

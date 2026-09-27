@@ -37,7 +37,7 @@ export function StaySheets(p: StaySheetsProps) {
 
   return (
     <>
-      {sheet === "pay" && folio && (
+      {sheet === "pay" && !!folio && (
         <PaySheet
           open
           onClose={close}
@@ -65,7 +65,7 @@ export function StaySheets(p: StaySheetsProps) {
           }}
         />
       )}
-      {sheet === "extra" && folio && (
+      {sheet === "extra" && !!folio && (
         <ExtraSheet
           open
           onClose={close}
@@ -90,7 +90,7 @@ export function StaySheets(p: StaySheetsProps) {
           }
         />
       )}
-      {sheet === "discount" && folio && (
+      {sheet === "discount" && !!folio && (
         <ApprovedMoneySheet
           open
           onClose={close}
@@ -116,7 +116,7 @@ export function StaySheets(p: StaySheetsProps) {
           }
         />
       )}
-      {sheet === "refund" && folio && (
+      {sheet === "refund" && !!folio && (
         <ApprovedMoneySheet
           open
           onClose={close}
@@ -143,7 +143,7 @@ export function StaySheets(p: StaySheetsProps) {
           }
         />
       )}
-      {sheet === "creditNote" && p.receipt && (
+      {sheet === "creditNote" && !!p.receipt && (
         <ApprovedMoneySheet
           open
           onClose={close}
@@ -231,7 +231,7 @@ export function StaySheets(p: StaySheetsProps) {
           }}
         />
       )}
-      {sheet === "release" && p.unit && (
+      {sheet === "release" && !!p.unit && (
         <ReleaseSheet
           open
           onClose={close}
