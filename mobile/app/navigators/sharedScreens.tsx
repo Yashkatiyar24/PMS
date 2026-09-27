@@ -3,7 +3,12 @@
  * each stack, so "open this stay" works from wherever the desk is.
  */
 import { SessionsScreen } from "@/features/auth/screens/SessionsScreen"
+import { CheckInScreen } from "@/features/bookings/screens/CheckInScreen"
+import { NewBookingScreen } from "@/features/bookings/screens/NewBookingScreen"
+import { StayScreen } from "@/features/bookings/screens/StayScreen"
+import { GuestScreen } from "@/features/guests/screens/GuestScreen"
 import { NotificationsScreen } from "@/features/notifications/screens/NotificationsScreen"
+import { NeedsAttentionScreen } from "@/features/offline/screens/NeedsAttentionScreen"
 import { ReceiptViewerScreen } from "@/features/receipts/screens/ReceiptViewerScreen"
 import { placeholderScreen } from "@/screens/PlaceholderScreen"
 
@@ -12,11 +17,11 @@ import type { ScreenComponent, SharedStackParamList } from "./navigationTypes"
 type Entry = { name: keyof SharedStackParamList; component: ScreenComponent }
 
 export const sharedScreens: Entry[] = [
-  { name: "Stay", component: placeholderScreen("Stay") },
-  { name: "CheckIn", component: placeholderScreen("Check-in") },
-  { name: "NewBooking", component: placeholderScreen("New booking") },
-  { name: "Guest", component: placeholderScreen("Guest") },
-  { name: "NeedsAttention", component: placeholderScreen("Needs attention") },
+  { name: "Stay", component: StayScreen },
+  { name: "CheckIn", component: CheckInScreen },
+  { name: "NewBooking", component: NewBookingScreen },
+  { name: "Guest", component: GuestScreen },
+  { name: "NeedsAttention", component: NeedsAttentionScreen },
   { name: "Notifications", component: NotificationsScreen },
   { name: "Portfolio", component: placeholderScreen("Portfolio") },
   { name: "Sessions", component: SessionsScreen },

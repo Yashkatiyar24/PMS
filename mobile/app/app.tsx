@@ -11,6 +11,7 @@ import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-c
 
 import { ToastHost } from "./components/ToastHost"
 import { PushSetup } from "./features/notifications/components/PushSetup"
+import { OfflineSync } from "./features/offline/components/OfflineSync"
 import { initI18n } from "./i18n"
 import { StoreProvider } from "./models/useStores"
 import { AppNavigator } from "./navigators/AppNavigator"
@@ -47,6 +48,7 @@ export function App() {
               onStateChange={onNavigationStateChange}
             />
             <PushSetup />
+            <OfflineSync />
             <ToastHost />
           </StoreProvider>
         </ThemeProvider>

@@ -1,0 +1,170 @@
+import { useState } from "react"
+import { RefreshControl, View, type ViewStyle } from "react-native"
+import { observer } from "mobx-react-lite"
+
+import {
+  ActionSheet,
+  Button,
+  ErrorState,
+  Loading,
+  PageHeader,
+  Screen,
+  SectionLabel,
+  Segmented,
+  StaleLabel,
+  showError,
+} from "@/components"
+import { AppHeader } from "@/components/AppHeader"
+import { usePermission } from "@/features/auth/hooks/usePermission"
+import { ReportIssueSheet } from "@/features/maintenance/components/ReportIssueSheet"
+import { OfflineBar } from "@/features/offline/components/OfflineBar"
+import { useResource } from "@/hooks/useResource"
+import { translate } from "@/i18n/translate"
+import { useAppNavigation } from "@/navigators/useAppNavigation"
+import { api } from "@/services/api"
+
+import { RoomSheet } from "../components/RoomSheet"
+import { RoomTile } from "../components/RoomTile"
+import { filterRooms, groupRooms, statusBucket, type RoomFilter } from "../lib/roomLabels"
+import type { HousekeepingInput, Room, RoomStatus } from "../types"
+
+/** Housekeeping's board: every room by building and floor, filtered; tap for status and assignment. */
+export const RoomsScreen = observer(function RoomsScreen() {
+  const navigation = useAppNavigation()
+  const { has, user } = usePermission()
+  const [filter, setFilter] = useState<RoomFilter>("all")
+  const [open, setOpen] = useState<Room | null>(null)
+  const [reporting, setReporting] = useState<Room | null>(null)
+  const [menu, setMenu] = useState(false)
+  const rooms = useResource(() => api.rooms.rooms(), [], { cacheKey: "rooms", refreshMs: 30_000 })
+  const housekeepers = useResource(() => api.rooms.housekeepers(), [], {
+    cacheKey: "housekeepers",
+    enabled: has("housekeeping"),
+  })
+  const list = rooms.data ?? []
+  const counts = {
+    clean: list.filter((r) => statusBucket(r.status) === "clean").length,
+    dirty: list.filter((r) => statusBucket(r.status) === "dirty").length,
+    blocked: list.filter((r) => statusBucket(r.status) === "blocked").length,
+  }
+  const mine = list.some((r) => r.housekeeperId === user?.id)
+  const shown = filterRooms(list, filter, user?.id ?? null)
+  const current = open ? (list.find((r) => r.id === open.id) ?? open) : null
+
+  /** Optimistic: paint the new status at once, put it back if the server refuses. */
+  const setStatus = async (room: Room, status: RoomStatus, reason: string | null) => {
+    rooms.set((rs) =>
+      rs.map((r) => (r.id === room.id ? { ...r, status, blockedReason: reason } : r)),
+    )
+    const result = await api.rooms.setStatus(room.id, { status, reason, until: null })
+    if (!result.ok) {
+      rooms.set((rs) => rs.map((r) => (r.id === room.id ? room : r)))
+      showError(result.problem)
+    } else setOpen(null)
+    void rooms.reload()
+  }
+  const setHousekeeping = async (room: Room, body: HousekeepingInput) => {
+    const result = await api.rooms.setHousekeeping(room.id, body)
+    if (!result.ok) return showError(result.problem)
+    setOpen(null)
+    void rooms.reload()
+  }
+
+  return (
+    <Screen
+      preset="scroll"
+      safeAreaEdges={["top"]}
+      contentContainerStyle={$content}
+      ScrollViewProps={{
+        refreshControl: <RefreshControl refreshing={rooms.refreshing} onRefresh={rooms.reload} />,
+      }}
+    >
+      <AppHeader />
+      <OfflineBar />
+      <PageHeader
+        title={translate("nav.rooms")}
+        subtitle={translate("rooms.summary", counts)}
+        actions={
+          has("maintenance") || has("maintenance.report") || has("lost_found") ? (
+            <Button
+              preset="secondary"
+              size="sm"
+              text="⋯"
+              accessibilityLabel={translate("common.more")}
+              onPress={() => setMenu(true)}
+            />
+          ) : undefined
+        }
+      />
+      <Segmented<RoomFilter>
+        scroll
+        value={filter}
+        onChange={setFilter}
+        items={[
+          { value: "all", label: translate("common.all"), count: list.length },
+          ...(mine ? [{ value: "mine" as RoomFilter, label: translate("rooms.mine") }] : []),
+          { value: "clean", label: translate("rooms.status.clean"), count: counts.clean },
+          { value: "dirty", label: translate("rooms.status.dirty"), count: counts.dirty },
+          { value: "blocked", label: translate("rooms.status.blocked"), count: counts.blocked },
+        ]}
+      />
+      {rooms.loading && <Loading />}
+      {rooms.problem && !rooms.data && (
+        <ErrorState message={rooms.problem.message} onRetry={rooms.reload} />
+      )}
+      {groupRooms(shown).map((g) => (
+        <View key={g.key}>
+          <SectionLabel text={g.title} />
+          <View style={$grid}>
+            {g.rooms.map((r) => (
+              <RoomTile key={r.id} room={r} onPress={() => setOpen(r)} />
+            ))}
+          </View>
+        </View>
+      ))}
+      {rooms.fromCache && <StaleLabel fetchedAt={rooms.fetchedAt} />}
+      {current && !reporting && (
+        <RoomSheet
+          room={current}
+          housekeepers={housekeepers.data ?? []}
+          onClose={() => setOpen(null)}
+          onStatus={(s, reason) => void setStatus(current, s, reason)}
+          onHousekeeping={(b) => void setHousekeeping(current, b)}
+          onReport={() => setReporting(current)}
+        />
+      )}
+      {reporting && (
+        <ReportIssueSheet
+          roomId={reporting.id}
+          roomNumber={reporting.number}
+          onClose={() => setReporting(null)}
+          onDone={() => {
+            setOpen(null)
+            void rooms.reload()
+          }}
+        />
+      )}
+      <ActionSheet
+        open={menu}
+        onClose={() => setMenu(false)}
+        title={translate("common.more")}
+        items={[
+          ...(has("maintenance") || has("maintenance.report")
+            ? [
+                {
+                  label: translate("maint.title"),
+                  onPress: () => navigation.navigate("Maintenance"),
+                },
+              ]
+            : []),
+          ...(has("lost_found")
+            ? [{ label: translate("lost.title"), onPress: () => navigation.navigate("LostFound") }]
+            : []),
+        ]}
+      />
+    </Screen>
+  )
+})
+
+const $content: ViewStyle = { padding: 16, gap: 8, paddingBottom: 32 }
+const $grid: ViewStyle = { flexDirection: "row", flexWrap: "wrap", gap: 8 }

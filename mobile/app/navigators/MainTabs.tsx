@@ -7,6 +7,12 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { observer } from "mobx-react-lite"
 
 import { Text } from "@/components"
+import { TapeChartScreen } from "@/features/bookings/screens/TapeChartScreen"
+import { GuestsScreen } from "@/features/guests/screens/GuestsScreen"
+import { PeriodReportScreen } from "@/features/reports/screens/PeriodReportScreen"
+import { ReportsScreen } from "@/features/reports/screens/ReportsScreen"
+import { RoomsScreen } from "@/features/rooms/screens/RoomsScreen"
+import { TodayScreen } from "@/features/today/screens/TodayScreen"
 import { translate } from "@/i18n/translate"
 import { useStores } from "@/models/useStores"
 import { placeholderScreen } from "@/screens/PlaceholderScreen"
@@ -40,12 +46,12 @@ function makeStack(root: Root, extra: Root[] = []) {
   }
 }
 
-const TodayStack = makeStack({ name: "Today", component: placeholderScreen("Today") })
-const GuestsStack = makeStack({ name: "Guests", component: placeholderScreen("Guests") })
-const BookingsStack = makeStack({ name: "TapeChart", component: placeholderScreen("Bookings") })
-const RoomsStack = makeStack({ name: "Rooms", component: placeholderScreen("Rooms") })
-const ReportsStack = makeStack({ name: "Reports", component: placeholderScreen("Reports") }, [
-  { name: "PeriodReport", component: placeholderScreen("Period") },
+const TodayStack = makeStack({ name: "Today", component: TodayScreen })
+const GuestsStack = makeStack({ name: "Guests", component: GuestsScreen })
+const BookingsStack = makeStack({ name: "TapeChart", component: TapeChartScreen })
+const RoomsStack = makeStack({ name: "Rooms", component: RoomsScreen })
+const ReportsStack = makeStack({ name: "Reports", component: ReportsScreen }, [
+  { name: "PeriodReport", component: PeriodReportScreen },
 ])
 const SettingsStack = makeStack({ name: "Settings", component: placeholderScreen("Settings") })
 const PlatformStack = makeStack({ name: "Platform", component: placeholderScreen("Platform") })
