@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The OCR runtime that postinstall copies out of node_modules: vendored, minified, not ours to lint.
+    "public/ocr/**",
   ]),
 ]);
 
