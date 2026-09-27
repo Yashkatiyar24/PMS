@@ -63,7 +63,7 @@ class OnlineSellingTest {
         new TransactionTemplate(adminTx).executeWithoutResult(tx -> {
             // audit_log is left alone: no role may delete from it.
             for (String t : List.of("channel_stays", "channel_links", "outbox", "receipts", "receipt_counters", "payments", "folio_lines", "folios",
-                    "booking_units", "booking_members", "bookings", "guests", "beds", "rooms", "room_types"))
+                    "stay_links", "booking_units", "booking_members", "bookings", "guests", "beds", "rooms", "room_types"))
                 admin.sql("delete from " + t + " where property_id = ?").param(property).update();
             admin.sql("delete from properties where id = ?").param(property).update();
             admin.sql("delete from organisations where id = ?").param(orgId).update();

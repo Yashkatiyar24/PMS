@@ -80,7 +80,7 @@ function store(key: string, link: NewLink | null) {
 }
 
 /** Over plain http (a LAN address in development) the async clipboard is missing, so fall back to select-and-copy. */
-async function copyText(text: string) {
+export async function copyText(text: string) {
   if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text)
   const box = Object.assign(document.createElement("textarea"), { value: text })
   document.body.append(box)

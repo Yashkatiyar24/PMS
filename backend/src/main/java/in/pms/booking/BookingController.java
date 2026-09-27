@@ -23,8 +23,11 @@ import java.util.UUID;
 public class BookingController {
     private final BookingService bookings;
     private final ApprovalService approvals;
+    private final in.pms.stay.StayService stays;
 
-    public BookingController(BookingService bookings, ApprovalService approvals) { this.bookings = bookings; this.approvals = approvals; }
+    public BookingController(BookingService bookings, ApprovalService approvals, in.pms.stay.StayService stays) {
+        this.bookings = bookings; this.approvals = approvals; this.stays = stays;
+    }
 
     public record Approval(UUID approverId, String pin) {}
     public record CheckOutInput(OffsetDateTime departAt, String overrideReason, UUID approverId, String pin) {}
@@ -144,5 +147,14 @@ public class BookingController {
     public Booking noShow(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id, @RequestBody(required = false) Approval in) {
         Approval a = in == null ? new Approval(null, null) : in;
         return bookings.noShow(id, u.id(), approvals.require(u, Permissions.RESERVATIONS_CANCEL, a.approverId(), a.pin()));
+    }
+
+    /**
+     * The guest's own link to this stay, to share or show as a QR. Minting one is a read for the desk but a
+     * new credential for the guest, so it needs the same authority as changing the booking.
+     */
+    @PostMapping("/{id}/stay-link") @PreAuthorize("hasAuthority('PERM_reservations.edit')")
+    public in.pms.stay.StayService.Link stayLink(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id) {
+        return stays.create(id, u.id());
     }
 }

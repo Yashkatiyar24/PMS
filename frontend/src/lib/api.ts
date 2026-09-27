@@ -7,13 +7,12 @@
  *    instead of being lost, and replayed later with the same client id.
  */
 import { enqueue, type QueuedRequest } from "./offline-queue"
+import { isPublicScreen } from "./public-screens"
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080"
 
-/** Screens reachable without an account; a 401 there must not redirect anywhere. */
-export function isPublicScreen(pathname: string): boolean {
-  return pathname.startsWith("/login") || pathname.startsWith("/g/") || pathname.startsWith("/book/")
-}
+/** Screens reachable without an account; a 401 there must not redirect anywhere. Defined in one place. */
+export { isPublicScreen }
 
 export class ApiError extends Error {
   constructor(readonly status: number, message: string, readonly fields?: Record<string, string>) {

@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { isPublicScreen } from "@/lib/public-screens"
 
 /**
  * An optimistic check only: if there is no session cookie, send the browser to the login screen instead of
  * loading a screen that will fail. It never decides what a user may do; the API checks the session and the
  * role on every request. (Next.js 16 renamed middleware to proxy.)
  */
-// "/g/" is the guest's own self-registration form, reached by scanning a QR at the desk. Whoever opens it
-// has no account and never will, so it must never be bounced to a login screen.
-const PUBLIC_PATHS = ["/login", "/g/", "/book/"]
-
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next()
+  if (isPublicScreen(pathname)) return NextResponse.next()
   // A file (hero.jpg, an icon) is not a screen: it carries no data and must load on the login page itself.
   if (/\.\w+$/.test(pathname)) return NextResponse.next()
 

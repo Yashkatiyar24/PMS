@@ -78,7 +78,7 @@ class OnlinePaymentTest {
         new TransactionTemplate(adminTx).executeWithoutResult(tx -> {
             admin.sql("update payment_orders set payment_id = null where property_id = ?").param(property).update();
             admin.sql("update payments set refund_of = null where property_id = ?").param(property).update();
-            for (String t : List.of("payment_orders", "payments", "folio_lines", "folios", "booking_units", "booking_members", "bookings", "guests", "rooms", "room_types"))
+            for (String t : List.of("payment_orders", "payments", "folio_lines", "folios", "stay_links", "booking_units", "booking_members", "bookings", "guests", "rooms", "room_types"))
                 admin.sql("delete from " + t + " where property_id = ?").param(property).update();
             admin.sql("delete from properties where id = ?").param(property).update();
             admin.sql("delete from organisations where id = ?").param(org).update();
