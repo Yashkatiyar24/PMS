@@ -7,15 +7,16 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { observer } from "mobx-react-lite"
 
 import { Text } from "@/components"
+import { PlatformListScreen } from "@/features/admin/screens/PlatformListScreen"
 import { TapeChartScreen } from "@/features/bookings/screens/TapeChartScreen"
 import { GuestsScreen } from "@/features/guests/screens/GuestsScreen"
 import { PeriodReportScreen } from "@/features/reports/screens/PeriodReportScreen"
 import { ReportsScreen } from "@/features/reports/screens/ReportsScreen"
 import { RoomsScreen } from "@/features/rooms/screens/RoomsScreen"
+import { SettingsScreen } from "@/features/settings/screens/SettingsScreen"
 import { TodayScreen } from "@/features/today/screens/TodayScreen"
 import { translate } from "@/i18n/translate"
 import { useStores } from "@/models/useStores"
-import { placeholderScreen } from "@/screens/PlaceholderScreen"
 import { useAppTheme } from "@/theme/context"
 import { visibleTabs } from "@/utils/permissions"
 
@@ -53,8 +54,8 @@ const RoomsStack = makeStack({ name: "Rooms", component: RoomsScreen })
 const ReportsStack = makeStack({ name: "Reports", component: ReportsScreen }, [
   { name: "PeriodReport", component: PeriodReportScreen },
 ])
-const SettingsStack = makeStack({ name: "Settings", component: placeholderScreen("Settings") })
-const PlatformStack = makeStack({ name: "Platform", component: placeholderScreen("Platform") })
+const SettingsStack = makeStack({ name: "Settings", component: SettingsScreen })
+const PlatformStack = makeStack({ name: "Platform", component: PlatformListScreen })
 
 const TABS = {
   Today: { route: "TodayTab", label: "nav.today", glyph: "⌂", component: TodayStack },
