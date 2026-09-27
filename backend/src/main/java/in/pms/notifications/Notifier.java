@@ -40,6 +40,18 @@ public class Notifier {
         for (String token : admin.sql("""
                 select t.token from push_tokens t join property_users pu on pu.user_id = t.user_id join users u on u.id = t.user_id
                 where pu.property_id = ? and pu.active and u.active and pu.role::text = any(?)""").params(property, roles).query(String.class).list())
-            outbox.enqueue(property, "push", Map.of("token", token, "title", title, "body", body == null ? "" : body), "notify:" + id + ":" + token.hashCode());
+            outbox.enqueue(property, "push", pushPayload(token, kind, title, body, link, id), "notify:" + id + ":" + token.hashCode());
+    }
+
+    /** What the phone needs to open the right screen on tap: the kind, the desk-app link and the feed row's id. */
+    static Map<String, String> pushPayload(String token, String kind, String title, String body, String link, UUID id) {
+        var payload = new java.util.HashMap<String, String>();
+        payload.put("token", token);
+        payload.put("title", title);
+        payload.put("body", body == null ? "" : body);
+        payload.put("kind", kind == null ? "" : kind);
+        payload.put("link", link == null ? "" : link);
+        payload.put("notificationId", id.toString());
+        return payload;
     }
 }
