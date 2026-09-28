@@ -21,7 +21,6 @@
       "backgroundImage": "./assets/images/app-icon-android-adaptive-background.png"
     },
     "allowBackup": false,
-    "edgeToEdgeEnabled": true,
     "permissions": ["android.permission.POST_NOTIFICATIONS", "android.permission.CAMERA"]
   },
   "ios": {
