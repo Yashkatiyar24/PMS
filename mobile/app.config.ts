@@ -15,7 +15,19 @@ import "tsx/cjs"
  * https://docs.expo.dev/workflow/configuration/#configuration-resolution-rules
  */
 module.exports = ({ config }: ConfigContext): Partial<ExpoConfig> => {
-  const existingPlugins = config.plugins ?? []
+  // A plain-http API (a LAN or emulator dev server) needs cleartext allowed on Android; an https API keeps it off.
+  const cleartext = (process.env.EXPO_PUBLIC_API_URL ?? "").startsWith("http://")
+  const existingPlugins = (config.plugins ?? []).map((plugin) =>
+    Array.isArray(plugin) && plugin[0] === "expo-build-properties"
+      ? ([
+          plugin[0],
+          {
+            ...plugin[1],
+            android: { ...(plugin[1]?.android ?? {}), usesCleartextTraffic: cleartext },
+          },
+        ] as [string, Record<string, unknown>])
+      : plugin,
+  )
 
   return {
     ...config,
