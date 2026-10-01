@@ -69,6 +69,9 @@ class DharamshalaCodeTest {
             for (UUID org : orgs) {
                 admin.sql("delete from property_users where property_id in (select id from properties where org_id = ?)").param(org).update();
                 admin.sql("delete from notifications where property_id in (select id from properties where org_id = ?)").param(org).update();
+                // An onboarded property arrives with its floor plan, so the rooms go before the property can.
+                admin.sql("delete from rooms where property_id in (select id from properties where org_id = ?)").param(org).update();
+                admin.sql("delete from room_types where property_id in (select id from properties where org_id = ?)").param(org).update();
                 admin.sql("delete from properties where org_id = ?").param(org).update();
                 admin.sql("delete from organisations where id = ?").param(org).update();
             }
