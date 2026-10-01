@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -31,6 +32,42 @@ public class InventoryController {
 
     @GetMapping("/rooms") @PreAuthorize(SEES_ROOMS)
     public List<Room> rooms() { return inventory.rooms(); }
+
+    @GetMapping("/floors") @PreAuthorize(SEES_ROOMS)
+    public List<Floor> floors() { return inventory.floors(); }
+
+    /** Name a floor, or add one before its rooms exist; a floor already there is renamed. */
+    @PostMapping("/floors") @PreAuthorize("hasRole('MANAGER')")
+    public Floor saveFloor(@AuthenticationPrincipal CurrentUser u, @RequestBody InventoryService.FloorInput in) { return inventory.saveFloor(in, u.id()); }
+
+    /** Forget a floor's label. Refused while it still has rooms: those are moved or deactivated one by one. */
+    @DeleteMapping("/floors/{number}") @PreAuthorize("hasRole('MANAGER')")
+    public void deleteFloor(@AuthenticationPrincipal CurrentUser u, @PathVariable int number) { inventory.deleteFloor(number, u.id()); }
+
+    /**
+     * Lay out the rooms floor by floor. With {@code apply} false this is the preview the setup screen shows
+     * before anything is created — same method, same answer, so there is nothing for the two to disagree about.
+     */
+    @PostMapping("/rooms/setup") @PreAuthorize("hasRole('MANAGER')")
+    public InventoryService.SetupPlan setup(@AuthenticationPrincipal CurrentUser u, @RequestBody(required = false) InventoryService.SetupInput in) {
+        return inventory.setup(in, u.id());
+    }
+
+    /** The default floor plan a new property opens with, for the setup screen to start from. */
+    @GetMapping("/rooms/defaults") @PreAuthorize(SEES_ROOMS)
+    public Map<String, Object> roomDefaults() {
+        var d = inventory.defaults();
+        return Map.of("roomsPerFloor", d.roomsPerFloor(), "firstFloor", d.firstFloor(), "totalRooms", d.defaultRoomCount(),
+                "maxFloors", d.maxFloors(), "maxRoomsPerFloor", d.maxRoomsPerFloor());
+    }
+
+    /** What to call one more room on this floor. */
+    @GetMapping("/rooms/next-number") @PreAuthorize("hasRole('MANAGER')")
+    public Map<String, String> nextNumber(@RequestParam int floor) { return Map.of("number", inventory.nextNumber(floor)); }
+
+    /** One change across the rooms the owner selected: their type, their floor, or taking them out of use. */
+    @PostMapping("/rooms/bulk-update") @PreAuthorize("hasRole('MANAGER')")
+    public List<Room> bulkUpdate(@AuthenticationPrincipal CurrentUser u, @RequestBody InventoryService.BulkUpdateInput in) { return inventory.bulkUpdate(in, u.id()); }
 
     @GetMapping("/rooms/{id}") @PreAuthorize(SEES_ROOMS)
     public Room room(@PathVariable UUID id) { return inventory.room(id); }

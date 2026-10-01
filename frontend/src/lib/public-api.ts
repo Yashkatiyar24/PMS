@@ -6,6 +6,7 @@
  * who has no login to go back to. Nothing here sends credentials or redirects anywhere.
  */
 import { API_BASE } from "./api"
+import type { Patch, SessionView } from "./checkin-fields"
 
 export class PublicApiError extends Error {
   constructor(readonly status: number, message: string) {
@@ -32,6 +33,30 @@ export async function submitForm<T>(token: string, body: unknown): Promise<T> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+    }),
+  )
+}
+
+const registration = (token: string) => `${API_BASE}/api/public/registration/${encodeURIComponent(token)}`
+
+/**
+ * The live check-in session behind this token: what the guest has typed so far — including anything the desk
+ * corrected at the counter — so reloading the phone mid-form loses nothing.
+ */
+export async function getSession(token: string): Promise<SessionView> {
+  return unwrap<SessionView>(await fetch(`${registration(token)}/session`, { headers: { Accept: "application/json" } }))
+}
+
+/**
+ * One field as it is typed, or what reading an ID suggested. Field-level, so the desk writing a correction at
+ * the same moment cannot clobber what the guest is typing in a different box.
+ */
+export async function patchSession(token: string, patch: Patch): Promise<SessionView> {
+  return unwrap<SessionView>(
+    await fetch(registration(token), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
     }),
   )
 }

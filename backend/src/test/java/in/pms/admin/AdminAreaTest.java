@@ -36,6 +36,7 @@ class AdminAreaTest {
     @Autowired in.pms.auth.PasswordService passwords;
     @Autowired in.pms.integrations.storage.StorageProvider storage;
     @Autowired in.pms.auth.SessionService sessions;
+    @Autowired in.pms.config.RoomDefaults roomDefaults;
 
     UUID orgId, propertyId, superAdminId, ownerId;
     final String superEmail = "superadmin@test.local", ownerEmail = "adminowner@test.local";
@@ -66,6 +67,7 @@ class AdminAreaTest {
                 admin.sql("delete from property_users where property_id in (select id from properties where org_id = ?)").param(org).update();
                 // An onboarded property arrives with its floor plan, so the rooms go before the property can.
                 admin.sql("delete from rooms where property_id in (select id from properties where org_id = ?)").param(org).update();
+                admin.sql("delete from floors where property_id in (select id from properties where org_id = ?)").param(org).update();
                 admin.sql("delete from room_types where property_id in (select id from properties where org_id = ?)").param(org).update();
                 admin.sql("delete from properties where org_id = ?").param(org).update();
                 admin.sql("delete from organisations where id = ?").param(org).update();
@@ -134,16 +136,30 @@ class AdminAreaTest {
                 .query(Integer.class).single();
         org.assertj.core.api.Assertions.assertThat(memberships).isEqualTo(1);
 
-        // The property opens with a floor plan already in it, so the desk is not looking at an empty rooms screen.
+        // The property opens with the configured floor plan already in it, so the desk is not looking at an
+        // empty rooms screen: three floors of 10, 10 and 5 — twenty-five rooms, 101-110, 201-210, 301-305.
         var floors = admin.sql("""
                 select r.floor, count(*) as n from rooms r join properties p on p.id = r.property_id
                 where p.name = 'New Dharamshala' group by r.floor order by r.floor""").query().listOfRows();
         org.assertj.core.api.Assertions.assertThat(floors).hasSize(3);
-        org.assertj.core.api.Assertions.assertThat(floors.stream().mapToLong(f -> (Long) f.get("n")).sum()).isEqualTo(25L);
+        org.assertj.core.api.Assertions.assertThat(floors.stream().map(f -> (Long) f.get("n")))
+                .containsExactly(10L, 10L, 5L);
+        // The count is whatever the configured plan adds up to; nothing in the code says twenty-five.
+        org.assertj.core.api.Assertions.assertThat(floors.stream().mapToLong(f -> (Long) f.get("n")).sum())
+                .isEqualTo(roomDefaults.defaultRoomCount());
         org.assertj.core.api.Assertions.assertThat(admin.sql("""
                 select count(*) from rooms r join properties p on p.id = r.property_id
-                where p.name = 'New Dharamshala' and r.number in ('G01', 'G09', '101', '108', '201', '208')""")
+                where p.name = 'New Dharamshala' and r.number in ('101', '110', '201', '210', '301', '305')""")
                 .query(Integer.class).single()).isEqualTo(6);
+        // Each floor has a row to be named through, and no room was given another property's room type.
+        org.assertj.core.api.Assertions.assertThat(admin.sql("""
+                select count(*) from floors f join properties p on p.id = f.property_id where p.name = 'New Dharamshala'""")
+                .query(Integer.class).single()).isEqualTo(3);
+        org.assertj.core.api.Assertions.assertThat(admin.sql("""
+                select count(*) from rooms r join room_types t on t.id = r.room_type_id
+                join properties p on p.id = r.property_id
+                where p.name = 'New Dharamshala' and t.property_id <> r.property_id""")
+                .query(Integer.class).single()).isZero();
     }
 
     @Test
@@ -258,7 +274,7 @@ class AdminAreaTest {
 
     @Test
     void supportAccessToGuestDataNeedsTheOwnersConsentWindow() {
-        AdminService service = new AdminService(admin, passwords, new in.pms.audit.AuditService(admin, admin, new com.fasterxml.jackson.databind.ObjectMapper()), storage, sessions);
+        AdminService service = new AdminService(admin, passwords, new in.pms.audit.AuditService(admin, admin, new com.fasterxml.jackson.databind.ObjectMapper()), storage, sessions, roomDefaults);
         var actor = new in.pms.auth.CurrentUser(superAdminId, "Support", true, UUID.randomUUID(), null, null, List.of(), null, java.util.Set.of());
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() ->

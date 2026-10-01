@@ -6,8 +6,14 @@
  * top to bottom, so nothing needs a tap to appear. The register's extra questions (address, ID,
  * photo) fold away until the desk needs them.
  *
+ * The guest's half of this form is not a copy of the guest's phone screen: it is the same check-in session,
+ * read and written through `useCheckInSession`. What the guest types appears here within a couple of seconds
+ * and what the clerk corrects here appears on the guest's phone, because there is one draft on one row and
+ * both screens name their fields from `checkin-fields.ts`. Nobody reloads anything.
+ *
  * Nothing here blocks on the network. If the phone is offline the whole check-in is stored on the device
- * with a client id and replayed later; the desk sees it saved either way.
+ * with a client id and replayed later; the desk sees it saved either way, and the draft it could not reach
+ * goes out with the next poll.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -16,15 +22,16 @@ import { clsx } from "clsx"
 import { api, ApiError, newClientUuid, QueuedOffline, upload } from "@/lib/api"
 import { compressImage } from "@/lib/image"
 import { readIdFromPhoto } from "@/lib/ocr"
+import { type FieldName, ID_TYPES, toGuestInput } from "@/lib/checkin-fields"
+import { useCheckInSession } from "@/lib/useCheckInSession"
 import { rupees, toPaise, unitName } from "@/lib/format"
 import { OFF_SALE, type Booking, type Guest, type Room, type RoomType } from "@/lib/types"
 import { useI18n } from "@/i18n"
 import { Banner, Button, Card, Chip, ChoiceChips, Disclosure, Field, Loading, PageHeader, Stepper } from "@/components/ui"
-import { SelfRegistrationQr, type Registration, type Submission } from "@/components/SelfRegistrationQr"
+import { SelfRegistrationQr, type Registration } from "@/components/SelfRegistrationQr"
+import { OcrSuggestion } from "@/components/OcrSuggestion"
 
 type Settings = Record<string, unknown>
-
-const ID_TYPES = ["aadhaar", "voter", "dl", "passport", "other"] as const
 
 /** Numbered section header: the desk reads the screen top to bottom, in this order. */
 function Step({ n, title, done }: { n: number; title: string; done?: boolean }) {
@@ -38,7 +45,6 @@ function Step({ n, title, done }: { n: number; title: string; done?: boolean }) 
   )
 }
 
-
 export default function CheckInPage() {
   const { t } = useI18n()
   const router = useRouter()
@@ -50,29 +56,32 @@ export default function CheckInPage() {
   const [rooms, setRooms] = useState<Room[]>([])
   const [types, setTypes] = useState<RoomType[]>([])
 
-  const [phone, setPhone] = useState("")
-  const [matches, setMatches] = useState<Guest[]>([])
+  // The check-in session the QR code points at. Everything the guest answers lives in it, on the server, so
+  // this screen can be reloaded without losing a word of it.
+  const [regId, setRegId] = useState<string | null>(null)
+  const transport = useMemo(() => ({
+    read: async () => (regId ? view(await api<Registration>(`/api/registrations/${regId}`)) : null),
+    write: async (patch: object) => view(await api<Registration>(`/api/registrations/${regId}`, { method: "PATCH", body: patch })),
+  }), [regId])
+  const live = useCheckInSession(transport, { enabled: !!regId })
+  const { draft, set, setMany, ocr, recent, connected, status } = live
+  /** The guest's answers as text, for an input's value. */
+  const v = useCallback((field: FieldName) => String(draft[field] ?? ""), [draft])
+  // The register wants an ID type named, so the desk's chips start where they always did rather than blank.
+  // Written into the session only if the clerk picks something, so it never overrules the guest's own answer.
+  const idType = v("idType") || "voter"
+
   const [guestId, setGuestId] = useState<string | null>(null)
-  const [name, setName] = useState("")
-  const [city, setCity] = useState("")
-  const [address, setAddress] = useState("")
-  const [idType, setIdType] = useState("voter")
-  const [idLast4, setIdLast4] = useState("")
+  const [matches, setMatches] = useState<Guest[]>([])
   const [photo, setPhoto] = useState<Blob | null>(null)
   const [skipReason, setSkipReason] = useState("")
-  // The guest filled the form on their own phone: which link it was, and whether an ID photo came with it.
-  const [registration, setRegistration] = useState<Pick<Registration, "id" | "hasIdPhoto"> | null>(null)
 
-  const [adults, setAdults] = useState(1)
-  const [children, setChildren] = useState(0)
   const [typeName, setTypeName] = useState("")
   const [unitKey, setUnitKey] = useState(search.get("room") ? `${search.get("room")}:${search.get("bed") ?? ""}` : "")
   const [nights, setNights] = useState(1)
   const [advance, setAdvance] = useState("")
   const [deposit, setDeposit] = useState("")
   const [mode, setMode] = useState("cash")
-  const [consent, setConsent] = useState(false)
-  const [optIn, setOptIn] = useState(false)
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
@@ -120,43 +129,53 @@ export default function CheckInPage() {
   const chosenRate = chosen?.ratePaise ?? 0
 
   const lookup = useCallback(async () => {
-    const digits = phone.replace(/\D/g, "")
+    const digits = v("phone").replace(/\D/g, "")
     if (digits.length < 4) return
     try {
       setMatches(await api<Guest[]>(`/api/guests?phone=${encodeURIComponent(digits)}`))
     } catch {
       setMatches([])
     }
-  }, [phone])
+  }, [v])
 
+  /** An existing guest the desk recognised: their record fills the draft, so the guest's phone shows it too. */
   function applyExistingGuest(guest: Guest) {
     setGuestId(guest.id)
-    setName(guest.name)
-    setCity(guest.city)
-    setAddress(guest.address)
-    setIdType(guest.idType ?? "voter")
-    setIdLast4(guest.idLast4 ?? "")
+    setMany({
+      name: guest.name, phone: guest.phone, city: guest.city, address: guest.address,
+      state: guest.state, country: guest.country, email: guest.email ?? "",
+      nationality: guest.nationality, idType: guest.idType ?? "", idLast4: guest.idLast4 ?? "",
+    }, true)
     setMatches([])
   }
 
+  /**
+   * The desk photographing the ID at the counter. The reading happens on this device — the image never goes
+   * anywhere for it — and what it finds is offered to the session as suggestions: empty fields take them, and
+   * a field somebody already typed keeps what they typed with the suggestion shown beside it.
+   */
   async function pickPhoto(file: File) {
     const compressed = await compressImage(file, Number(settings?.id_photo_max_kb ?? 300))
     setPhoto(compressed)
-    // The ID number, read off the photo on this phone alone; it fills only what the desk left empty.
+    if (regId) live.setStatus("reading_id")
     const read = await readIdFromPhoto(compressed)
     if (read) {
-      setIdLast4((v) => v || read.idLast4)
-      if (read.idType) setIdType(read.idType)
-      setNotice(t("ocr.filled", { last4: read.idLast4 }))
+      live.pushOcr(read)
+      setNotice(t("ocr.read"))
+    } else {
+      setNotice(t("ocr.failed"))
+      if (regId) live.setStatus("filling")
     }
   }
 
   const photoRequired = Boolean(settings?.id_photo_required)
   const consentRequired = Boolean(settings?.consent_required)
-  const guestPhoto = Boolean(registration?.hasIdPhoto)
+  const consent = Boolean(draft.consent)
+  // The guest photographing their own ID is the one thing this screen cannot read out of the draft.
+  const guestPhoto = Boolean(live.session?.hasIdPhoto)
   // What still stands between the desk and the receipt, in the order the screen asks. Shown beside the button,
   // because a greyed-out button with no reason reads as broken.
-  const missing = !name.trim() ? t("checkin.need.name")
+  const missing = !v("name").trim() ? t("checkin.need.name")
     : !unitKey ? t("checkin.need.room")
     : consentRequired && !consent ? t("checkin.need.consent")
     : photoRequired && !photo && !guestPhoto && !skipReason.trim() ? t("checkin.need.photo")
@@ -168,21 +187,24 @@ export default function CheckInPage() {
     setError("")
     const [roomId, bedId] = unitKey.split(":")
     const clientUuid = newClientUuid()
-    const newGuest = { name: name.trim(), phone, city, address, nationality: "IN", idType, idLast4, notes: "" }
+    // One canonical guest, built from the one draft both screens have been writing into.
+    const newGuest = { ...toGuestInput(draft), idType }
     try {
+      // Anything typed in the last half second has not been sent yet; it goes before the check-in does.
+      if (regId) await live.flush()
       let guest = guestId
-      // Details the guest typed on their own phone become the guest record, their ID photo included, with whatever
-      // the desk corrected on screen. Remembered, so a check-in the server refuses is not applied twice on retry.
+      // The session's details become the guest record, their ID photo included, with whatever the desk
+      // corrected on screen. Remembered, so a check-in the server refuses is not applied twice on retry.
       // Offline, the plain path below still queues the check-in; only the guest's photo is left behind.
-      if (!guest && registration) {
+      if (!guest && regId) {
         try {
-          guest = (await api<{ guestId: string }>(`/api/registrations/${registration.id}/apply`, { method: "POST", body: newGuest })).guestId
+          guest = (await api<{ guestId: string }>(`/api/registrations/${regId}/apply`, { method: "POST", body: newGuest })).guestId
           setGuestId(guest)
         } catch (e) {
           if (!(e instanceof TypeError)) throw e
         }
-      } else if (guest && registration) {
-        // Already saved the moment the guest pressed send; this carries the desk's corrections onto it.
+      } else if (guest && regId) {
+        // Already a guest — from a phone lookup, or from an earlier apply; this carries the corrections onto it.
         await api(`/api/guests/${guest}`, { method: "PUT", body: newGuest })
       }
       // A photo needs a guest row to hang on, so an existing guest gets theirs uploaded first.
@@ -197,13 +219,13 @@ export default function CheckInPage() {
           newGuest: guest ? null : newGuest,
           units: [{ roomId, bedId: bedId || null, ratePaise: null }],
           nights,
-          adults,
-          children,
-          members: null,
-          purpose: "pilgrimage",
+          adults: Number(draft.adults ?? 1),
+          children: Number(draft.children ?? 0),
+          members: (draft.members as { name: string; adult: boolean }[] | undefined) ?? null,
+          purpose: String(draft.purpose ?? "pilgrimage"),
           notes: "",
           consent,
-          whatsappOptIn: optIn,
+          whatsappOptIn: Boolean(draft.whatsappOptIn),
           idPhotoSkippedReason: photo || guestPhoto ? null : skipReason.trim() || null,
           advancePaise: toPaise(advance),
           advanceMode: mode,
@@ -229,36 +251,27 @@ export default function CheckInPage() {
     }
   }
 
-  /**
-   * The guest pressed save on their own phone: their answers fill this form for the desk to read back, and
-   * the guest record is written straight away so they are in the guest list whether or not the desk goes on
-   * to finish the check-in. Anything the desk corrects afterwards is written over it on submit.
-   */
-  const applySelfRegistration = useCallback((sub: Submission, reg: Registration) => {
-    setName(sub.name)
-    if (sub.phone) setPhone(sub.phone)
-    setCity(sub.city ?? "")
-    setAddress(sub.address ?? "")
-    if (sub.idType) setIdType(sub.idType)
-    if (sub.idLast4) setIdLast4(sub.idLast4)
-    setAdults(sub.adults || 1)
-    setChildren(sub.children || 0)
-    setConsent(sub.consent)
-    setOptIn(sub.whatsappOptIn)
-    setGuestId(null)
-    setRegistration({ id: reg.id, hasIdPhoto: reg.hasIdPhoto })
-    setNotice(t("selfreg.received", { name: sub.name }))
-    // No body: the guest's own words are saved as typed. A failure here is not shown — the desk carries on
-    // and submit() applies the registration the old way.
-    void api<{ guestId: string }>(`/api/registrations/${reg.id}/apply`, { method: "POST" })
-      .then(({ guestId }) => setGuestId(guestId))
-      .catch(() => undefined)
-  }, [t])
-
   if (!settings) return <Loading />
 
   const paymentModes = (settings.payment_modes as string[]) ?? ["cash"]
   const total = chosenRate * nights
+  const ocrLabels = { read: t("ocr.read"), verify: t("ocr.verify"), use: t("ocr.use") }
+
+  /** A field of the shared draft: typed here, sent to the guest's phone, marked when it came from theirs. */
+  const live_ = (field: FieldName, label: string, extra?: { hint?: string; maxLength?: number; inputMode?: "numeric" | "decimal" | "email"; type?: string }) => (
+    <Field label={label} hint={extra?.hint}>
+      <input
+        value={v(field)}
+        maxLength={extra?.maxLength}
+        inputMode={extra?.inputMode}
+        type={extra?.type}
+        onChange={(e) => set(field, e.target.value)}
+        className={clsx(recent.includes(field) && "anim-pop border-ok")}
+      />
+      <OcrSuggestion suggestion={ocr[field]} current={v(field)} onUse={() => live.accept(field)} labels={ocrLabels} />
+      {recent.includes(field) && <p className="mt-1 text-xs font-medium text-ok">{t("selfreg.fromGuest")}</p>}
+    </Field>
+  )
 
   // The total, the one button that matters, and why it is waiting. Pinned under the thumb on a phone; a card
   // beside the form on a laptop.
@@ -280,23 +293,28 @@ export default function CheckInPage() {
       <PageHeader title={t("action.checkIn")} back="/" />
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
       {notice && <Banner tone="info" onClose={() => setNotice("")}>{notice}</Banner>}
+      {/* Derived, not stored: the guest pressing save on their phone is a fact about the session, and a banner
+          held in state here would survive a new code being shown. */}
+      {status === "submitted" && !notice && <Banner tone="info">{t("selfreg.received", { name: v("name") })}</Banner>}
 
       {/* A phone reads top to bottom: the QR handover, then the steps, with the total pinned below. A laptop has
           room for the handover and the total to sit beside the form, so the desk sees the code and the form at once. */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-6">
         <aside className="space-y-4 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1">
-          {Boolean(settings.self_registration_enabled) && <SelfRegistrationQr onReceived={applySelfRegistration} />}
+          {Boolean(settings.self_registration_enabled) && (
+            <SelfRegistrationQr onLink={setRegId} status={status} connected={connected} />
+          )}
           <Card className="hidden space-y-2 lg:block">{totalBlock}{hint}{submitButton}</Card>
         </aside>
 
         <div className="space-y-4 lg:col-start-1 lg:row-start-1">
       {/* 1 · Guest */}
       <Card>
-        <Step n={1} title={t("checkin.guest")} done={!!name.trim()} />
+        <Step n={1} title={t("checkin.guest")} done={!!v("name").trim()} />
         <div className="space-y-3">
           <Field label={t("checkin.phoneLookup")}>
             <div className="flex gap-2">
-              <input inputMode="numeric" value={phone} onChange={(e) => { setPhone(e.target.value); setGuestId(null) }} onBlur={lookup} placeholder="9876543210" />
+              <input inputMode="numeric" value={v("phone")} onChange={(e) => { set("phone", e.target.value); setGuestId(null) }} onBlur={lookup} placeholder="9876543210" />
               <Button variant="secondary" onClick={lookup} aria-label={t("action.search")}><Search size={18} aria-hidden /></Button>
             </div>
           </Field>
@@ -315,9 +333,7 @@ export default function CheckInPage() {
           )}
 
           <div className="grid grid-cols-[1fr_auto] items-end gap-2">
-            <Field label={t("checkin.name")}>
-              <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
-            </Field>
+            <div className="min-w-0">{live_("name", t("checkin.name"))}</div>
             {guestId && <Chip tone="ok" className="mb-3">{t("checkin.guest")}</Chip>}
           </div>
         </div>
@@ -325,23 +341,21 @@ export default function CheckInPage() {
 
       <Disclosure
         title={t("checkin.moreDetails")}
-        summary={[idType && t(`id.${idType}` as "id.aadhaar"), idLast4 && `••${idLast4}`, photo ? `${Math.round(photo.size / 1024)} KB` : guestPhoto && t("selfreg.photoReceived")].filter(Boolean).join(" · ") || undefined}
-        defaultOpen={photoRequired}
+        summary={[t(`id.${idType}` as "id.aadhaar"), v("idLast4") && `••${v("idLast4")}`, photo ? `${Math.round(photo.size / 1024)} KB` : guestPhoto && t("selfreg.photoReceived")].filter(Boolean).join(" · ") || undefined}
+        defaultOpen={photoRequired || Object.keys(ocr).length > 0}
       >
         <div className="space-y-3">
           <Field group label={t("checkin.idType")}>
-            <ChoiceChips value={idType} onChange={setIdType} options={ID_TYPES.map((value) => ({ value, label: t(`id.${value}` as "id.aadhaar") }))} />
+            <ChoiceChips value={idType} onChange={(value) => set("idType", value)} options={ID_TYPES.map((value) => ({ value, label: t(`id.${value}` as "id.aadhaar") }))} />
           </Field>
           <div className="grid grid-cols-2 gap-2">
-            <Field label={t("checkin.idLast4")} hint={t("checkin.idLast4Hint")}>
-              <input value={idLast4} maxLength={4} inputMode="numeric" onChange={(e) => setIdLast4(e.target.value)} />
-            </Field>
-            <Field label={t("setup.address")}>
-              <input value={address} onChange={(e) => setAddress(e.target.value)} />
-            </Field>
-            <Field label={t("checkin.city")}>
-              <input value={city} onChange={(e) => setCity(e.target.value)} />
-            </Field>
+            {live_("idLast4", t("checkin.idLast4"), { hint: t("checkin.idLast4Hint"), maxLength: 4, inputMode: "numeric" })}
+            {live_("address", t("checkin.address"))}
+            {live_("city", t("checkin.city"))}
+            {live_("state", t("setup.state"))}
+            {live_("pincode", t("checkin.pincode"), { maxLength: 10, inputMode: "numeric" })}
+            {live_("dob", t("checkin.dob"), { type: "date" })}
+            {live_("email", t("setup.email"), { inputMode: "email" })}
           </div>
           <input ref={fileInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files?.[0] && pickPhoto(e.target.files[0])} />
           <div className="flex flex-wrap items-center gap-2">
@@ -363,15 +377,15 @@ export default function CheckInPage() {
         <Step n={2} title={t("checkin.stepRoom")} done={!!unitKey} />
         <div className="space-y-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <Stepper label={t("checkin.adults")} value={adults} min={1} onChange={setAdults} />
-            <Stepper label={t("checkin.children")} value={children} onChange={setChildren} />
+            <Stepper label={t("checkin.adults")} value={Number(draft.adults ?? 1)} min={1} onChange={(n) => set("adults", n)} />
+            <Stepper label={t("checkin.children")} value={Number(draft.children ?? 0)} onChange={(n) => set("children", n)} />
             <Stepper label={t("checkin.nights")} value={nights} min={1} onChange={setNights} />
           </div>
 
           <Field group label={t("booking.roomType")}>
             <ChoiceChips
               value={activeType}
-              onChange={(v) => { setTypeName(v); setUnitKey("") }}
+              onChange={(value) => { setTypeName(value); setUnitKey("") }}
               options={[...options.entries()].map(([name, es]) => ({ value: name, label: `${name} · ${rupees(es[0]?.ratePaise ?? 0)}` }))}
             />
           </Field>
@@ -419,12 +433,12 @@ export default function CheckInPage() {
           </Field>
           {consentRequired && (
             <label className="flex gap-3 text-sm">
-              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+              <input type="checkbox" checked={consent} onChange={(e) => set("consent", e.target.checked)} />
               <span>{t("checkin.consent")}</span>
             </label>
           )}
           <label className="flex gap-3 text-sm">
-            <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} />
+            <input type="checkbox" checked={Boolean(draft.whatsappOptIn)} onChange={(e) => set("whatsappOptIn", e.target.checked)} />
             <span>{t("checkin.whatsappOptIn")}</span>
           </label>
         </div>
@@ -441,4 +455,12 @@ export default function CheckInPage() {
       </div>
     </div>
   )
+}
+
+/** The desk's registration row, as the shared session hook wants it. */
+function view(reg: Registration) {
+  return {
+    state: reg.state, status: reg.status, version: reg.version,
+    draft: reg.draft ?? {}, ocr: reg.ocr ?? {}, hasIdPhoto: reg.hasIdPhoto, expiresAt: reg.expiresAt,
+  }
 }

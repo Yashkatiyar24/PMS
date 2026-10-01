@@ -38,9 +38,12 @@ public class AdminService {
     private final AuditService audit;
     private final StorageProvider storage;
     private final SessionService sessions;
+    /** The floor plan a new property opens with; the only place the default inventory size is decided. */
+    private final in.pms.config.RoomDefaults rooms;
 
-    public AdminService(@Qualifier("adminJdbc") JdbcClient admin, PasswordService passwords, AuditService audit, StorageProvider storage, SessionService sessions) {
-        this.admin = admin; this.passwords = passwords; this.audit = audit; this.storage = storage; this.sessions = sessions;
+    public AdminService(@Qualifier("adminJdbc") JdbcClient admin, PasswordService passwords, AuditService audit, StorageProvider storage,
+                        SessionService sessions, in.pms.config.RoomDefaults rooms) {
+        this.admin = admin; this.passwords = passwords; this.audit = audit; this.storage = storage; this.sessions = sessions; this.rooms = rooms;
     }
 
     public record PropertyHealth(
@@ -243,19 +246,27 @@ public class AdminService {
     }
 
     /**
-     * A new property opens with a floor plan already in it: one room type and 25 rooms over the ground,
-     * first and second floors (G01-G09, 101-108, 201-208). Almost every property here is shaped like this,
-     * and a desk that can start taking bookings on day one beats an empty rooms screen. The owner renames,
-     * re-rates or deactivates whatever does not match.
+     * A new property opens with a floor plan already in it: one room type and the configured default building —
+     * three floors of 10, 10 and 5 rooms, numbered 101-110, 201-210 and 301-305, twenty-five in all. Almost
+     * every property here is shaped roughly like this, and a desk that can take a booking on day one beats an
+     * empty rooms screen; the owner re-plans it from the rooms screen, which adds, renames, re-rates and
+     * deactivates whatever does not match.
+     *
+     * <p>The shape is {@link in.pms.config.RoomDefaults}, not a number written here: the count a property
+     * starts with is whatever that plan adds up to, and a deployment can ship a different one.
+     *
+     * <p>This runs inside {@code createProperty}'s transaction, so a property is never left half furnished:
+     * if a room fails, the organisation, the property, the owner and the membership all roll back with it.
      */
     private void seedRooms(UUID propertyId) {
-        UUID typeId = admin.sql("insert into room_types(property_id, name, max_occupancy, sort_order) values (?, 'Standard', 2, 0) returning id")
-                .param(propertyId).query(UUID.class).single();
-        for (int floor = 0; floor <= 2; floor++) {
-            String prefix = floor == 0 ? "G" : String.valueOf(floor);
-            for (int n = 1; n <= (floor == 0 ? 9 : 8); n++)
+        UUID typeId = admin.sql("insert into room_types(property_id, name, max_occupancy, sort_order) values (?, ?, ?, 0) returning id")
+                .params(propertyId, rooms.defaultTypeName(), rooms.defaultMaxOccupancy()).query(UUID.class).single();
+        for (int[] floorPlan : rooms.defaultPlan()) {
+            int floor = floorPlan[0], count = floorPlan[1];
+            admin.sql("insert into floors(property_id, number, sort_order) values (?, ?, ?)").params(propertyId, floor, floor).update();
+            for (int n = 1; n <= count; n++)
                 admin.sql("insert into rooms(property_id, room_type_id, number, floor) values (?, ?, ?, ?)")
-                        .params(propertyId, typeId, prefix + String.format("%02d", n), floor).update();
+                        .params(propertyId, typeId, rooms.number(floor, n), floor).update();
         }
     }
 

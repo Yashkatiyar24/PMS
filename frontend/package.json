@@ -12,6 +12,7 @@
     "ui-check": "node ui-check.mjs",
     "feature-check": "node feature-check.mjs",
     "selfreg-check": "node selfreg-check.mjs",
+    "rooms-check": "node rooms-check.mjs",
     "admin-check": "node admin-check.mjs",
     "postinstall": "node scripts/copy-ocr-assets.mjs"
   },

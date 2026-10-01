@@ -131,7 +131,23 @@ export type Room = {
   hkNote: string
   /** Set for an ordinary room when taken, and for a dormitory only when the whole room is. */
   occupancy: Occupancy | null
+  /** This room's own details. Rate, occupancy and amenities belong to its type. */
+  name: string
+  bedType: string
+  description: string
 }
+
+/** A floor's label and order. Its rooms are found by their own `floor` number, not by a key to this. */
+export type Floor = { id: string | null; number: number; name: string; sortOrder: number; rooms: number }
+
+/**
+ * What laying out a floor plan would do. The same shape comes back from the preview and from the real thing,
+ * because the server answers both with one method: `create` is added, `keep` is left exactly as it is, and
+ * `surplus` is reported and never touched — removing rooms is the owner's decision, one room at a time.
+ */
+export type FloorPlan = { floor: number; name: string; create: string[]; keep: string[]; surplus: string[] }
+export type RoomSetupPlan = { floors: FloorPlan[]; total: number; created: number; kept: number; surplus: number }
+export type RoomDefaults = { roomsPerFloor: number[]; firstFloor: number; totalRooms: number; maxFloors: number; maxRoomsPerFloor: number }
 
 export const OFF_SALE: RoomStatus[] = ["blocked", "maintenance"]
 

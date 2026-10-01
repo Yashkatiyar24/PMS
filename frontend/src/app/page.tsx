@@ -5,7 +5,7 @@
  * right the day's activity, one list at a time — the number you tap. The owner also sees the next two weeks
  * as booked: occupancy, room nights, average rate, revenue per room and revenue.
  */
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AlertTriangle, CalendarPlus, CheckCircle2, ChevronLeft, ChevronRight, Clock, UserPlus } from "lucide-react"
@@ -13,7 +13,7 @@ import { clsx } from "clsx"
 import { api } from "@/lib/api"
 import { useAutoRefresh, useReloadAfterSync, useResource } from "@/lib/use-resource"
 import { formatDate, rupees, unitName } from "@/lib/format"
-import type { Booking, BookingState, Forecast, Today } from "@/lib/types"
+import { OFF_SALE, type Booking, type BookingState, type Forecast, type Room, type Today } from "@/lib/types"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
 import { Avatar, Banner, Button, Chip, Empty, IconButton, Loading, type Tone } from "@/components/ui"
@@ -100,6 +100,7 @@ function Dashboard() {
         <aside className="grid gap-4 lg:content-start">
           <DateCard iso={today.date} language={language} />
           <OccupancyCard today={today} />
+          <InventoryCard />
         </aside>
 
         <section className="min-w-0 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--shadow-card)] md:p-5">
@@ -179,6 +180,56 @@ function DateCard({ iso, language }: { iso: string; language: string }) {
       <p className="text-6xl font-extrabold leading-none tracking-tight tabular-nums">{date.getDate()}</p>
       <p className="mt-1 text-sm font-semibold text-ink-soft">{new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(date)}</p>
     </div>
+  )
+}
+
+/**
+ * The inventory itself, as the rooms screen holds it: how many rooms there are and what each is doing right
+ * now. Counted from the rooms the desk can already see rather than from a report of its own, so it cannot
+ * disagree with the rooms screen or the housekeeping board — occupied and reserved come from the bookings,
+ * the rest from housekeeping.
+ */
+function InventoryCard() {
+  const { t } = useI18n()
+  const { data: rooms } = useResource(() => api<Room[]>("/api/rooms"), [], "")
+  const counts = useMemo(() => {
+    const c = { total: 0, available: 0, occupied: 0, reserved: 0, cleaning: 0, maintenance: 0, outOfUse: 0 }
+    for (const room of rooms ?? []) {
+      c.total++
+      if (!room.active) { c.outOfUse++; continue }
+      if (room.occupancy?.state === "occupied") c.occupied++
+      else if (room.occupancy?.state === "reserved") c.reserved++
+      else if (OFF_SALE.includes(room.status)) c.maintenance++
+      else if (room.status === "dirty" || room.status === "cleaning") c.cleaning++
+      else c.available++
+    }
+    return c
+  }, [rooms])
+
+  if (!rooms || rooms.length === 0) return null
+  const rows: [string, number, string][] = [
+    [t("dash.available"), counts.available, "text-ok"],
+    [t("setup.statusOccupied"), counts.occupied, ""],
+    [t("setup.statusReserved"), counts.reserved, ""],
+    [t("dash.cleaning"), counts.cleaning, counts.cleaning > 0 ? "text-warn" : ""],
+    [t("dash.maintenance"), counts.maintenance, counts.maintenance > 0 ? "text-danger" : ""],
+    [t("setup.archived"), counts.outOfUse, ""],
+  ]
+  return (
+    <Link href="/settings/rooms" className="rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--shadow-card)] hover:bg-surface-2">
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <h2 className="text-sm font-bold tracking-tight">{t("dash.inventory")}</h2>
+        <span className="text-xl font-extrabold tabular-nums">{counts.total}</span>
+      </div>
+      <dl className="space-y-1.5 text-sm">
+        {rows.filter(([, value], i) => value > 0 || i < 3).map(([label, value, tone]) => (
+          <div key={label} className="flex items-center justify-between gap-2">
+            <dt className="text-ink-soft">{label}</dt>
+            <dd className={clsx("font-bold tabular-nums", tone)}>{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </Link>
   )
 }
 

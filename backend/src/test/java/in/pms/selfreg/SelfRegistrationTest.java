@@ -18,6 +18,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
@@ -267,6 +268,155 @@ class SelfRegistrationTest {
                 "select count(*) from audit_log where property_id = ? and table_name = 'guest_registrations' and action = 'guest_submit' and user_id is null")
                 .param(propertyA).query(Integer.class).single());
         assertThat(rows).isEqualTo(1);
+    }
+
+    // ---------- One session, two screens ----------
+
+    /**
+     * The feature this was all built for: the desk watches the register fill in while the guest types, with
+     * nobody reloading anything. The poll on the desk's screen reads exactly what this test reads.
+     */
+    @Test
+    void theDeskSeesEachFieldAsTheGuestTypesIt() throws Exception {
+        var link = asDesk(propertyA, () -> service.create(null, userId));
+
+        patchAsGuest(link, """
+                {"fields": {"name": "Rahul Sharma"}, "status": "filling"}""").andExpect(status().isOk());
+        var afterName = asDesk(propertyA, () -> service.get(link.id()));
+        assertThat(afterName.draft()).containsEntry("name", "Rahul Sharma");
+        assertThat(afterName.status()).isEqualTo("filling");
+        assertThat(afterName.version()).isEqualTo(1);
+        // Still nothing has become a guest: a draft is as inert as a submission.
+        assertThat(afterName.state()).isEqualTo("open");
+
+        patchAsGuest(link, """
+                {"fields": {"city": "Delhi", "address": "XYZ"}}""").andExpect(status().isOk());
+        var afterAddress = asDesk(propertyA, () -> service.get(link.id()));
+        assertThat(afterAddress.draft())
+                .containsEntry("name", "Rahul Sharma")   // the earlier field is not lost by the later write
+                .containsEntry("city", "Delhi")
+                .containsEntry("address", "XYZ");
+        assertThat(afterAddress.version()).isEqualTo(2);
+    }
+
+    /** The other direction: the clerk fixes a name at the counter and the guest's phone shows the correction. */
+    @Test
+    void theDesksCorrectionReachesTheGuestsPhone() throws Exception {
+        var link = asDesk(propertyA, () -> service.create(null, userId));
+        patchAsGuest(link, """
+                {"fields": {"name": "Rahul Sharma", "city": "Delhi"}}""").andExpect(status().isOk());
+
+        asDesk(propertyA, () -> {
+            service.writeDraft(link.id(), new SelfRegistrationService.Patch(Map.of("name", "Rahul Kumar"), null, null), "owner", userId);
+            return null;
+        });
+
+        mvc.perform(get("/api/public/registration/" + tokenOf(link) + "/session"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.draft.name").value("Rahul Kumar"))
+                .andExpect(jsonPath("$.draft.city").value("Delhi"))   // field-level: the desk's write left this alone
+                .andExpect(header().string("Cache-Control", "no-store"));
+    }
+
+    /** A guest whose phone went to sleep, or who pulled to refresh, comes back to what they had typed. */
+    @Test
+    void theDraftSurvivesTheGuestReloadingTheirPhone() throws Exception {
+        var link = asDesk(propertyA, () -> service.create(null, userId));
+        patchAsGuest(link, """
+                {"fields": {"name": "Rahul Sharma", "idType": "voter", "idLast4": "4321"}}""").andExpect(status().isOk());
+
+        mvc.perform(get("/api/public/registration/" + tokenOf(link) + "/session"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.draft.name").value("Rahul Sharma"))
+                .andExpect(jsonPath("$.draft.idLast4").value("4321"))
+                .andExpect(jsonPath("$.state").value("open"));
+    }
+
+    /** What reading an ID suggests is kept as a suggestion, next to the draft and not inside it. */
+    @Test
+    void whatTheIdPhotoSaidIsOfferedRatherThanApplied() throws Exception {
+        var link = asDesk(propertyA, () -> service.create(null, userId));
+        patchAsGuest(link, """
+                {"fields": {"name": "Rahul Kumar"},
+                 "ocr": {"name": {"value": "Rahul Sharma", "confidence": 0.96},
+                         "city": {"value": "Haridwar", "confidence": 0.5}, "_doc": "aadhaar"}}""")
+                .andExpect(status().isOk());
+
+        var reg = asDesk(propertyA, () -> service.get(link.id()));
+        assertThat(reg.draft()).containsEntry("name", "Rahul Kumar");  // what the human typed stands
+        assertThat(reg.ocr()).containsKeys("name", "city", "_doc");
+        assertThat(reg.draft()).doesNotContainKey("ocr");
+        // The reader's own confidence is kept, because a screen must be able to say "please check this one".
+        assertThat(((Map<?, ?>) reg.ocr().get("city")).get("confidence")).isEqualTo(0.5);
+    }
+
+    @Test
+    void aGuestCannotKeepEditingAfterTheyHaveSentTheForm() throws Exception {
+        var link = asDesk(propertyA, () -> service.create(null, userId));
+        mvc.perform(post("/api/public/registration/" + tokenOf(link)).contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(submission("Sent Already")))).andExpect(status().isOk());
+
+        patchAsGuest(link, """
+                {"fields": {"name": "Someone Else"}}""").andExpect(status().isBadRequest());
+        // The desk, however, may still correct it — that is the whole point of the review step.
+        assertThat(asDesk(propertyA, () -> service.get(link.id())).draft()).containsEntry("name", "Sent Already");
+    }
+
+    @Test
+    void aFullAadhaarNumberIsRefusedInADraftToo() throws Exception {
+        var link = asDesk(propertyA, () -> service.create(null, userId));
+        patchAsGuest(link, """
+                {"fields": {"address": "Aadhaar 1234 5678 9012"}}""").andExpect(status().isBadRequest());
+        assertThat(asDesk(propertyA, () -> service.get(link.id())).draft()).isEmpty();
+    }
+
+    @Test
+    void aDraftCannotBeUsedToParkArbitraryData() throws Exception {
+        var link = asDesk(propertyA, () -> service.create(null, userId));
+        patchAsGuest(link, """
+                {"fields": {"name": "Rahul", "secretPayload": "x", "adults": 9999}}""").andExpect(status().isOk());
+
+        var draft = asDesk(propertyA, () -> service.get(link.id())).draft();
+        assertThat(draft).containsOnlyKeys("name", "adults");
+        assertThat(draft).containsEntry("adults", 30); // clamped, not refused: a count is not worth a failed save
+    }
+
+    @Test
+    void aDraftWriteIsAudited() throws Exception {
+        var link = asDesk(propertyA, () -> service.create(null, userId));
+        patchAsGuest(link, """
+                {"fields": {"name": "Audited Draft", "idLast4": "4321"}}""").andExpect(status().isOk());
+
+        String after = new TransactionTemplate(adminTx).execute(tx -> admin.sql("""
+                select after::text from audit_log where property_id = ? and table_name = 'guest_registrations'
+                 and action = 'draft_guest' order by at desc limit 1""")
+                .param(propertyA).query(String.class).single());
+        assertThat(after).contains("name").contains("Audited Draft");
+        // The last four digits of a document are recorded as having changed, never written into the log.
+        assertThat(after).contains("idLast4").doesNotContain("4321");
+    }
+
+    /**
+     * The guarantee the whole design rests on: the desk's screen, the guest's phone and the document reader
+     * ask the same questions. The browser's list is checked against this one, because a field added to only
+     * one side is exactly the drift this feature was built to end.
+     */
+    @Test
+    void theDeskAndTheGuestsPhoneAskTheSameQuestions() throws Exception {
+        var file = java.nio.file.Path.of("..", "frontend", "src", "lib", "checkin-fields.ts");
+        org.junit.jupiter.api.Assumptions.assumeTrue(java.nio.file.Files.exists(file), "frontend not checked out");
+        String source = java.nio.file.Files.readString(file);
+        String marker = "export const FIELDS = [";
+        String list = source.substring(source.indexOf(marker) + marker.length());
+        list = list.substring(0, list.indexOf("]"));
+        var inBrowser = java.util.Arrays.stream(list.split(",")).map(x -> x.replaceAll("[\\s\"]", "")).filter(x -> !x.isEmpty()).toList();
+        assertThat(inBrowser).containsExactlyElementsOf(CheckInFields.all());
+    }
+
+    /** Rate-limited like everything else on this door, but loosely enough for a phone sending as it types. */
+    private org.springframework.test.web.servlet.ResultActions patchAsGuest(SelfRegistrationService.NewLink link, String body) throws Exception {
+        return mvc.perform(patch("/api/public/registration/" + tokenOf(link))
+                .contentType(MediaType.APPLICATION_JSON).content(body));
     }
 
     @Test

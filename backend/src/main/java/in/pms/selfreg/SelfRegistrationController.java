@@ -25,9 +25,24 @@ public class SelfRegistrationController {
         return service.create(in == null ? null : in.bookingId(), u.id());
     }
 
-    /** Polled by the desk while the QR is on screen. */
+    /**
+     * Polled by the desk while the check-in screen is open: what the guest has typed so far, what reading
+     * their ID suggested, and how far along they are. The desk's screen redraws from this, so nobody has to
+     * reload a page to see the guest's answers arrive.
+     */
     @GetMapping("/{id}")
     public SelfRegistration get(@PathVariable UUID id) { return service.get(id); }
+
+    /**
+     * The desk's own correction of a field, written into the same draft the guest's phone is reading, so a
+     * name fixed here shows up on the guest's screen as well.
+     */
+    @PatchMapping("/{id}")
+    public SelfRegistration patch(@AuthenticationPrincipal CurrentUser u, @PathVariable UUID id,
+                                  @RequestBody SelfRegistrationService.Patch in) {
+        service.writeDraft(id, in, "owner", u.id());
+        return service.get(id);
+    }
 
     /** The body, when present, is the desk's corrected copy of the details; an empty body keeps the guest's own words. */
     @PostMapping("/{id}/apply")
