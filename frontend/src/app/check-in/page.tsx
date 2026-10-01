@@ -181,6 +181,9 @@ export default function CheckInPage() {
         } catch (e) {
           if (!(e instanceof TypeError)) throw e
         }
+      } else if (guest && registration) {
+        // Already saved the moment the guest pressed send; this carries the desk's corrections onto it.
+        await api(`/api/guests/${guest}`, { method: "PUT", body: newGuest })
       }
       // A photo needs a guest row to hang on, so an existing guest gets theirs uploaded first.
       if (photo && guest) await upload(`/api/guests/${guest}/id-photo`, photo, "id.jpg")
@@ -226,7 +229,11 @@ export default function CheckInPage() {
     }
   }
 
-  /** The guest pressed save on their own phone: their answers fill this form for the desk to read back. */
+  /**
+   * The guest pressed save on their own phone: their answers fill this form for the desk to read back, and
+   * the guest record is written straight away so they are in the guest list whether or not the desk goes on
+   * to finish the check-in. Anything the desk corrects afterwards is written over it on submit.
+   */
   const applySelfRegistration = useCallback((sub: Submission, reg: Registration) => {
     setName(sub.name)
     if (sub.phone) setPhone(sub.phone)
@@ -241,6 +248,11 @@ export default function CheckInPage() {
     setGuestId(null)
     setRegistration({ id: reg.id, hasIdPhoto: reg.hasIdPhoto })
     setNotice(t("selfreg.received", { name: sub.name }))
+    // No body: the guest's own words are saved as typed. A failure here is not shown — the desk carries on
+    // and submit() applies the registration the old way.
+    void api<{ guestId: string }>(`/api/registrations/${reg.id}/apply`, { method: "POST" })
+      .then(({ guestId }) => setGuestId(guestId))
+      .catch(() => undefined)
   }, [t])
 
   if (!settings) return <Loading />

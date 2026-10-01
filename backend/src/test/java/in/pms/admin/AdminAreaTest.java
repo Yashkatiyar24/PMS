@@ -64,6 +64,9 @@ class AdminAreaTest {
             List<UUID> orgs = admin.sql("select id from organisations where name in ('Admin Trust', 'Onboarded Trust')").query(UUID.class).list();
             for (UUID org : orgs) {
                 admin.sql("delete from property_users where property_id in (select id from properties where org_id = ?)").param(org).update();
+                // An onboarded property arrives with its floor plan, so the rooms go before the property can.
+                admin.sql("delete from rooms where property_id in (select id from properties where org_id = ?)").param(org).update();
+                admin.sql("delete from room_types where property_id in (select id from properties where org_id = ?)").param(org).update();
                 admin.sql("delete from properties where org_id = ?").param(org).update();
                 admin.sql("delete from organisations where id = ?").param(org).update();
             }
@@ -130,6 +133,17 @@ class AdminAreaTest {
                 where u.phone = '9555500001' and pu.role = 'owner' and p.name = 'New Dharamshala'""")
                 .query(Integer.class).single();
         org.assertj.core.api.Assertions.assertThat(memberships).isEqualTo(1);
+
+        // The property opens with a floor plan already in it, so the desk is not looking at an empty rooms screen.
+        var floors = admin.sql("""
+                select r.floor, count(*) as n from rooms r join properties p on p.id = r.property_id
+                where p.name = 'New Dharamshala' group by r.floor order by r.floor""").query().listOfRows();
+        org.assertj.core.api.Assertions.assertThat(floors).hasSize(3);
+        org.assertj.core.api.Assertions.assertThat(floors.stream().mapToLong(f -> (Long) f.get("n")).sum()).isEqualTo(25L);
+        org.assertj.core.api.Assertions.assertThat(admin.sql("""
+                select count(*) from rooms r join properties p on p.id = r.property_id
+                where p.name = 'New Dharamshala' and r.number in ('G01', 'G09', '101', '108', '201', '208')""")
+                .query(Integer.class).single()).isEqualTo(6);
     }
 
     @Test

@@ -235,9 +235,28 @@ public class AdminService {
                 on conflict (property_id, user_id) do update set role = 'owner', active = true""")
                 .params(propertyId, ownerId).update();
 
+        seedRooms(propertyId);
+
         audit.recordPlatform(propertyId, "properties", propertyId.toString(), "onboard", null,
                 Map.of("org", in.orgName(), "property", in.propertyName(), "ownerPhone", mask(ownerPhone)), actor.id());
         return new NewPropertyResult(orgId, propertyId, ownerId, ownerPhone, signInEmail, (String) property.get("code"), password);
+    }
+
+    /**
+     * A new property opens with a floor plan already in it: one room type and 25 rooms over the ground,
+     * first and second floors (G01-G09, 101-108, 201-208). Almost every property here is shaped like this,
+     * and a desk that can start taking bookings on day one beats an empty rooms screen. The owner renames,
+     * re-rates or deactivates whatever does not match.
+     */
+    private void seedRooms(UUID propertyId) {
+        UUID typeId = admin.sql("insert into room_types(property_id, name, max_occupancy, sort_order) values (?, 'Standard', 2, 0) returning id")
+                .param(propertyId).query(UUID.class).single();
+        for (int floor = 0; floor <= 2; floor++) {
+            String prefix = floor == 0 ? "G" : String.valueOf(floor);
+            for (int n = 1; n <= (floor == 0 ? 9 : 8); n++)
+                admin.sql("insert into rooms(property_id, room_type_id, number, floor) values (?, ?, ?, ?)")
+                        .params(propertyId, typeId, prefix + String.format("%02d", n), floor).update();
+        }
     }
 
     /** Switch the optional parts of the product on or off for one property; takes effect on everyone's next request. */
