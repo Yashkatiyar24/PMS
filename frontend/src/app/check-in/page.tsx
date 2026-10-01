@@ -28,7 +28,7 @@ import { useResource } from "@/lib/use-resource"
 import { rupees, toPaise, unitName } from "@/lib/format"
 import { OFF_SALE, type Booking, type Guest, type Room, type RoomType } from "@/lib/types"
 import { useI18n } from "@/i18n"
-import { Banner, Button, Card, Chip, ChoiceChips, Disclosure, Field, Loading, PageHeader, PhoneInput, Stepper } from "@/components/ui"
+import { Alert, Banner, Button, Card, Chip, ChoiceChips, Disclosure, Field, Loading, PageHeader, PhoneInput, Stepper } from "@/components/ui"
 import { SelfRegistrationQr, type Registration } from "@/components/SelfRegistrationQr"
 import { OcrSuggestion } from "@/components/OcrSuggestion"
 
@@ -93,7 +93,9 @@ export default function CheckInPage() {
   const [skipReason, setSkipReason] = useState("")
 
   const [typeName, setTypeName] = useState("")
-  const [unitKey, setUnitKey] = useState(search.get("room") ? `${search.get("room")}:${search.get("bed") ?? ""}` : "")
+  // A family taking three rooms is one check-in, one folio and one bill, so the desk picks as many units as
+  // it needs here rather than checking the same guest in three times. The booking API has always taken a list.
+  const [unitKeys, setUnitKeys] = useState<string[]>(search.get("room") ? [`${search.get("room")}:${search.get("bed") ?? ""}`] : [])
   const [nights, setNights] = useState(1)
   const [advance, setAdvance] = useState("")
   // Null until the desk types: the property's own default stands in, without an effect that would set state
@@ -135,10 +137,11 @@ export default function CheckInPage() {
   }, [rooms, types])
 
   // The chosen type follows a preselected unit (from the tape chart), else the first type listed.
-  const activeType = typeName || [...options.entries()].find(([, es]) => es.some((e) => e.key === unitKey))?.[0] || [...options.keys()][0] || ""
+  const activeType = typeName || [...options.entries()].find(([, es]) => es.some((e) => unitKeys.includes(e.key)))?.[0] || [...options.keys()][0] || ""
   const units = options.get(activeType) ?? []
-  const chosen = [...options.values()].flat().find((e) => e.key === unitKey)
-  const chosenRate = chosen?.ratePaise ?? 0
+  const chosen = [...options.values()].flat().filter((e) => unitKeys.includes(e.key))
+  // Each unit is charged at its own type's rate, so three rooms of two kinds add up correctly.
+  const chosenRate = chosen.reduce((sum, unit) => sum + unit.ratePaise, 0)
 
   const lookup = useCallback(async () => {
     const digits = v("phone").replace(/\D/g, "")
@@ -190,7 +193,7 @@ export default function CheckInPage() {
   // What still stands between the desk and the receipt, in the order the screen asks. Shown beside the button,
   // because a greyed-out button with no reason reads as broken.
   const missing = !v("name").trim() ? t("checkin.need.name")
-    : !unitKey ? t("checkin.need.room")
+    : unitKeys.length === 0 ? t("checkin.need.room")
     : consentRequired && !consent ? t("checkin.need.consent")
     : photoRequired && !photo && !guestPhoto && !skipReason.trim() ? t("checkin.need.photo")
     : ""
@@ -199,7 +202,10 @@ export default function CheckInPage() {
   async function submit() {
     setBusy(true)
     setError("")
-    const [roomId, bedId] = unitKey.split(":")
+    const units = unitKeys.map((key) => {
+      const [roomId, bedId] = key.split(":")
+      return { roomId, bedId: bedId || null, ratePaise: null }
+    })
     const clientUuid = newClientUuid()
     // One canonical guest, built from the one draft both screens have been writing into.
     const newGuest = { ...toGuestInput(draft), idType }
@@ -231,7 +237,7 @@ export default function CheckInPage() {
         body: {
           guestId: guest,
           newGuest: guest ? null : newGuest,
-          units: [{ roomId, bedId: bedId || null, ratePaise: null }],
+          units,
           nights,
           adults: Number(draft.adults ?? 1),
           children: Number(draft.children ?? 0),
@@ -302,6 +308,7 @@ export default function CheckInPage() {
     <div className="min-w-0 flex-1">
       <p className="text-xs text-ink-soft">{t("checkin.total")}</p>
       <p className="text-lg font-bold tabular-nums leading-tight">{rupees(total)} <span className="whitespace-nowrap text-xs font-normal text-ink-soft">{chosenRate > 0 && `${rupees(chosenRate)} × ${nights}`}</span></p>
+      {chosen.length > 1 && <p className="truncate text-xs text-ink-soft">{t("checkin.roomsChosen", { n: chosen.length, rooms: chosen.map((u) => u.label).join(", ") })}</p>}
     </div>
   )
   const hint = missing && <p className="text-xs font-medium text-warn">{missing}</p>
@@ -314,7 +321,9 @@ export default function CheckInPage() {
   return (
     <div className="space-y-4 pb-24 lg:pb-0">
       <PageHeader title={t("action.checkIn")} back="/" />
-      {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
+      {/* A refused check-in is not a banner at the top of a long form: the desk is looking at the button it
+          just pressed, so the problem comes to the middle of the screen and waits to be read. */}
+      <Alert message={error} onClose={() => setError("")} />
       {notice && <Banner tone="info" onClose={() => setNotice("")}>{notice}</Banner>}
       {/* Derived, not stored: the guest pressing save on their phone is a fact about the session, and a banner
           held in state here would survive a new code being shown. */}
@@ -397,7 +406,7 @@ export default function CheckInPage() {
 
       {/* 2 · Room */}
       <Card>
-        <Step n={2} title={t("checkin.stepRoom")} done={!!unitKey} />
+        <Step n={2} title={t("checkin.stepRoom")} done={unitKeys.length > 0} />
         <div className="space-y-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <Stepper label={t("checkin.adults")} value={Number(draft.adults ?? 1)} min={1} onChange={(n) => set("adults", n)} />
@@ -408,7 +417,7 @@ export default function CheckInPage() {
           <Field group label={t("booking.roomType")}>
             <ChoiceChips
               value={activeType}
-              onChange={(value) => { setTypeName(value); setUnitKey("") }}
+              onChange={(value) => setTypeName(value)}
               options={[...options.entries()].map(([name, es]) => ({ value: name, label: `${name} · ${rupees(es[0]?.ratePaise ?? 0)}` }))}
             />
           </Field>
@@ -419,13 +428,13 @@ export default function CheckInPage() {
             ) : (
               <div className="scroll-thin flex max-h-40 flex-wrap gap-2 overflow-y-auto">
                 {units.map((u) => {
-                  const on = u.key === unitKey
+                  const on = unitKeys.includes(u.key)
                   return (
                     <button
                       key={u.key}
                       type="button"
                       aria-pressed={on}
-                      onClick={() => setUnitKey(u.key)}
+                      onClick={() => setUnitKeys((keys) => (keys.includes(u.key) ? keys.filter((k) => k !== u.key) : [...keys, u.key]))}
                       className={clsx("min-h-[44px] min-w-[64px] rounded-xl border px-3 text-[15px] font-bold tabular-nums transition-colors", on ? "border-brand bg-brand text-on-solid" : "border-line-strong bg-surface hover:bg-surface-2")}
                     >
                       {u.dirty && <span aria-label={t("rooms.status.dirty")} title={t("rooms.status.dirty")} className="mr-1.5 inline-block h-2 w-2 rounded-full bg-warn align-middle" />}

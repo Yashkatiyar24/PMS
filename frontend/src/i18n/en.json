@@ -1042,5 +1042,9 @@
   "setup.typeRetiredWarning": "{n} rooms use this type. They will not be offered for sale while it is out of use.",
   "guests.peopleN": "{n} guests",
   "guests.nightsN": "{n} nights left",
-  "guests.dueAmount": "{amount} due"
+  "guests.dueAmount": "{amount} due",
+  "selfreg.slow": "Still making a code — the server may be waking up. Tap “Show a new code” to try again.",
+  "error.title": "That did not work",
+  "action.ok": "OK",
+  "checkin.roomsChosen": "{n} rooms · {rooms}"
 }

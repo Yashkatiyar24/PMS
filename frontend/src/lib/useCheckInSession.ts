@@ -49,7 +49,9 @@ export function useCheckInSession(transport: Transport, options: { enabled?: boo
 
   const [session, setSession] = useState<SessionView | null>(null)
   const [draft, setDraft] = useState<Draft>({})
-  const [connected, setConnected] = useState(false)
+  // Optimistic: nothing has failed yet, so there is nothing to report. Starting at "disconnected" made every
+  // screen claim a connection problem for the first couple of seconds, and before a session even existed.
+  const [connected, setConnected] = useState(true)
   /** Fields the other side changed a moment ago, for the "just updated" mark beside them. */
   const [recent, setRecent] = useState<FieldName[]>([])
 

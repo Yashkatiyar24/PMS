@@ -465,6 +465,50 @@ export function Sheet({
   )
 }
 
+/**
+ * Something went wrong, in the middle of the screen.
+ *
+ * A banner at the top of a long form is read by whoever happens to be looking at the top of a long form. A
+ * refused check-in is not that kind of news: the desk has pressed the button, is looking at the button, and
+ * has to know the guest is not checked in. So this stops everything, in the centre, until it is dismissed —
+ * which is also what makes it safe to keep banners for the quiet things.
+ *
+ * Only for a failure the person must act on. Anything a screen merely wants to mention stays a Banner.
+ */
+export function Alert({
+  message,
+  title,
+  onClose,
+}: {
+  /** The failure, in the words the server or the screen used. Empty closes it. */
+  message: string
+  title?: string
+  onClose: () => void
+}) {
+  const { t } = useI18n()
+  return (
+    <Dialog.Root open={Boolean(message)} onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="anim-fade fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]" />
+        <Dialog.Content
+          role="alertdialog"
+          className="anim-pop fixed left-1/2 top-1/2 z-50 w-[min(26rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-surface p-5 text-center text-ink shadow-[var(--shadow-pop)] outline-none"
+        >
+          <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-danger-soft">
+            <AlertTriangle size={24} className="text-danger" aria-hidden />
+          </div>
+          <Dialog.Title className="text-lg font-bold leading-tight">{title ?? t("error.title")}</Dialog.Title>
+          <Dialog.Description className="mt-1 text-[15px] text-ink-soft">{message}</Dialog.Description>
+          <Dialog.Close asChild>
+            {/* Autofocused: the keyboard and a screen reader both land on the way out of the problem. */}
+            <Button className="mt-4 w-full" autoFocus>{t("action.ok")}</Button>
+          </Dialog.Close>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}
+
 export type MenuItem = {
   label: React.ReactNode
   icon?: React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>

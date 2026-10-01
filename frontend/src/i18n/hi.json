@@ -1042,5 +1042,9 @@
   "setup.typeRetiredWarning": "इस प्रकार के {n} कमरे हैं। उपयोग से बाहर रहने तक वे बिक्री के लिए नहीं दिखेंगे।",
   "guests.peopleN": "{n} मेहमान",
   "guests.nightsN": "{n} रातें बाकी",
-  "guests.dueAmount": "{amount} बाकी"
+  "guests.dueAmount": "{amount} बाकी",
+  "selfreg.slow": "कोड बन रहा है — सर्वर जाग रहा है। दोबारा कोशिश के लिए “नया कोड दिखाएं” दबाएं।",
+  "error.title": "यह नहीं हो पाया",
+  "action.ok": "ठीक है",
+  "checkin.roomsChosen": "{n} कमरे · {rooms}"
 }

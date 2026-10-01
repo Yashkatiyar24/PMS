@@ -116,6 +116,8 @@ export function SelfRegistrationQr({
   const [link, setLink] = useState<NewLink | null>(null)
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
+  /** The code is taking longer than it should: say so, and let the desk ask for another one. */
+  const [slow, setSlow] = useState(false)
   const [copied, setCopied] = useState(false)
   const bootstrapped = useRef<string | null>(null)
 
@@ -123,6 +125,10 @@ export function SelfRegistrationQr({
     setBusy(true)
     setError("")
     setCopied(false)
+    setSlow(false)
+    // The request is not cancelled when it runs long — a sleeping server answers in its own time and the code
+    // then appears — but after this the desk is told why it is waiting and the retry stops being greyed out.
+    const slowTimer = setTimeout(() => setSlow(true), 8000)
     try {
       // A new code retires the old one by itself: the desk's screen stops following the previous session the
       // moment this one is reported upward, and the old link dies at its own expiry.
@@ -132,7 +138,9 @@ export function SelfRegistrationQr({
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("selfreg.failed"))
     } finally {
+      clearTimeout(slowTimer)
       setBusy(false)
+      setSlow(false)
     }
   }, [bookingId, key, t])
 
@@ -145,7 +153,12 @@ export function SelfRegistrationQr({
       const kept = readStored(key)
       if (kept) {
         try {
-          const reg = await api<Registration>(`/api/registrations/${kept.id}`)
+          // Checking the kept code must not become its own wait: if the server does not answer promptly,
+          // stop asking and mint a fresh one, which is what would have happened had nothing been kept.
+          const reg = await Promise.race([
+            api<Registration>(`/api/registrations/${kept.id}`),
+            new Promise<never>((_, fail) => setTimeout(() => fail(new Error("slow")), 6000)),
+          ])
           // A session the guest has already filled in is still the one to follow: the desk reloading its
           // browser must come back to the guest's details, not to an empty new code.
           if (reg.state !== "revoked" && new Date(reg.expiresAt) > new Date()) { setLink(kept); return }
@@ -173,7 +186,7 @@ export function SelfRegistrationQr({
   }, [link])
 
   const newCode = (
-    <Button variant={status === "submitted" ? "soft" : "ghost"} size="sm" className={status === "submitted" ? "w-full" : undefined} onClick={start} disabled={busy}>
+    <Button variant={status === "submitted" ? "soft" : "ghost"} size="sm" className={status === "submitted" ? "w-full" : undefined} onClick={start} disabled={busy && !slow}>
       <RefreshCw size={16} aria-hidden /> {t("selfreg.newCode")}
     </Button>
   )
@@ -217,7 +230,7 @@ export function SelfRegistrationQr({
         {copied ? <><Check size={14} className="inline align-text-bottom" aria-hidden /> {t("selfreg.copied")}</> : t("selfreg.copyHint")}
       </p>
 
-      <GuestStatus status={status} connected={connected} />
+      {link ? <GuestStatus status={status} connected={connected} /> : slow && <p className="text-sm text-ink-soft">{t("selfreg.slow")}</p>}
       {error && <Banner tone="warn">{error}</Banner>}
       {newCode}
     </Card>
