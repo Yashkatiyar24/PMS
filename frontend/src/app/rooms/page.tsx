@@ -126,7 +126,10 @@ export default function RoomsPage() {
         return (
           <section key={key}>
             <SectionLabel>{building ? `${building} · ${t("rooms.floor", { n: floor })}` : t("rooms.floor", { n: floor })}</SectionLabel>
-            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
+            {/* Three across on a phone, where a wall of rooms is what housekeeping wants in one glance. Above
+                that the tiles size themselves: at least 9.5rem each, as many as fit, sharing the row. A fixed
+                eight columns on a laptop made 129px tiles with 11px type and left the screen looking empty. */}
+            <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] sm:gap-3">
               {onFloor.map((room) => {
                 const tone = STATUS_TONE[room.status]
                 const bedsTaken = room.beds.filter((b) => b.active && b.occupancy).length
@@ -137,15 +140,15 @@ export default function RoomsPage() {
                       onClick={() => setOpenId(room.id)}
                       aria-label={`${room.number} · ${label(room.status)}`}
                       className={clsx(
-                        "relative flex w-full flex-col items-start gap-1 overflow-hidden rounded-2xl border border-line bg-surface p-3 text-left shadow-[var(--shadow-card)] transition-colors hover:bg-surface-2",
+                        "relative flex h-full w-full flex-col items-start gap-1 overflow-hidden rounded-2xl border border-line bg-surface p-3 text-left shadow-[var(--shadow-card)] transition-colors hover:border-line-strong hover:bg-surface-2 sm:gap-1.5 sm:p-4",
                       )}
                     >
                       <span aria-hidden className={clsx("absolute inset-y-0 left-0 w-1.5", TONE[tone].solid)} />
                       {room.hkPriority === "high" && <AlertTriangle size={14} aria-label={t("priority.high")} className="absolute right-2 top-2 text-danger" />}
-                      <span className="pl-1.5 text-xl font-bold leading-none tabular-nums">{room.number}</span>
-                      <span className="w-full truncate pl-1.5 text-[11px] text-ink-soft">{room.roomTypeName}</span>
+                      <span className="pl-1.5 text-xl font-bold leading-none tabular-nums sm:text-2xl">{room.number}</span>
+                      <span className="w-full truncate pl-1.5 text-[11px] text-ink-soft sm:text-xs">{room.roomTypeName}</span>
                       <Chip tone={tone} dot className="ml-1.5 mt-0.5 max-w-[calc(100%-0.375rem)]"><span className="min-w-0 truncate">{label(room.status)}</span></Chip>
-                      <span className="w-full truncate pl-1.5 text-[11px] font-semibold text-ink-soft">
+                      <span className="w-full truncate pl-1.5 text-[11px] font-semibold text-ink-soft sm:text-xs">
                         {bedsTotal > 0 && !room.occupancy
                           ? t("rooms.bedsTaken", { n: bedsTaken, total: bedsTotal })
                           : room.occupancy
