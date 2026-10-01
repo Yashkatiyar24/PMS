@@ -119,7 +119,9 @@ export default function CheckInPage() {
     for (const room of rooms) {
       if (!room.active || OFF_SALE.includes(room.status) || room.occupancy) continue
       const type = types.find((x) => x.id === room.roomTypeId)
-      if (!type) continue
+      // A retired room type is left out, exactly as the availability query leaves it out: offering a room the
+      // tape chart does not believe is free is how a desk ends up with a booking nobody can see.
+      if (!type || !type.active) continue
       const entries = byType.get(type.name) ?? []
       const dirty = room.status === "dirty" || room.status === "cleaning"
       if (type.dormitory) {

@@ -1037,5 +1037,7 @@
   "dash.maintenance": "मरम्मत",
   "dash.totalRooms": "कमरे",
   "setup.selectRoom": "कमरा {number} चुनें",
-  "common.stillLoading": "अभी लोड हो रहा है — सर्वर जाग रहा है। इसमें एक मिनट तक लग सकता है।"
+  "common.stillLoading": "अभी लोड हो रहा है — सर्वर जाग रहा है। इसमें एक मिनट तक लग सकता है।",
+  "setup.typeInUse": "उपयोग में (बिक्री के लिए)",
+  "setup.typeRetiredWarning": "इस प्रकार के {n} कमरे हैं। उपयोग से बाहर रहने तक वे बिक्री के लिए नहीं दिखेंगे।"
 }

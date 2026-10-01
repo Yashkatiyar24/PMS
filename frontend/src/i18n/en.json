@@ -1037,5 +1037,7 @@
   "dash.maintenance": "Maintenance",
   "dash.totalRooms": "Rooms",
   "setup.selectRoom": "Select room {number}",
-  "common.stillLoading": "Still loading — the server may be waking up. This can take up to a minute."
+  "common.stillLoading": "Still loading — the server may be waking up. This can take up to a minute.",
+  "setup.typeInUse": "In use (offered for sale)",
+  "setup.typeRetiredWarning": "{n} rooms use this type. They will not be offered for sale while it is out of use."
 }

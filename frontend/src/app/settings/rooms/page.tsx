@@ -328,7 +328,7 @@ export default function RoomSetupPage() {
               leading={<Avatar name={type.name} tone={type.dormitory ? "violet" : "teal"} size={38} />}
               title={type.name}
               subtitle={`${rupees(type.baseRatePaise)} · ${type.dormitory ? `${type.bedCount} ${t("setup.beds").toLowerCase()}` : `${type.maxOccupancy} ${t("setup.maxOccupancy").toLowerCase()}`} · ${t("setup.rooms")} ${roomsOfType(type.id)}`}
-              right={type.dormitory ? <Chip tone="violet">dorm</Chip> : undefined}
+              right={!type.active ? <Chip tone="neutral">{t("setup.archived")}</Chip> : type.dormitory ? <Chip tone="violet">dorm</Chip> : undefined}
               chevron
             />
           ))}
@@ -363,6 +363,20 @@ export default function RoomSetupPage() {
               <input type="checkbox" disabled={!!editing.id} checked={editing.dormitory ?? false} onChange={(e) => setEditing({ ...editing, dormitory: e.target.checked })} />
               <span>{t("setup.isDormitory")}</span>
             </label>
+            {/* A type is never deleted — a stay booked at its rate still points at it — but it can be retired,
+                which is the only way to get a type created by mistake off the check-in screen. Its rooms go
+                off sale with it, so the sheet says how many that is before anybody ticks it. */}
+            {editing.id && (
+              <>
+                <label className="flex gap-3 text-sm">
+                  <input type="checkbox" checked={editing.active ?? true} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} />
+                  <span>{t("setup.typeInUse")}</span>
+                </label>
+                {editing.active === false && roomsOfType(editing.id) > 0 && (
+                  <Banner tone="warn">{t("setup.typeRetiredWarning", { n: String(roomsOfType(editing.id)) })}</Banner>
+                )}
+              </>
+            )}
             <Field label={t("setup.amenities")} hint={t("setup.amenitiesHint")}>
               <input value={(editing.amenities ?? []).join(", ")} onChange={(e) => setEditing({ ...editing, amenities: e.target.value.split(",").map((a) => a.trimStart()) })} />
             </Field>
