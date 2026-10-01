@@ -24,6 +24,7 @@ import { compressImage } from "@/lib/image"
 import { readIdFromPhoto } from "@/lib/ocr"
 import { type FieldName, ID_TYPES, toGuestInput } from "@/lib/checkin-fields"
 import { useCheckInSession } from "@/lib/useCheckInSession"
+import { useResource } from "@/lib/use-resource"
 import { rupees, toPaise, unitName } from "@/lib/format"
 import { OFF_SALE, type Booking, type Guest, type Room, type RoomType } from "@/lib/types"
 import { useI18n } from "@/i18n"
@@ -52,9 +53,24 @@ export default function CheckInPage() {
   const started = useRef<number | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
-  const [settings, setSettings] = useState<Settings | null>(null)
-  const [rooms, setRooms] = useState<Room[]>([])
-  const [types, setTypes] = useState<RoomType[]>([])
+  /**
+   * What the screen needs before it can draw: the property's settings, its rooms and their types. Loaded
+   * through the shared resource hook, so a server that is slow, asleep or down ends in a message with a retry
+   * rather than a skeleton that never resolves.
+   */
+  const { data: setup, error: loadError, reload } = useResource(
+    async () => {
+      const [settings, rooms, types] = await Promise.all([
+        api<Settings>("/api/settings"), api<Room[]>("/api/rooms"), api<RoomType[]>("/api/room-types"),
+      ])
+      return { settings, rooms, types }
+    },
+    [],
+    t("error.generic"),
+  )
+  const settings = setup?.settings
+  const rooms = useMemo(() => setup?.rooms ?? [], [setup])
+  const types = useMemo(() => setup?.types ?? [], [setup])
 
   // The check-in session the QR code points at. Everything the guest answers lives in it, on the server, so
   // this screen can be reloaded without losing a word of it.
@@ -80,24 +96,18 @@ export default function CheckInPage() {
   const [unitKey, setUnitKey] = useState(search.get("room") ? `${search.get("room")}:${search.get("bed") ?? ""}` : "")
   const [nights, setNights] = useState(1)
   const [advance, setAdvance] = useState("")
-  const [deposit, setDeposit] = useState("")
-  const [mode, setMode] = useState("cash")
+  // Null until the desk types: the property's own default stands in, without an effect that would set state
+  // the moment the settings land and render the screen twice.
+  const [deposit, setDeposit] = useState<string | null>(null)
+  const [mode, setMode] = useState<string | null>(null)
+  const depositValue = deposit ?? String(Number(settings?.deposit_default_paise ?? 0) / 100 || "")
+  const modeValue = mode ?? (settings?.payment_modes as string[] | undefined)?.[0] ?? "cash"
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
 
-  useEffect(() => {
-    started.current = Date.now()
-    void (async () => {
-      const [s, r, ty] = await Promise.all([api<Settings>("/api/settings"), api<Room[]>("/api/rooms"), api<RoomType[]>("/api/room-types")])
-      setSettings(s)
-      setRooms(r)
-      setTypes(ty)
-      setDeposit(String(Number(s.deposit_default_paise ?? 0) / 100 || ""))
-      setMode(String((s.payment_modes as string[])?.[0] ?? "cash"))
-    })()
-  }, [])
+  useEffect(() => { started.current = Date.now() }, [])
 
   /**
    * Free units for tonight, grouped by type, with the rate the desk will charge. A unit with a guest in it, or
@@ -228,8 +238,8 @@ export default function CheckInPage() {
           whatsappOptIn: Boolean(draft.whatsappOptIn),
           idPhotoSkippedReason: photo || guestPhoto ? null : skipReason.trim() || null,
           advancePaise: toPaise(advance),
-          advanceMode: mode,
-          depositPaise: toPaise(deposit),
+          advanceMode: modeValue,
+          depositPaise: toPaise(depositValue),
         },
       })
 
@@ -251,6 +261,15 @@ export default function CheckInPage() {
     }
   }
 
+  // A failed load is said out loud, with the one thing worth trying. The desk can still reach the rest of the
+  // app from the rail; what it cannot do is check anybody in without knowing the rooms.
+  if (loadError) return (
+    <div className="space-y-4">
+      <PageHeader title={t("action.checkIn")} back="/" />
+      <Banner tone="danger">{loadError}</Banner>
+      <Button onClick={reload}>{t("action.retry")}</Button>
+    </div>
+  )
   if (!settings) return <Loading />
 
   const paymentModes = (settings.payment_modes as string[]) ?? ["cash"]
@@ -425,11 +444,11 @@ export default function CheckInPage() {
               <input inputMode="decimal" value={advance} onChange={(e) => setAdvance(e.target.value)} placeholder={total ? String(total / 100) : "0"} />
             </Field>
             <Field label={t("checkin.deposit")}>
-              <input inputMode="decimal" value={deposit} onChange={(e) => setDeposit(e.target.value)} placeholder="0" />
+              <input inputMode="decimal" value={depositValue} onChange={(e) => setDeposit(e.target.value)} placeholder="0" />
             </Field>
           </div>
           <Field group label={t("checkin.mode")}>
-            <ChoiceChips value={mode} onChange={setMode} options={paymentModes.map((m) => ({ value: m, label: m.toUpperCase() }))} />
+            <ChoiceChips value={modeValue} onChange={setMode} options={paymentModes.map((m) => ({ value: m, label: m.toUpperCase() }))} />
           </Field>
           {consentRequired && (
             <label className="flex gap-3 text-sm">

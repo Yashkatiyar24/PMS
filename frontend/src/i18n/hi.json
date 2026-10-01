@@ -1036,5 +1036,6 @@
   "dash.cleaning": "सफ़ाई हो रही है",
   "dash.maintenance": "मरम्मत",
   "dash.totalRooms": "कमरे",
-  "setup.selectRoom": "कमरा {number} चुनें"
+  "setup.selectRoom": "कमरा {number} चुनें",
+  "common.stillLoading": "अभी लोड हो रहा है — सर्वर जाग रहा है। इसमें एक मिनट तक लग सकता है।"
 }

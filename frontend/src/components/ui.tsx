@@ -6,6 +6,7 @@
  * The rule the kit enforces: a screen shows its status and its one main action; every other form lives in
  * a Sheet and every other action in a Menu, so nothing is on screen that the desk did not ask for.
  */
+import { useEffect, useState } from "react"
 import * as Dialog from "@radix-ui/react-dialog"
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu"
 import Link from "next/link"
@@ -605,14 +606,27 @@ export function Banner({ tone = "info", children, onClose }: { tone?: "info" | "
   )
 }
 
+/**
+ * The skeleton, and — if it is still there after a few seconds — a word about why.
+ *
+ * A grey screen that never changes reads as broken. The API sleeps when nobody has used it for a while and
+ * takes the best part of a minute to wake, which is exactly the case where somebody is left staring at this;
+ * saying so is the difference between waiting and reloading the page four times.
+ */
 export function Loading({ rows = 3 }: { rows?: number }) {
   const { t } = useI18n()
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 5000)
+    return () => clearTimeout(timer)
+  }, [])
   return (
     <div role="status" aria-label={t("common.loading")} className="space-y-3">
       <div className="h-7 w-40 animate-pulse rounded-lg bg-line" />
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="h-20 animate-pulse rounded-[var(--radius-card)] bg-line" style={{ animationDelay: `${i * 80}ms` }} />
       ))}
+      {slow && <p className="anim-pop text-center text-sm text-ink-soft">{t("common.stillLoading")}</p>}
     </div>
   )
 }

@@ -1036,5 +1036,6 @@
   "dash.cleaning": "Being cleaned",
   "dash.maintenance": "Maintenance",
   "dash.totalRooms": "Rooms",
-  "setup.selectRoom": "Select room {number}"
+  "setup.selectRoom": "Select room {number}",
+  "common.stillLoading": "Still loading — the server may be waking up. This can take up to a minute."
 }
