@@ -139,7 +139,20 @@ public final class CheckInFields {
         if (key.equals("gender") && !GENDERS.contains(s.toLowerCase())) return "";
         if (key.equals("dob") && !s.isEmpty() && !s.matches("\\d{4}-\\d{2}-\\d{2}")) return "";
         if (key.equals("pincode") && !s.isEmpty() && !s.matches("\\d{4,10}")) return "";
+        if (key.equals("phone")) return phone(s);
         return s;
+    }
+
+    /**
+     * Ten digits, the way the guest record stores them. A country code or a trunk zero in front of a full
+     * number is dropped and anything past the tenth digit with it, so a number typed on a phone, pasted from
+     * a contact or read off a document all end up as the same thing — and as the thing the screens show.
+     */
+    private static String phone(String raw) {
+        String digits = raw.replaceAll("\\D", "");
+        while (digits.length() > 10 && (digits.startsWith("91") || digits.startsWith("0")))
+            digits = digits.startsWith("91") ? digits.substring(2) : digits.substring(1);
+        return digits.length() > 10 ? digits.substring(0, 10) : digits;
     }
 
     private static int clamp(Object v, int min, int max) {

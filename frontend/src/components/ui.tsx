@@ -12,6 +12,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu"
 import Link from "next/link"
 import { AlertTriangle, ArrowLeft, Check, ChevronDown, ChevronRight, Info, Inbox, MoreHorizontal, X, XCircle } from "lucide-react"
 import { clsx } from "clsx"
+import { phoneDigits } from "@/lib/format"
 import { useI18n } from "@/i18n"
 export type Tone = "neutral" | "brand" | "teal" | "violet" | "ok" | "warn" | "danger" | "info"
 
@@ -326,6 +327,36 @@ export function Disclosure({
       </summary>
       <div className="border-t border-line px-4 py-3">{children}</div>
     </details>
+  )
+}
+
+/**
+ * A mobile number, and nothing else.
+ *
+ * One component for every phone field in the app, because the rule has to hold in all of them: digits only,
+ * ten at most, a pasted +91 or leading zero stripped. The tenth digit is the end of it — an eleventh does not
+ * appear, rather than being typed in and refused on save. The keyboard is numeric on a phone and the browser
+ * offers the person's own number to fill in.
+ */
+export function PhoneInput({
+  value,
+  onChange,
+  ...props
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
+  value: string
+  onChange: (digits: string) => void
+}) {
+  return (
+    <input
+      type="tel"
+      inputMode="numeric"
+      autoComplete="tel"
+      maxLength={10}
+      placeholder="9876543210"
+      {...props}
+      value={value}
+      onChange={(e) => onChange(phoneDigits(e.target.value))}
+    />
   )
 }
 

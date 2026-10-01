@@ -24,7 +24,7 @@ import { readIdFromPhoto } from "@/lib/ocr"
 import { type FieldName, type Member, type Patch } from "@/lib/checkin-fields"
 import { useCheckInSession } from "@/lib/useCheckInSession"
 import { OcrSuggestion } from "@/components/OcrSuggestion"
-import { Banner, Button, Card, Field, Loading, Stepper } from "@/components/ui"
+import { Banner, Button, Card, Field, Loading, PhoneInput, Stepper } from "@/components/ui"
 
 type Form = {
   propertyName: string
@@ -148,7 +148,8 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
         setPhotoSent(true)
         setReading(true)
         live.setStatus("reading_id")
-        const read = await readIdFromPhoto(image)
+        // The full-size photo from the camera is what gets read; only the small copy is sent and stored.
+        const read = await readIdFromPhoto(file)
         if (read) {
           live.pushOcr(read)
           setReadNote(t.readDone)
@@ -268,7 +269,12 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
 
       <Card className="space-y-3">
         {box("name", t.name, { autoComplete: "name", autoFocus: true })}
-        {box("phone", t.phone, { inputMode: "numeric", autoComplete: "tel" })}
+        {/* The one field with a shape of its own: ten digits, and the eleventh keystroke does nothing. */}
+        <Field label={t.phone}>
+          <PhoneInput value={value("phone")} onChange={(digits) => write("phone", digits)}
+            className={recent.includes("phone") ? "anim-pop border-ok" : undefined} />
+          <OcrSuggestion suggestion={ocr.phone} current={value("phone")} onUse={() => live.accept("phone")} labels={ocrLabels} />
+        </Field>
         {box("city", t.city, { autoComplete: "address-level2" })}
         {box("address", t.address, { autoComplete: "street-address" })}
         <div className="grid grid-cols-2 gap-2">

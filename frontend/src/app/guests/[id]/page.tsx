@@ -14,7 +14,7 @@ import { formatDate, formatDateTime, rupees } from "@/lib/format"
 import type { BookingState, GuestProfile } from "@/lib/types"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
-import { Avatar, Banner, Button, Card, Chip, Empty, Field, ListCard, ListRow, Loading, PageHeader, SectionLabel, Sheet, StatTile, type Tone } from "@/components/ui"
+import { Avatar, Banner, Button, Card, Chip, Empty, Field, ListCard, ListRow, Loading, PageHeader, PhoneInput, SectionLabel, Sheet, StatTile, type Tone } from "@/components/ui"
 
 const STATE_TONE: Record<BookingState, Tone> = { pending: "warn", reserved: "brand", checked_in: "ok", checked_out: "neutral", no_show: "danger", cancelled: "neutral" }
 const ID_TYPES = ["aadhaar", "voter", "dl", "passport", "other"] as const
@@ -147,7 +147,7 @@ export default function GuestProfilePage({ params }: { params: Promise<{ id: str
         {form && (
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label={t("checkin.name")}><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
-            <Field label={t("login.phone")}><input inputMode="numeric" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
+            <Field label={t("login.phone")}><PhoneInput value={form.phone} onChange={(digits) => setForm({ ...form, phone: digits })} /></Field>
             <Field label={t("setup.email")}><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
             <Field label={t("checkin.address")}><input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
             <Field label={t("checkin.city")}><input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></Field>

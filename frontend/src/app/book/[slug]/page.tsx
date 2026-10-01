@@ -20,7 +20,7 @@ import {
 import { openRazorpay, type CheckoutResult } from "@/lib/checkout"
 import { formatDate, formatDateTime, rupees } from "@/lib/format"
 import { useI18n } from "@/i18n"
-import { Banner, Button, Empty, Field, Loading, Logo, Sheet, Stepper } from "@/components/ui"
+import { Banner, Button, Empty, Field, Loading, Logo, PhoneInput, Sheet, Stepper } from "@/components/ui"
 
 /** yyyy-mm-dd plus whole days, in UTC both ways so no time zone can shift the date. */
 const addDays = (iso: string, days: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10)
@@ -195,7 +195,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label={t("book.phone")}>
-                  <input type="tel" inputMode="numeric" autoComplete="tel" placeholder="9876543210" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                  <PhoneInput value={phone} onChange={setPhone} required />
                 </Field>
                 <Field label={t("book.city")}>
                   <input autoComplete="address-level2" value={city} onChange={(e) => setCity(e.target.value)} />

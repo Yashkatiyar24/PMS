@@ -32,20 +32,33 @@ describe("what a document read is allowed to do", () => {
   const ocr = {
     name: { value: "Rahul Sharma", confidence: 0.96 },
     city: { value: "Haridwar", confidence: 0.8 },
-    state: { value: "Uttarakhand", confidence: 0.4 },
+    // A reader that barely saw the card. A date it still had to parse is trusted; free text is not.
+    dob: { value: "1988-03-14", confidence: 0.22 },
+    pincode: { value: "249401", confidence: 0.2 },
+    state: { value: "Uttarakhand", confidence: 0.18 },
   }
 
   it("fills in the empty fields", () => {
-    expect(autoFillFromOcr({ name: "", city: undefined }, ocr)).toEqual({ name: "Rahul Sharma", city: "Haridwar" })
+    expect(autoFillFromOcr({ name: "", city: undefined }, ocr)).toMatchObject({ name: "Rahul Sharma", city: "Haridwar" })
   })
 
   it("never overwrites what a person typed", () => {
     const typed: Draft = { name: "Rahul Kumar", city: "" }
-    expect(autoFillFromOcr(typed, ocr)).toEqual({ city: "Haridwar" })
+    expect(autoFillFromOcr(typed, ocr)).not.toHaveProperty("name")
+    expect(autoFillFromOcr(typed, ocr).city).toBe("Haridwar")
   })
 
-  it("leaves a field alone when it is barely readable", () => {
+  it("will not put barely-read free text into a box", () => {
+    // Nothing vouches for a misread name but the reader's own confidence, so a bad one is offered, not written.
     expect(autoFillFromOcr({ state: "" }, ocr)).not.toHaveProperty("state")
+  })
+
+  it("does fill a field whose shape it had to match", () => {
+    // A date that parsed and six digits of a pincode are their own evidence; the screen still marks them for
+    // a glance, because the confidence is what decides that.
+    const filled = autoFillFromOcr({ dob: "", pincode: "" }, ocr)
+    expect(filled.dob).toBe("1988-03-14")
+    expect(filled.pincode).toBe("249401")
   })
 
   it("offers the reader's version of a field somebody already answered", () => {

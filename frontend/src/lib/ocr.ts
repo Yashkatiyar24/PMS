@@ -127,14 +127,25 @@ export function parseDocument(text: string, confidence = 0.8): Suggestions {
   if (number) put("idLast4", number.slice(-4), sure)
   if (doc === "passport" && number && number.length > 4) put("passportNo", number, sure)
 
-  // Name: a printed label is believed; otherwise the line above the date of birth, which is where every one
-  // of these cards puts it.
-  const label = labelled(all, /(?:elector'?s? name|name|नाम)\b/i)
-  if (label && !NOT_A_NAME.test(label)) put("name", cleanName(label), sure)
-  else {
-    const dobLine = all.findIndex((l) => /dob|date of birth|जन्म|\b\d{2}[/\-.]\d{2}[/\-.]\d{4}\b/i.test(l))
-    const above = dobLine > 0 ? all.slice(0, dobLine).reverse().find((l) => looksLikeName(l)) : undefined
-    put("name", cleanName(above ?? ""), guess)
+  // Name: a printed label is believed, but only if what follows it still looks like a name — a card read in
+  // bad light yields "be" after the word "Name", and a two-letter name passed off as read is worse than none.
+  // Failing that, the line above the date of birth, which is where every one of these cards puts it.
+  const dobLine = all.findIndex((l) => /dob|date of birth|जन्म|\b\d{1,2}[/\-.]\d{1,2}[/\-.]\d{4}\b/i.test(l))
+  // In order of how much they can be trusted: what followed a printed "Name", the line above the date of
+  // birth, and — because a blurred card often comes back with the two running together on one line — whatever
+  // stood before the date on that line. Each is cleaned first and then has to still look like somebody's
+  // name, so a smudge read as "be" or a misread Hindi header falls through to the next candidate.
+  const candidates: [string, number][] = [
+    [labelled(all, /(?:elector'?s? name|name|नाम)\b/i) ?? "", sure],
+    [dobLine > 0 ? all.slice(0, dobLine).reverse()
+      // A line with a digit in it is a number, a date or an address, never a name — and "ABCDE1234F" cleaned
+      // of its digits reads as a plausible five-letter name, which is how a PAN number became one.
+      .find((line) => !/\d/.test(line) && looksLikeName(cleanName(line))) ?? "" : "", guess],
+    [dobLine >= 0 ? all[dobLine].split(/\b(?:dob|date of birth|जन्म)\b|\d{1,2}[/\-.]\d{1,2}[/\-.]\d{4}/i)[0] ?? "" : "", guess],
+  ]
+  for (const [raw, confidence] of candidates) {
+    const candidate = cleanName(raw)
+    if (looksLikeName(candidate)) { put("name", candidate, confidence); break }
   }
 
   put("dob", isoDate(text), sure)
@@ -167,11 +178,18 @@ export function parseDocument(text: string, confidence = 0.8): Suggestions {
 }
 
 function looksLikeName(line: string) {
+  // Four characters at the least, a vowel somewhere (Devanagari carries its own), and no more words than a
+  // person has names. Everything else the reader produced from a smudge fails one of the three.
+  if (!/[aeiouAEIOUऀ-ॿ]/.test(line)) return false
   return !NOT_A_NAME.test(line) && /^[A-Za-zऀ-ॿ.\s]{4,60}$/.test(line) && line.split(/\s+/).length <= 5
 }
 
 function cleanName(raw: string) {
-  return raw.replace(/[^A-Za-zऀ-ॿ.\s]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120)
+  const words = raw.replace(/[^A-Za-zऀ-ॿ.\s]/g, " ").replace(/\s+/g, " ").trim().split(" ")
+  // A stray one- or two-letter tail is the rest of the printed line the reader could not make out
+  // ("Arjun Singh i"), never part of a name. A leading initial is kept: "K Ramesh" is somebody's name.
+  while (words.length > 1 && words[words.length - 1].replace(/\./g, "").length <= 2) words.pop()
+  return words.join(" ").slice(0, 120)
 }
 
 /* ------------------------------------------------------------------ the worker */
@@ -182,18 +200,35 @@ let worker: Promise<Worker> | null = null
 
 async function getWorker(): Promise<Worker> {
   const { createWorker } = await import("tesseract.js")
-  return createWorker("eng", 1 /* LSTM only: matches the -lstm cores we ship */, {
+  const w = await createWorker("eng", 1 /* LSTM only: matches the -lstm cores we ship */, {
     workerPath: "/ocr/worker.min.js",
     corePath: "/ocr/core",
     langPath: "/ocr/lang",
   })
-  // No character whitelist: this reads names, dates and addresses as well as the number now, and digits-only
-  // recognition returned nothing for any of them.
+  // No character whitelist: this reads names, dates and addresses as well as the number, and digits-only
+  // recognition returned nothing for any of them. The declared DPI matters more than it looks: without it
+  // Tesseract guesses from the pixel size and mis-scales its models for a photograph of a card.
+  await w.setParameters({ user_defined_dpi: "300", preserve_interword_spaces: "1" })
+  return w
 }
 
+/*
+ * There is no image preparation step here on purpose, and it is worth saying why: grey-scaling, upscaling and
+ * stretching the contrast of a photographed card — the usual advice — was measured against five noisy cards
+ * by `ocr-check.mjs` and made things markedly worse. Tesseract's own confidence fell from the high 0.8s to
+ * around 0.3 and names came back as fragments, because stretching the contrast of a noisy JPEG amplifies the
+ * noise along with the letters and interpolating it larger gives the recogniser more of it to read. Its own
+ * binarisation is better at this than a histogram stretch in a canvas. Anything added here has to beat the
+ * benchmark before it stays.
+ */
+
 /**
- * What the photograph says, or null: never an error, never a wait anybody notices. Thirty seconds is the
+ * What the photograph says, or null: never an error, never a wait anybody notices. Forty seconds is the
  * ceiling — past that the person types it in, which they can always do anyway.
+ *
+ * Confidence is per field, not per image: the words that make up a value are the ones that decide whether the
+ * screen presents it as read or asks somebody to check it. A name read clearly off a blurred card is still a
+ * name read clearly.
  */
 export async function readIdFromPhoto(image: Blob): Promise<Suggestions | null> {
   try {
@@ -201,7 +236,7 @@ export async function readIdFromPhoto(image: Blob): Promise<Suggestions | null> 
     const w = await worker
     const result = await Promise.race([
       w.recognize(image),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 30_000)),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 40_000)),
     ])
     if (!result) return null
     const suggestions = parseDocument(result.data.text, (result.data.confidence ?? 80) / 100)

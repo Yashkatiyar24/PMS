@@ -91,11 +91,17 @@ export function mergeIncoming(
  * feature could destroy real information. The rest stay as suggestions beside the field, for a human to take
  * or ignore.
  */
-export function autoFillFromOcr(draft: Draft, ocr: Suggestions, minConfidence = 0.6): Draft {
+export function autoFillFromOcr(draft: Draft, ocr: Suggestions, minConfidence = MIN_FILL_CONFIDENCE): Draft {
   const fill: Draft = {}
   for (const field of FIELDS) {
     const suggestion = ocr[field]
-    if (!suggestion || suggestion.confidence < minConfidence) continue
+    if (!suggestion) continue
+    // A field whose shape the reader had to match to produce it at all — a real date, six digits of pincode,
+    // four of a document number, one of the ID types we know — is filled in whatever the reader thought of
+    // the photograph: the structure is the evidence. A card read in a dim lobby reports a confidence around
+    // 0.3 and still gives the right date, and leaving that out of the form was costing more than it saved.
+    // Free text (a name, an address) still has to clear the bar, because nothing but confidence vouches for it.
+    if (!VERIFIED_BY_SHAPE.includes(field) && suggestion.confidence < minConfidence) continue
     const current = draft[field]
     if (current !== undefined && current !== "" && current !== null) continue
     fill[field] = suggestion.value
@@ -112,6 +118,23 @@ export function openSuggestions(draft: Draft, ocr: Suggestions): { field: FieldN
     return current !== undefined && current !== "" && String(current) !== suggestion.value ? [{ field, suggestion }] : []
   })
 }
+
+/**
+ * The bar free text has to clear to be written into an empty box.
+ *
+ * Deliberately low, and measured: a card photographed in a lobby comes back between 0.4 and 0.5 with the name
+ * right, and a name found by its position on the card is discounted again on top of that.
+ * Leaving the box empty does not save anybody from a bad read — they retype the name either way — while a
+ * filled box marked "please check" (anything under {@link LOW_CONFIDENCE}) gets glanced at and corrected in
+ * one tap. Nothing is ever written over something a person typed, which is what makes a low bar safe here.
+ */
+const MIN_FILL_CONFIDENCE = 0.35
+
+/**
+ * Fields the parser can only produce by matching a shape, so a low confidence does not make them doubtful in
+ * the way a badly-read name is. They are filled in and flagged for a glance, not withheld.
+ */
+const VERIFIED_BY_SHAPE: FieldName[] = ["dob", "pincode", "idType", "idLast4", "gender", "nationality"]
 
 /** Below this, the reader is guessing and the screen says so rather than passing it off as read. */
 export const LOW_CONFIDENCE = 0.75

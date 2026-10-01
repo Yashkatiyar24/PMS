@@ -12,7 +12,7 @@ import { api, ApiError } from "@/lib/api"
 import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
-import { Avatar, Banner, Button, Card, Chip, ChoiceChips, Field, ListCard, ListRow, Loading, Menu, PageHeader, Sheet, type MenuItem, type Tone } from "@/components/ui"
+import { Avatar, Banner, Button, Card, Chip, ChoiceChips, Field, ListCard, ListRow, Loading, Menu, PageHeader, PhoneInput, Sheet, type MenuItem, type Tone } from "@/components/ui"
 import { Credentials } from "@/components/Credentials"
 import { SplitPage } from "@/components/SplitPage"
 
@@ -130,7 +130,7 @@ export default function StaffPage() {
         }>
         <div className="space-y-3">
           <Field label={t("setup.name")}><input value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
-          <Field label={t("login.phone")}><input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" /></Field>
+          <Field label={t("login.phone")}><PhoneInput value={phone} onChange={setPhone} /></Field>
           <Field label={t("login.email")}><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.in" /></Field>
           <Field group label={t("setup.role")}><ChoiceChips value={role} onChange={setRole} options={grantable.map((r) => ({ value: r, label: roleLabel(r) }))} /></Field>
         </div>

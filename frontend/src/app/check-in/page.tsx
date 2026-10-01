@@ -28,7 +28,7 @@ import { useResource } from "@/lib/use-resource"
 import { rupees, toPaise, unitName } from "@/lib/format"
 import { OFF_SALE, type Booking, type Guest, type Room, type RoomType } from "@/lib/types"
 import { useI18n } from "@/i18n"
-import { Banner, Button, Card, Chip, ChoiceChips, Disclosure, Field, Loading, PageHeader, Stepper } from "@/components/ui"
+import { Banner, Button, Card, Chip, ChoiceChips, Disclosure, Field, Loading, PageHeader, PhoneInput, Stepper } from "@/components/ui"
 import { SelfRegistrationQr, type Registration } from "@/components/SelfRegistrationQr"
 import { OcrSuggestion } from "@/components/OcrSuggestion"
 
@@ -170,7 +170,9 @@ export default function CheckInPage() {
     const compressed = await compressImage(file, Number(settings?.id_photo_max_kb ?? 300))
     setPhoto(compressed)
     if (regId) live.setStatus("reading_id")
-    const read = await readIdFromPhoto(compressed)
+    // Read from the camera's own file, not the copy squeezed down for storage: the small print on a card is
+    // the first thing a 300 KB JPEG throws away, and it is exactly what has to be read.
+    const read = await readIdFromPhoto(file)
     if (read) {
       live.pushOcr(read)
       setNotice(t("ocr.read"))
@@ -335,7 +337,7 @@ export default function CheckInPage() {
         <div className="space-y-3">
           <Field label={t("checkin.phoneLookup")}>
             <div className="flex gap-2">
-              <input inputMode="numeric" value={v("phone")} onChange={(e) => { set("phone", e.target.value); setGuestId(null) }} onBlur={lookup} placeholder="9876543210" />
+              <PhoneInput value={v("phone")} onChange={(digits) => { set("phone", digits); setGuestId(null) }} onBlur={lookup} />
               <Button variant="secondary" onClick={lookup} aria-label={t("action.search")}><Search size={18} aria-hidden /></Button>
             </div>
           </Field>
