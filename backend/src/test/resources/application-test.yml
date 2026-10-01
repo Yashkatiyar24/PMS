@@ -6,3 +6,6 @@ pms.allowed-origins: http://localhost:3000
 # within Postgres's connection limit alongside a running dev server.
 pms.db.app.max-pool-size: 6
 pms.db.admin.max-pool-size: 3
+# Every test builds the exact fixture it means to assert on, so the start-up pass that furnishes an empty
+# property must not reach in and add rooms to one. DefaultInventoryTest calls the seeder directly instead.
+pms.rooms.seed-existing: false

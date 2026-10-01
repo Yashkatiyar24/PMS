@@ -8,7 +8,8 @@
  */
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { AlertTriangle, Ban, Check, ClipboardCheck, PackageSearch, Sparkles, Unlock, UserRound, Wrench } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { AlertTriangle, Ban, BedDouble, Check, ClipboardCheck, LayoutGrid, PackageSearch, Sparkles, Unlock, UserRound, Wrench } from "lucide-react"
 import { clsx } from "clsx"
 import { api, ApiError } from "@/lib/api"
 import { useAutoRefresh, useResource } from "@/lib/use-resource"
@@ -16,7 +17,7 @@ import { formatDate } from "@/lib/format"
 import { OFF_SALE, type Room, type RoomStatus } from "@/lib/types"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
-import { Banner, Button, Chip, ChoiceChips, Disclosure, Field, Loading, Menu, PageHeader, SectionLabel, Segmented, Sheet, TONE, type MenuItem, type Tone } from "@/components/ui"
+import { Banner, Button, Chip, ChoiceChips, Disclosure, Empty, Field, Loading, Menu, PageHeader, SectionLabel, Segmented, Sheet, TONE, type MenuItem, type Tone } from "@/components/ui"
 import { ReportIssue } from "@/components/ReportIssue"
 
 type Filter = "all" | "clean" | "dirty" | "blocked" | "mine"
@@ -28,6 +29,7 @@ type Person = { id: string; name: string; role: string }
 export default function RoomsPage() {
   const { t } = useI18n()
   const { user, has } = useSession()
+  const router = useRouter()
   const { data: rooms, error: loadError, reload, set } = useResource(() => api<Room[]>("/api/rooms"), [], t("error.generic"))
   const housekeeping = has("housekeeping")
   const { data: people } = useResource(() => (housekeeping ? api<Person[]>("/api/housekeepers") : Promise.resolve([])), [housekeeping], t("error.generic"))
@@ -104,6 +106,18 @@ export default function RoomsPage() {
           { value: "blocked", label: label("blocked"), count: counts.blocked, tone: "danger" },
         ]}
       />
+
+      {/* A property whose rooms have never been set up: the board has nothing to show and nothing to do, so it
+          says so and points at the one screen that fixes it. Only a manager can act on that. */}
+      {rooms.length === 0 && (
+        <Empty icon={BedDouble} action={has("staff.manage") ? (
+          <Button variant="soft" size="sm" onClick={() => router.push("/settings/rooms/setup")}>
+            <LayoutGrid size={16} aria-hidden /> {t("setup.planRooms")}
+          </Button>
+        ) : undefined}>
+          {t("setup.noRoomsYetHint")}
+        </Empty>
+      )}
 
       {groups.map(({ building, floor }) => {
         const key = `${building}#${floor}`

@@ -37,6 +37,7 @@ class AdminAreaTest {
     @Autowired in.pms.integrations.storage.StorageProvider storage;
     @Autowired in.pms.auth.SessionService sessions;
     @Autowired in.pms.config.RoomDefaults roomDefaults;
+    @Autowired in.pms.inventory.DefaultInventory defaultInventory;
 
     UUID orgId, propertyId, superAdminId, ownerId;
     final String superEmail = "superadmin@test.local", ownerEmail = "adminowner@test.local";
@@ -274,7 +275,7 @@ class AdminAreaTest {
 
     @Test
     void supportAccessToGuestDataNeedsTheOwnersConsentWindow() {
-        AdminService service = new AdminService(admin, passwords, new in.pms.audit.AuditService(admin, admin, new com.fasterxml.jackson.databind.ObjectMapper()), storage, sessions, roomDefaults);
+        AdminService service = new AdminService(admin, passwords, new in.pms.audit.AuditService(admin, admin, new com.fasterxml.jackson.databind.ObjectMapper()), storage, sessions, defaultInventory);
         var actor = new in.pms.auth.CurrentUser(superAdminId, "Support", true, UUID.randomUUID(), null, null, List.of(), null, java.util.Set.of());
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() ->
