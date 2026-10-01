@@ -1039,5 +1039,8 @@
   "setup.selectRoom": "कमरा {number} चुनें",
   "common.stillLoading": "अभी लोड हो रहा है — सर्वर जाग रहा है। इसमें एक मिनट तक लग सकता है।",
   "setup.typeInUse": "उपयोग में (बिक्री के लिए)",
-  "setup.typeRetiredWarning": "इस प्रकार के {n} कमरे हैं। उपयोग से बाहर रहने तक वे बिक्री के लिए नहीं दिखेंगे।"
+  "setup.typeRetiredWarning": "इस प्रकार के {n} कमरे हैं। उपयोग से बाहर रहने तक वे बिक्री के लिए नहीं दिखेंगे।",
+  "guests.peopleN": "{n} मेहमान",
+  "guests.nightsN": "{n} रातें बाकी",
+  "guests.dueAmount": "{amount} बाकी"
 }

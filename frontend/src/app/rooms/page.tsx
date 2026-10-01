@@ -134,13 +134,30 @@ export default function RoomsPage() {
                 const tone = STATUS_TONE[room.status]
                 const bedsTaken = room.beds.filter((b) => b.active && b.occupancy).length
                 const bedsTotal = room.beds.filter((b) => b.active).length
+                // Two different questions share this tile, so they get two different parts of it. The stripe
+                // down the side is housekeeping's — clean, dirty, off sale — because that is what the cleaner
+                // walks the floor looking for. The card's own colour is the bookings' answer: a room with
+                // somebody in it, or somebody arriving today, must not look like an empty one at a glance.
+                // A dormitory carries its guests on its beds, not on the room, so a full one has to be worked
+                // out: ten of ten beds taken is as occupied as a room with somebody's name on it.
+                const full = bedsTotal > 0 && bedsTaken === bedsTotal
+                const state = room.occupancy?.state ?? (full ? "occupied" : null)
+                // Three steps, not three colours: free is plain, reserved is outlined, occupied is filled in.
+                // Two similar tints side by side are two things to tell apart; a filled tile and an outlined
+                // one are not.
+                const taken = state === "occupied" ? "brand" : state === "reserved" ? "info" : null
                 return (
                   <li key={room.id}>
                     <button
                       onClick={() => setOpenId(room.id)}
                       aria-label={`${room.number} · ${label(room.status)}`}
                       className={clsx(
-                        "relative flex h-full w-full flex-col items-start gap-1 overflow-hidden rounded-2xl border border-line bg-surface p-3 text-left shadow-[var(--shadow-card)] transition-colors hover:border-line-strong hover:bg-surface-2 sm:gap-1.5 sm:p-4",
+                        "relative flex h-full w-full flex-col items-start gap-1 overflow-hidden rounded-2xl border p-3 text-left shadow-[var(--shadow-card)] transition-colors hover:border-line-strong sm:gap-1.5 sm:p-4",
+                        state === "occupied"
+                          ? "border-transparent bg-brand-soft"
+                          : state === "reserved"
+                            ? "border-info bg-surface"
+                            : "border-line bg-surface hover:bg-surface-2",
                       )}
                     >
                       <span aria-hidden className={clsx("absolute inset-y-0 left-0 w-1.5", TONE[tone].solid)} />
@@ -148,13 +165,15 @@ export default function RoomsPage() {
                       <span className="pl-1.5 text-xl font-bold leading-none tabular-nums sm:text-2xl">{room.number}</span>
                       <span className="w-full truncate pl-1.5 text-[11px] text-ink-soft sm:text-xs">{room.roomTypeName}</span>
                       <Chip tone={tone} dot className="ml-1.5 mt-0.5 max-w-[calc(100%-0.375rem)]"><span className="min-w-0 truncate">{label(room.status)}</span></Chip>
-                      <span className="w-full truncate pl-1.5 text-[11px] font-semibold text-ink-soft sm:text-xs">
+                      {/* Who is in it, said in the colour of the state it is in: an occupied room reads as
+                          occupied from across the room, not by reading the small print under the number. */}
+                      <span className={clsx("w-full truncate pl-1.5 text-[11px] font-semibold sm:text-xs", taken ? TONE[taken].text : "text-ink-soft")}>
                         {bedsTotal > 0 && !room.occupancy
                           ? t("rooms.bedsTaken", { n: bedsTaken, total: bedsTotal })
                           : room.occupancy
                             ? t(`rooms.${room.occupancy.state}` as "rooms.occupied")
                             : t("rooms.available")}
-                        {room.housekeeperName && ` · ${room.housekeeperName}`}
+                        {room.occupancy?.guestName ? ` · ${room.occupancy.guestName}` : room.housekeeperName ? ` · ${room.housekeeperName}` : ""}
                       </span>
                     </button>
                   </li>
