@@ -9,38 +9,38 @@
 @theme {
   --font-sans: var(--font-inter), var(--font-devanagari), "Noto Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  --color-bg: #f7f8fa;
+  --color-bg: #f7f7f7;
   --color-surface: #ffffff;
-  --color-surface-2: #f9fafb;
-  --color-ink: #171c26;
-  --color-ink-soft: #596273;
-  --color-ink-faint: #8a93a5;
-  --color-line: #e7e9ee;
-  --color-line-strong: #d3d7de;
+  --color-surface-2: #fafafa;
+  --color-ink: #171717;
+  --color-ink-soft: #595959;
+  --color-ink-faint: #8f8f8f;
+  --color-line: #e8e8e8;
+  --color-line-strong: #d4d4d4;
 
-  --color-brand: #0f6cbd;
-  --color-brand-strong: #0b58a0;
-  --color-brand-soft: #e6f0fb;
-  --color-brand-ink: #0b58a0;
+  --color-brand: #171717;
+  --color-brand-strong: #000000;
+  --color-brand-soft: #ececec;
+  --color-brand-ink: #171717;
 
-  --color-teal: #0e8a7d;
-  --color-teal-soft: #e0f4f1;
-  --color-violet: #6b4fd8;
-  --color-violet-soft: #eeeafc;
+  --color-teal: #525252;
+  --color-teal-soft: #ededed;
+  --color-violet: #737373;
+  --color-violet-soft: #f1f1f1;
   --color-ok: #107c41;
   --color-ok-soft: #e2f3e9;
   --color-warn: #b25e00;
   --color-warn-soft: #fdf0dd;
   --color-danger: #c4314b;
   --color-danger-soft: #fbe8ec;
-  --color-info: #0f6cbd;
-  --color-info-soft: #e6f0fb;
+  --color-info: #595959;
+  --color-info-soft: #ececec;
   /* Text on a solid tone fill: white here, dark in dark mode where the fills turn pastel. */
   --color-on-solid: #ffffff;
   /* The lifted item in a track, like the chosen tab: always lighter than what it sits in. */
   --color-raised: #ffffff;
   /* One chart series: validated against the card surface in each theme (dataviz lightness band, 3:1 contrast). */
-  --color-chart: #0f6cbd;
+  --color-chart: #171717;
 
   --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
   --shadow-pop: 0 12px 32px rgb(16 24 40 / 0.16), 0 2px 6px rgb(16 24 40 / 0.08);
@@ -50,103 +50,103 @@
 /* The login scene: a day sky over a sandstone building. Night re-steps these like any other token. */
 :root {
   color-scheme: light;
-  --sky-top: #9dc0e6;
-  --sky: #d3e3f4;
+  --sky-top: #bcbcbc;
+  --sky: #e2e2e2;
   --cloud: #ffffff;
-  --stone: #eccda4;
-  --trim: #c9956a;
-  --glass: #7b9dc4;
-  --glass-hi: #d8e6f5;
-  --glow: #f2a24a;
-  --glow-hi: #ffe3ad;
-  --leaf: #6e8b3d;
-  --leaf-2: #4d6b2c;
+  --stone: #d6d6d6;
+  --trim: #9e9e9e;
+  --glass: #9a9a9a;
+  --glass-hi: #e6e6e6;
+  --glow: #d9d9d9;
+  --glow-hi: #f2f2f2;
+  --leaf: #7d7d7d;
+  --leaf-2: #5e5e5e;
 }
 
-/* Dark: re-stepped against a #0e1117 surface, not inverted. */
+/* Dark: re-stepped against a #121212 surface, not inverted. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --color-bg: #0e1117;
-    --color-surface: #161b24;
-    --color-surface-2: #1c2230;
-    --color-ink: #e9edf4;
-    --color-ink-soft: #a3adbf;
-    --color-ink-faint: #6e7889;
-    --color-line: #262d3a;
-    --color-line-strong: #384253;
-    --color-brand: #5aa7f0;
-    --color-brand-strong: #7fbcf5;
-    --color-brand-soft: #14273f;
-    --color-brand-ink: #8cc4f7;
-    --color-teal: #43c2b3;
-    --color-teal-soft: #0f2b28;
-    --color-violet: #ab8ff7;
-    --color-violet-soft: #251d40;
+    --color-bg: #121212;
+    --color-surface: #1b1b1b;
+    --color-surface-2: #222222;
+    --color-ink: #ededed;
+    --color-ink-soft: #ababab;
+    --color-ink-faint: #767676;
+    --color-line: #2c2c2c;
+    --color-line-strong: #404040;
+    --color-brand: #ededed;
+    --color-brand-strong: #ffffff;
+    --color-brand-soft: #2f2f2f;
+    --color-brand-ink: #ededed;
+    --color-teal: #b0b0b0;
+    --color-teal-soft: #272727;
+    --color-violet: #949494;
+    --color-violet-soft: #2b2b2b;
     --color-ok: #52c47e;
     --color-ok-soft: #112b1b;
     --color-warn: #f1a54d;
     --color-warn-soft: #33230f;
     --color-danger: #f2758d;
     --color-danger-soft: #35161e;
-    --color-info: #5aa7f0;
-    --color-info-soft: #14273f;
-    --color-on-solid: #0e1117;
-    --color-raised: #2a3242;
-    --color-chart: #4a97e6;
+    --color-info: #ababab;
+    --color-info-soft: #2f2f2f;
+    --color-on-solid: #121212;
+    --color-raised: #343434;
+    --color-chart: #d4d4d4;
     --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
     --shadow-pop: 0 16px 40px rgb(0 0 0 / 0.6);
-    --sky-top: #060d1a;
-    --sky: #0f1b2e;
-    --cloud: #1a2740;
-    --stone: #5a4a3b;
-    --trim: #3d3128;
-    --glass: #1d2d47;
-    --glass-hi: #34496b;
-    --leaf: #2f4526;
-    --leaf-2: #22341c;
+    --sky-top: #0d0d0d;
+    --sky: #1a1a1a;
+    --cloud: #262626;
+    --stone: #4d4d4d;
+    --trim: #333333;
+    --glass: #2b2b2b;
+    --glass-hi: #4a4a4a;
+    --leaf: #3a3a3a;
+    --leaf-2: #2b2b2b;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --color-bg: #0e1117;
-  --color-surface: #161b24;
-  --color-surface-2: #1c2230;
-  --color-ink: #e9edf4;
-  --color-ink-soft: #a3adbf;
-  --color-ink-faint: #6e7889;
-  --color-line: #262d3a;
-  --color-line-strong: #384253;
-  --color-brand: #5aa7f0;
-  --color-brand-strong: #7fbcf5;
-  --color-brand-soft: #14273f;
-  --color-brand-ink: #8cc4f7;
-  --color-teal: #43c2b3;
-  --color-teal-soft: #0f2b28;
-  --color-violet: #ab8ff7;
-  --color-violet-soft: #251d40;
+  --color-bg: #121212;
+  --color-surface: #1b1b1b;
+  --color-surface-2: #222222;
+  --color-ink: #ededed;
+  --color-ink-soft: #ababab;
+  --color-ink-faint: #767676;
+  --color-line: #2c2c2c;
+  --color-line-strong: #404040;
+  --color-brand: #ededed;
+  --color-brand-strong: #ffffff;
+  --color-brand-soft: #2f2f2f;
+  --color-brand-ink: #ededed;
+  --color-teal: #b0b0b0;
+  --color-teal-soft: #272727;
+  --color-violet: #949494;
+  --color-violet-soft: #2b2b2b;
   --color-ok: #52c47e;
   --color-ok-soft: #112b1b;
   --color-warn: #f1a54d;
   --color-warn-soft: #33230f;
   --color-danger: #f2758d;
   --color-danger-soft: #35161e;
-  --color-info: #5aa7f0;
-  --color-info-soft: #14273f;
-  --color-on-solid: #0e1117;
-  --color-raised: #2a3242;
-  --color-chart: #4a97e6;
+  --color-info: #ababab;
+  --color-info-soft: #2f2f2f;
+  --color-on-solid: #121212;
+  --color-raised: #343434;
+  --color-chart: #d4d4d4;
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-pop: 0 16px 40px rgb(0 0 0 / 0.6);
-  --sky-top: #060d1a;
-  --sky: #0f1b2e;
-  --cloud: #1a2740;
-  --stone: #5a4a3b;
-  --trim: #3d3128;
-  --glass: #1d2d47;
-  --glass-hi: #34496b;
-  --leaf: #2f4526;
-  --leaf-2: #22341c;
+  --sky-top: #0d0d0d;
+  --sky: #1a1a1a;
+  --cloud: #262626;
+  --stone: #4d4d4d;
+  --trim: #333333;
+  --glass: #2b2b2b;
+  --glass-hi: #4a4a4a;
+  --leaf: #3a3a3a;
+  --leaf-2: #2b2b2b;
 }
 
 html { -webkit-text-size-adjust: 100%; }

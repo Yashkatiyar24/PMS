@@ -19,7 +19,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   // The browser chrome follows the page, which is the light ground the wordmark sits on; dark mode gets the ink.
-  themeColor: [{ media: "(prefers-color-scheme: light)", color: "#f7f8fa" }, { media: "(prefers-color-scheme: dark)", color: "#171c26" }],
+  themeColor: [{ media: "(prefers-color-scheme: light)", color: "#f7f7f7" }, { media: "(prefers-color-scheme: dark)", color: "#171717" }],
 }
 
 /**
