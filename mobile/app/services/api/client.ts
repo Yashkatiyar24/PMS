@@ -55,24 +55,29 @@ export class ApiClient {
   }
 
   get<T>(path: string, query?: Query): Promise<ApiResult<T>> {
-    return this.run<T>(this.http.get<T>(path, clean(query)))
+    return this.run<T>((config) => this.http.get<T>(path, clean(query), config))
   }
 
   post<T>(path: string, body?: unknown, query?: Query): Promise<ApiResult<T>> {
-    return this.run<T>(this.http.post<T>(path, body ?? {}, { params: clean(query) }))
+    return this.run<T>((config) =>
+      this.http.post<T>(path, body ?? {}, { params: clean(query), ...config }),
+    )
   }
 
   put<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
-    return this.run<T>(this.http.put<T>(path, body ?? {}))
+    return this.run<T>((config) => this.http.put<T>(path, body ?? {}, config))
   }
 
   patch<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
-    return this.run<T>(this.http.patch<T>(path, body ?? {}))
+    return this.run<T>((config) => this.http.patch<T>(path, body ?? {}, config))
   }
 
   delete<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
-    return this.run<T>(
-      this.http.delete<T>(path, undefined, body === undefined ? undefined : { data: body }),
+    return this.run<T>((config) =>
+      this.http.delete<T>(path, undefined, {
+        ...(body === undefined ? {} : { data: body }),
+        ...config,
+      }),
     )
   }
 
@@ -90,8 +95,11 @@ export class ApiClient {
       } as unknown as Blob)
     }
     // Overrides apisauce's JSON default, which would otherwise serialise the form as JSON.
-    return this.run<T>(
-      this.http.post<T>(path, form, { headers: { "Content-Type": "multipart/form-data" } }),
+    return this.run<T>((config) =>
+      this.http.post<T>(path, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+        ...config,
+      }),
     )
   }
 
@@ -144,16 +152,44 @@ export class ApiClient {
     return cookieHeader(this.token)
   }
 
-  private async run<T>(request: Promise<import("apisauce").ApiResponse<T>>): Promise<ApiResult<T>> {
-    let response: import("apisauce").ApiResponse<T>
-    try {
-      response = await request
-    } catch (e) {
-      return fail(badData(e instanceof Error ? e.message : "Request failed"))
+  /**
+   * Sends a request, and gives a sleeping server a second chance.
+   *
+   * The API is on a plan that stops the container when nobody has used it, and its first request afterwards
+   * waits out a hundred-second start-up. Twenty seconds is the right patience for an awake server, so a
+   * request that times out is tried once more with the patience a waking one needs: without that, the first
+   * sign-in of the morning always failed and trying again just restarted the same twenty seconds.
+   *
+   * Only timeouts and connection failures are retried, and only once. Anything the server actually answered —
+   * a refusal, a conflict, a bad password — is returned as it came.
+   */
+  private async run<T>(
+    send: (config?: { timeout?: number }) => Promise<import("apisauce").ApiResponse<T>>,
+  ): Promise<ApiResult<T>> {
+    let response = await this.attempt(send)
+    if (response instanceof Error) return fail(badData(response.message))
+
+    let problem = problemFrom(response)
+    if (problem && (problem.kind === "timeout" || problem.kind === "cannot-connect")) {
+      logWarn("api", `${problem.kind} — retrying once while the server wakes`)
+      const second = await this.attempt(send, { timeout: Config.API_COLD_START_TIMEOUT_MS })
+      if (second instanceof Error) return fail(badData(second.message))
+      response = second
+      problem = problemFrom(response)
     }
-    const problem = problemFrom(response)
     if (problem) return this.failed(problem)
     return ok(response.data as T)
+  }
+
+  private async attempt<T>(
+    send: (config?: { timeout?: number }) => Promise<import("apisauce").ApiResponse<T>>,
+    config?: { timeout?: number },
+  ): Promise<import("apisauce").ApiResponse<T> | Error> {
+    try {
+      return await send(config)
+    } catch (e) {
+      return e instanceof Error ? e : new Error("Request failed")
+    }
   }
 
   private failed<T>(problem: ApiProblem): ApiResult<T> {
