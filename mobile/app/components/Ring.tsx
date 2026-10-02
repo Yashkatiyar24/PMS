@@ -5,10 +5,18 @@ import { useAppTheme } from "@/theme/context"
 
 import { Text } from "./Text"
 
-export type RingProps = { pct: number; size?: number; label?: string }
+export type RingProps = {
+  pct: number
+  size?: number
+  label?: string
+  /** Overrides for a ring drawn on a coloured card, where the theme's own ink would disappear. */
+  color?: string
+  track?: string
+  textColor?: string
+}
 
 /** The occupancy ring: a percentage drawn as an arc. */
-export function Ring({ pct, size = 96, label }: RingProps) {
+export function Ring({ pct, size = 96, label, color, track, textColor }: RingProps) {
   const { theme } = useAppTheme()
   const stroke = 10
   const r = (size - stroke) / 2
@@ -24,7 +32,7 @@ export function Ring({ pct, size = 96, label }: RingProps) {
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke={theme.colors.surface2}
+          stroke={track ?? theme.colors.surface2}
           strokeWidth={stroke}
           fill="none"
         />
@@ -32,7 +40,7 @@ export function Ring({ pct, size = 96, label }: RingProps) {
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke={theme.colors.palette.chart}
+          stroke={color ?? theme.colors.palette.chart}
           strokeWidth={stroke}
           fill="none"
           strokeLinecap="round"
@@ -44,9 +52,19 @@ export function Ring({ pct, size = 96, label }: RingProps) {
       <View style={$center}>
         <Text
           text={`${Math.round(clamped)}%`}
-          style={{ fontSize: size * 0.22, fontWeight: "800", color: theme.colors.text }}
+          style={{
+            fontSize: size * 0.22,
+            fontWeight: "800",
+            color: textColor ?? theme.colors.text,
+          }}
         />
-        {!!label && <Text text={label} size="xxs" style={{ color: theme.colors.textDim }} />}
+        {!!label && (
+          <Text
+            text={label}
+            size="xxs"
+            style={{ color: textColor ?? theme.colors.textDim, opacity: textColor ? 0.85 : 1 }}
+          />
+        )}
       </View>
     </View>
   )

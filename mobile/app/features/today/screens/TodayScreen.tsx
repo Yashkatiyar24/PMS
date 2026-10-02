@@ -4,36 +4,38 @@ import { observer } from "mobx-react-lite"
 
 import {
   Banner,
-  Button,
   Empty,
   ErrorState,
   Loading,
-  PageHeader,
   Screen,
   SectionLabel,
+  Segmented,
   StaleLabel,
   Switch,
 } from "@/components"
-import { AppHeader } from "@/components/AppHeader"
 import { usePermission } from "@/features/auth/hooks/usePermission"
 import { StayList } from "@/features/bookings/components/StayList"
 import { OfflineBar } from "@/features/offline/components/OfflineBar"
 import { useSyncReload } from "@/features/offline/hooks/useSyncReload"
 import { useResource } from "@/hooks/useResource"
 import { translate } from "@/i18n/translate"
+import { useStores } from "@/models/useStores"
 import { useAppNavigation } from "@/navigators/useAppNavigation"
 import { api } from "@/services/api"
-import { formatDate } from "@/utils/date"
 
-import { ActivityTiles, staysFor, type ActivityView } from "../components/ActivityTiles"
+import { staysFor, type ActivityView } from "../components/ActivityTiles"
 import { ForecastCard } from "../components/ForecastCard"
-import { OccupancyCard } from "../components/OccupancyCard"
+import { HomeActions, type HomeAction } from "../components/HomeActions"
+import { HomeGreeting } from "../components/HomeGreeting"
+import { HomeHero } from "../components/HomeHero"
+import { HomeTiles } from "../components/HomeTiles"
 
 /** The front desk's day: occupancy, arrivals/departures/in-house and the forecast. Refreshes every 30 s. */
 export const TodayScreen = observer(function TodayScreen() {
   const navigation = useAppNavigation()
   const { has } = usePermission()
-  const [view, setView] = useState<ActivityView>("arrivals")
+  const { auth } = useStores()
+  const [view, setView] = useState<ActivityView>("inHouse")
   const [showDone, setShowDone] = useState(false)
   const today = useResource(() => api.bookings.today(), [], {
     cacheKey: "today",
@@ -41,6 +43,31 @@ export const TodayScreen = observer(function TodayScreen() {
   })
   useSyncReload(today.reload)
   const t = today.data
+
+  // Only what this role may do: a square that refuses is worse than a square that is not there.
+  const actions: HomeAction[] = [
+    has("reservations.create") && {
+      glyph: "＋",
+      label: translate("action.newBooking"),
+      onPress: () => navigation.navigate("NewBooking"),
+    },
+    has("checkin") && {
+      glyph: "→",
+      label: translate("action.checkIn"),
+      onPress: () => navigation.navigate("CheckIn"),
+    },
+    {
+      glyph: "⌕",
+      label: translate("mobile.findGuest"),
+      // Across to another tab, which is the tab navigator's business rather than this stack's.
+      onPress: () => navigation.getParent()?.navigate("GuestsTab" as never),
+    },
+    has("revenue.view") && {
+      glyph: "▥",
+      label: translate("nav.reports"),
+      onPress: () => navigation.getParent()?.navigate("ReportsTab" as never),
+    },
+  ].filter(Boolean) as HomeAction[]
 
   return (
     <Screen
@@ -51,39 +78,17 @@ export const TodayScreen = observer(function TodayScreen() {
         refreshControl: <RefreshControl refreshing={today.refreshing} onRefresh={today.reload} />,
       }}
     >
-      <AppHeader />
       <OfflineBar />
-      <PageHeader
-        title={translate("nav.today")}
-        subtitle={t ? formatDate(t.date) : undefined}
-        actions={
-          <>
-            {has("reservations.create") && (
-              <Button
-                preset="secondary"
-                size="sm"
-                text={translate("action.add")}
-                onPress={() => navigation.navigate("NewBooking")}
-              />
-            )}
-            {has("checkin") && (
-              <Button
-                size="sm"
-                text={translate("action.checkIn")}
-                onPress={() => navigation.navigate("CheckIn")}
-                testID="today-checkin"
-              />
-            )}
-          </>
-        }
-      />
+      <HomeGreeting name={auth.user?.name ?? ""} date={t?.date} />
       {!!today.loading && <Loading />}
       {!!today.problem && !t && (
         <ErrorState message={today.problem.message} onRetry={today.reload} />
       )}
       {!!t && (
         <>
-          <OccupancyCard today={t} />
+          <HomeHero today={t} />
+          <HomeTiles today={t} />
+          <HomeActions actions={actions} />
           {t.flaggedNoShow.length > 0 && (
             <Banner
               tone="warn"
@@ -92,8 +97,24 @@ export const TodayScreen = observer(function TodayScreen() {
               onAction={() => setView("noShow")}
             />
           )}
-          <SectionLabel text={translate("dash.activity")} />
-          <ActivityTiles today={t} view={view} onChange={setView} />
+          <SectionLabel text={translate("mobile.inHouse")} />
+          {/* The day's lists behind one pill track: the three numbers that matter are already in the tiles
+              above, so repeating them as another row of big tiles only pushed the guests off the screen. */}
+          <Segmented
+            scroll
+            value={view}
+            onChange={setView}
+            items={[
+              { value: "inHouse", label: translate("today.inHouse"), count: t.inHouse.length },
+              { value: "arrivals", label: translate("today.arrivals"), count: t.arrivals.length },
+              {
+                value: "departures",
+                label: translate("today.departures"),
+                count: t.departures.length,
+              },
+              { value: "booked", label: translate("dash.bookingsMade"), count: t.booked.length },
+            ]}
+          />
           {view === "arrivals" && (
             <View style={$toggle}>
               <Switch

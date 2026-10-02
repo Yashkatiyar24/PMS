@@ -52,5 +52,18 @@
   "mobile.takePhoto": "Take photo",
   "mobile.pickFile": "Attach the bill",
   "mobile.photoTooLarge": "The photo is too large. Try again closer to the document.",
-  "mobile.noPermissionScreen": "Your role cannot open this screen."
+  "mobile.noPermissionScreen": "Your role cannot open this screen.",
+  "mobile.greetingMorning": "Good morning, {name}",
+  "mobile.greetingAfternoon": "Good afternoon, {name}",
+  "mobile.greetingEvening": "Good evening, {name}",
+  "mobile.staysInHouse": "{n} in house",
+  "mobile.dueOut": "Due out",
+  "mobile.nobodyToday": "Nobody today",
+  "mobile.freeRooms": "Free rooms",
+  "mobile.allClean": "All clean",
+  "mobile.arrivingToday": "Arriving",
+  "mobile.alreadyIn": "{n} already in",
+  "mobile.quickActions": "Quick actions",
+  "mobile.findGuest": "Find guest",
+  "mobile.inHouse": "In house"
 }

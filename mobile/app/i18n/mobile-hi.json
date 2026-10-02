@@ -52,5 +52,18 @@
   "mobile.takePhoto": "फ़ोटो लें",
   "mobile.pickFile": "बिल जोड़ें",
   "mobile.photoTooLarge": "फ़ोटो बहुत बड़ी है। दस्तावेज़ के पास से फिर लें।",
-  "mobile.noPermissionScreen": "आपकी भूमिका यह स्क्रीन नहीं खोल सकती।"
+  "mobile.noPermissionScreen": "आपकी भूमिका यह स्क्रीन नहीं खोल सकती।",
+  "mobile.greetingMorning": "सुप्रभात, {name}",
+  "mobile.greetingAfternoon": "नमस्कार, {name}",
+  "mobile.greetingEvening": "शुभ संध्या, {name}",
+  "mobile.staysInHouse": "{n} ठहरे हुए",
+  "mobile.dueOut": "आज जाने वाले",
+  "mobile.nobodyToday": "आज कोई नहीं",
+  "mobile.freeRooms": "ख़ाली कमरे",
+  "mobile.allClean": "सब साफ़",
+  "mobile.arrivingToday": "आने वाले",
+  "mobile.alreadyIn": "{n} आ चुके",
+  "mobile.quickActions": "तुरंत काम",
+  "mobile.findGuest": "अतिथि खोजें",
+  "mobile.inHouse": "ठहरे हुए"
 }

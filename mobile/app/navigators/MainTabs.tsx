@@ -20,6 +20,7 @@ import { useStores } from "@/models/useStores"
 import { useAppTheme } from "@/theme/context"
 import { visibleTabs } from "@/utils/permissions"
 
+import { FloatingTabBar } from "./FloatingTabBar"
 import { gated } from "./gated"
 import type { MainTabParamList, ScreenComponent, SharedStackParamList } from "./navigationTypes"
 import { sharedScreens } from "./sharedScreens"
@@ -87,13 +88,8 @@ export const MainTabs = observer(function MainTabs() {
         headerShown: false,
         tabBarActiveTintColor: theme.colors.palette.brandInk,
         tabBarInactiveTintColor: theme.colors.textDim,
-        tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
-          minHeight: 58,
-        },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
       }}
+      tabBar={(props) => <FloatingTabBar {...props} />}
     >
       {tabs.map((key) => {
         const tab = TABS[key]

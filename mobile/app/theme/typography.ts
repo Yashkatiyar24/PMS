@@ -17,11 +17,21 @@ const fonts = {
   monospace: {
     normal: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
   },
+  /**
+   * Headings and the big numbers. The platform's own serif — Georgia on iOS, Noto Serif on Android — so the
+   * app reads as a printed register rather than a dashboard, with no font file to download and no first
+   * paint in the wrong face.
+   */
+  display: {
+    normal: Platform.select({ ios: "Georgia", android: "serif", default: "Georgia, serif" }),
+    bold: Platform.select({ ios: "Georgia-Bold", android: "serif", default: "Georgia, serif" }),
+  },
 }
 
 export const typography = {
   fonts,
   primary: fonts.system,
   secondary: fonts.system,
+  display: fonts.display,
   code: fonts.monospace,
 }
