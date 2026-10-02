@@ -12,6 +12,7 @@ import {
   SectionLabel,
   Segmented,
   StaleLabel,
+  Text,
   showError,
 } from "@/components"
 import { AppHeader } from "@/components/AppHeader"
@@ -22,6 +23,7 @@ import { useResource } from "@/hooks/useResource"
 import { translate } from "@/i18n/translate"
 import { useAppNavigation } from "@/navigators/useAppNavigation"
 import { api } from "@/services/api"
+import { useAppTheme } from "@/theme/context"
 
 import { RoomSheet } from "../components/RoomSheet"
 import { RoomTile } from "../components/RoomTile"
@@ -108,6 +110,7 @@ export const RoomsScreen = observer(function RoomsScreen() {
           { value: "blocked", label: translate("rooms.status.blocked"), count: counts.blocked },
         ]}
       />
+      <Legend />
       {!!rooms.loading && <Loading />}
       {!!rooms.problem && !rooms.data && (
         <ErrorState message={rooms.problem.message} onRetry={rooms.reload} />
@@ -166,5 +169,29 @@ export const RoomsScreen = observer(function RoomsScreen() {
   )
 })
 
+/** What the chip colours mean, in the words the status chips already use. */
+function Legend() {
+  const { theme } = useAppTheme()
+  const entries: { color: string; label: string }[] = [
+    { color: theme.colors.palette.brand, label: translate("rooms.occupied") },
+    { color: theme.colors.palette.ok, label: translate("rooms.status.clean") },
+    { color: theme.colors.palette.warn, label: translate("rooms.status.dirty") },
+    { color: theme.colors.palette.danger, label: translate("rooms.status.blocked") },
+  ]
+  return (
+    <View style={$legend}>
+      {entries.map((e) => (
+        <View key={e.label} style={$legendItem}>
+          <View style={[$legendDot, { backgroundColor: e.color }]} />
+          <Text text={e.label} size="xxs" style={{ color: theme.colors.textDim }} />
+        </View>
+      ))}
+    </View>
+  )
+}
+
 const $content: ViewStyle = { padding: 16, gap: 8, paddingBottom: 32 }
 const $grid: ViewStyle = { flexDirection: "row", flexWrap: "wrap", gap: 8 }
+const $legend: ViewStyle = { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingVertical: 2 }
+const $legendItem: ViewStyle = { flexDirection: "row", alignItems: "center", gap: 5 }
+const $legendDot: ViewStyle = { width: 7, height: 7, borderRadius: 4 }

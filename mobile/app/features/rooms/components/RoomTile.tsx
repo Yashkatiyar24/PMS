@@ -1,91 +1,59 @@
-import { Pressable, View, type ViewStyle, type TextStyle } from "react-native"
+import { Pressable, View, type TextStyle, type ViewStyle } from "react-native"
 
-import { Chip, Text } from "@/components"
-import { translate, translateOr } from "@/i18n/translate"
+import { Text } from "@/components"
 import { useAppTheme } from "@/theme/context"
 import { toneColors } from "@/theme/tones"
 
 import { occupancySummary, statusTone } from "../lib/roomLabels"
 import type { Room } from "../types"
 
-/** One room in the grid: colour bar, number, type, status chip, occupancy line, housekeeper. */
+/**
+ * One room in the grid: just the number on a chip, tinted by housekeeping status, with everything else a tap
+ * away in the sheet. An occupied room goes solid ink so the board shows fullness at a glance; the dot repeats
+ * the housekeeping tone so status never rides on the fill alone.
+ */
 export function RoomTile({ room, onPress }: { room: Room; onPress: () => void }) {
   const { theme } = useAppTheme()
-  const tone = statusTone(room.status)
-  const { solid } = toneColors(theme.colors, tone)
+  const tone = toneColors(theme.colors, statusTone(room.status))
   const occ = occupancySummary(room)
-  const occText =
-    occ.key === "beds"
-      ? translate("rooms.bedsTaken", { n: occ.taken, total: occ.total })
-      : occ.key === "occupied"
-        ? translate("rooms.occupied")
-        : occ.key === "reserved"
-          ? translate("rooms.reserved")
-          : translate("rooms.available")
+  const taken = occ.key === "occupied" || (occ.key === "beds" && (occ.taken ?? 0) > 0)
+  const clean = room.status === "clean" || room.status === "inspected"
+  const bg = taken ? theme.colors.palette.brand : clean ? theme.colors.surface : tone.soft
+  const fg = taken ? theme.colors.onSolid : theme.colors.text
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${room.number} ${room.status}`}
+      accessibilityLabel={`${room.number} ${room.status}${taken ? " occupied" : ""}`}
       style={[
-        $tile,
+        $chip,
         {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
+          backgroundColor: bg,
+          borderColor: taken ? theme.colors.palette.brand : theme.colors.border,
           opacity: room.active ? 1 : 0.5,
         },
       ]}
     >
-      <View style={[$bar, { backgroundColor: solid }]} />
-      <View style={$head}>
-        <Text
-          text={room.number}
-          style={[$number, { color: theme.colors.text }]}
-          numberOfLines={1}
-        />
+      <Text text={room.number} style={[$number, { color: fg }]} numberOfLines={1} />
+      <View style={$marks}>
+        <View style={[$dot, { backgroundColor: taken ? theme.colors.onSolid : tone.solid }]} />
         {room.hkPriority === "high" && (
-          <Text text="⚠" style={{ color: theme.colors.palette.warn }} />
+          <Text text="!" size="xxs" style={{ color: taken ? fg : theme.colors.palette.warn }} />
         )}
       </View>
-      <Text
-        text={room.roomTypeName}
-        size="xxs"
-        style={{ color: theme.colors.textDim }}
-        numberOfLines={1}
-      />
-      <Chip tone={tone} text={translateOr(`rooms.status.${room.status}`, room.status)} />
-      <Text
-        text={occText}
-        size="xxs"
-        style={{ color: occ.key === "available" ? theme.colors.palette.ok : theme.colors.textDim }}
-        numberOfLines={1}
-      />
-      {!!room.housekeeperName && (
-        <Text
-          text={room.housekeeperName}
-          size="xxs"
-          style={{ color: theme.colors.textFaint }}
-          numberOfLines={1}
-        />
-      )}
     </Pressable>
   )
 }
 
-const $tile: ViewStyle = {
-  flexBasis: "31%",
+const $chip: ViewStyle = {
+  flexBasis: "17%",
   flexGrow: 1,
-  borderRadius: 14,
+  borderRadius: 12,
   borderWidth: 1,
-  padding: 10,
-  gap: 4,
-  overflow: "hidden",
-}
-const $bar: ViewStyle = { position: "absolute", top: 0, left: 0, right: 0, height: 4 }
-const $head: ViewStyle = {
-  flexDirection: "row",
-  justifyContent: "space-between",
+  paddingVertical: 12,
   alignItems: "center",
-  marginTop: 2,
+  gap: 4,
 }
-const $number: TextStyle = { fontSize: 18, fontWeight: "800" }
+const $number: TextStyle = { fontSize: 15, fontWeight: "700" }
+const $marks: ViewStyle = { flexDirection: "row", alignItems: "center", gap: 3, minHeight: 8 }
+const $dot: ViewStyle = { width: 6, height: 6, borderRadius: 3 }
