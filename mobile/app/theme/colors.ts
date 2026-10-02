@@ -1,61 +1,61 @@
 /**
- * Light theme — the app's own look, not the web's.
+ * Light theme — monochrome, matching the web.
  *
- * Warm paper rather than cold white, one deep maroon doing the work of a brand colour, and status colours
- * muted enough to sit on a cream page: a desk uses this at arm's length in daylight, and the screen should
- * read as calm rather than as a dashboard. The web app keeps its own palette; only the API is shared.
+ * Black ink on white, grey for everything that used to be a brand colour. Only the status colours (ok, warn,
+ * danger) keep a hue, because "occupied", "due" and "failed" must read at a glance; they use the web's values
+ * so both apps say the same thing in the same colour.
  */
 const palette = {
-  bg: "#f5efe9",
+  bg: "#f7f7f7",
   surface: "#ffffff",
-  surface2: "#faf5f0",
+  surface2: "#fafafa",
   raised: "#ffffff",
-  ink: "#241d1a",
-  inkSoft: "#7b6e66",
-  inkFaint: "#a89c93",
-  line: "#eadfd6",
-  lineStrong: "#dccec2",
-  onSolid: "#fdf8f4",
+  ink: "#171717",
+  inkSoft: "#595959",
+  inkFaint: "#8f8f8f",
+  line: "#e8e8e8",
+  lineStrong: "#d4d4d4",
+  onSolid: "#ffffff",
 
-  brand: "#7a1f2b",
-  brandStrong: "#5d141e",
-  brandSoft: "#f7e6e7",
-  brandInk: "#7a1f2b",
-  teal: "#2f7d62",
-  tealSoft: "#e3efe9",
-  violet: "#6b4fd8",
-  violetSoft: "#ece7fb",
-  ok: "#2f7d52",
-  okSoft: "#e3f0e8",
-  warn: "#b07d25",
-  warnSoft: "#f8eedc",
-  danger: "#a8392a",
-  dangerSoft: "#f7e4e0",
-  info: "#45628f",
-  infoSoft: "#e8edf6",
-  neutral: "#7b6e66",
-  neutralSoft: "#f0e9e2",
-  chart: "#8a5a3b",
+  brand: "#171717",
+  brandStrong: "#000000",
+  brandSoft: "#ececec",
+  brandInk: "#171717",
+  teal: "#525252",
+  tealSoft: "#ededed",
+  violet: "#737373",
+  violetSoft: "#f1f1f1",
+  ok: "#107c41",
+  okSoft: "#e2f3e9",
+  warn: "#b25e00",
+  warnSoft: "#fdf0dd",
+  danger: "#c4314b",
+  dangerSoft: "#fbe8ec",
+  info: "#595959",
+  infoSoft: "#ececec",
+  neutral: "#595959",
+  neutralSoft: "#efefef",
+  chart: "#171717",
 
   // Aliases the Ignite Toggle components expect; mapped onto the Padav palette.
   neutral100: "#ffffff",
-  neutral200: "#faf5f0",
-  neutral300: "#eadfd6",
-  neutral400: "#dccec2",
-  neutral500: "#a89c93",
-  neutral600: "#7b6e66",
-  neutral700: "#4a3f39",
-  neutral800: "#241d1a",
+  neutral200: "#fafafa",
+  neutral300: "#e8e8e8",
+  neutral400: "#d4d4d4",
+  neutral500: "#8f8f8f",
+  neutral600: "#595959",
+  neutral700: "#3a3a3a",
+  neutral800: "#171717",
   neutral900: "#000000",
-  primary500: "#7a1f2b",
-  secondary500: "#7a1f2b",
-  accent100: "#f7e6e7",
-  accent500: "#7a1f2b",
-  angry100: "#f7e4e0",
-  angry500: "#a8392a",
+  primary500: "#171717",
+  secondary500: "#171717",
+  accent100: "#ececec",
+  accent500: "#171717",
+  angry100: "#fbe8ec",
+  angry500: "#c4314b",
 
-  overlay20: "rgba(36, 29, 26, 0.2)",
-  overlay50: "rgba(36, 29, 26, 0.5)",
+  overlay20: "rgba(0, 0, 0, 0.2)",
+  overlay50: "rgba(0, 0, 0, 0.5)",
 } as const
 
 export const colors = {
@@ -85,6 +85,6 @@ export const colors = {
   errorBackground: palette.dangerSoft,
   /** Text on a solid primary button. */
   onSolid: palette.onSolid,
-  /** Solid button: the app's maroon, where the web uses ink. */
+  /** Solid button: ink, as on the web. */
   primaryButton: palette.brand,
 } as const
