@@ -87,19 +87,21 @@ export function IconButton({ label, className, ...props }: React.ButtonHTMLAttri
 /** The house mark, in ink like the buttons. */
 export function Logo({ size = 36 }: { size?: number }) {
   return (
-    <span aria-hidden style={{ width: size, height: size }} className="grid shrink-0 place-items-center rounded-xl bg-ink text-bg">
-      <svg width={size / 2} height={size / 2} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 11 12 4l9 7" /><path d="M5 10v10h14V10" /><path d="M10 20v-6h4v6" />
-      </svg>
-    </span>
+    /* The mark itself, not a stand-in: a plain <img> because it is a fixed local file with its own colours,
+       and next/image would only add a loader between it and the header. */
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/padav-mark.png"
+      alt=""
+      aria-hidden
+      width={size}
+      height={size}
+      className="shrink-0 object-contain"
+      style={{ width: size, height: size }}
+    />
   )
 }
 
-/**
- * The product's own wordmark. It is painted as a mask rather than shown as a picture, so it takes the colour
- * of whatever it sits in: ink on the page, white on the dark footer, and the right one in dark mode, from a
- * single file. Give it a height; the width follows the letters' own proportions.
- */
 export function Wordmark({ className, label, decorative }: { className?: string; label?: string; decorative?: boolean }) {
   return (
     <span
@@ -108,7 +110,7 @@ export function Wordmark({ className, label, decorative }: { className?: string;
       aria-label={decorative ? undefined : label ?? "Padav"}
       className={clsx("inline-block shrink-0 bg-current", className)}
       style={{
-        aspectRatio: "1126 / 186",
+        aspectRatio: "881 / 133",
         maskImage: "url(/padav-wordmark.png)", WebkitMaskImage: "url(/padav-wordmark.png)",
         maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat",
         maskSize: "contain", WebkitMaskSize: "contain",
