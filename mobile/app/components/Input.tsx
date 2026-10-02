@@ -42,6 +42,11 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           ref={ref}
           editable={!disabled}
           multiline={multiline}
+          // A secret is typed exactly as it is: many Android keyboards otherwise capitalise its first letter,
+          // which the dots hide, and the server then says the password is wrong.
+          {...(rest.secureTextEntry
+            ? { autoCapitalize: "none" as const, autoCorrect: false, spellCheck: false }
+            : null)}
           placeholderTextColor={theme.colors.textFaint}
           style={[
             $input,
