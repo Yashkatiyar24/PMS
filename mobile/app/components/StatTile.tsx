@@ -29,7 +29,15 @@ export function StatTile({
   const { solid, soft } = toneColors(theme.colors, tone)
   const content = (
     <>
-      <Text text={String(value)} style={[$value, { color: theme.colors.text }]} />
+      {/* One line, shrinking if it must: a tile this narrow broke "₹2,000" across two lines as "₹2,00 / 0",
+          which reads as a different number. Better small than wrong. */}
+      <Text
+        text={String(value)}
+        style={[$value, { color: theme.colors.text }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}
+      />
       <Text text={label} size="xs" style={{ color: theme.colors.textDim }} numberOfLines={1} />
       {!!hint && (
         <Text text={hint} size="xxs" style={{ color: theme.colors.textFaint }} numberOfLines={1} />
