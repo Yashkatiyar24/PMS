@@ -38,7 +38,10 @@ export const LoginScreen = observer(function LoginScreen() {
         </View>
         <LanguageToggle />
       </View>
-      <Text text={translate("mobile.appName")} style={[$brand, { color: theme.colors.text }]} />
+      <View style={$brandRow}>
+        <Text text={translate("mobile.appName")} style={[$brand, { color: theme.colors.text }]} />
+        <Text text="PMS" style={[$brand, { color: theme.colors.textFaint }]} />
+      </View>
       <Text text={translate("login.lead")} size="sm" style={{ color: theme.colors.textDim }} />
 
       <View style={$form}>
@@ -122,5 +125,6 @@ const $logo: ViewStyle = {
   alignItems: "center",
   justifyContent: "center",
 }
-const $brand: TextStyle = { fontSize: 34, fontWeight: "800", letterSpacing: -1, marginTop: 12 }
+const $brandRow: ViewStyle = { flexDirection: "row", gap: 8, marginTop: 12 }
+const $brand: TextStyle = { fontSize: 34, fontWeight: "800", letterSpacing: -1 }
 const $form: ViewStyle = { gap: 14, marginTop: 20 }

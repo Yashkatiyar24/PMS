@@ -8,7 +8,7 @@ export function statusTone(status: RoomStatus): Tone {
     case "inspected":
       return "ok"
     case "dirty":
-      return "warn"
+      return "danger"
     case "cleaning":
       return "info"
     default:

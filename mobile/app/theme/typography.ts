@@ -18,11 +18,11 @@ const fonts = {
     normal: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
   },
   /**
-   * Headings and the big numbers. Light-weight system sans, so large figures read airy rather than heavy,
-   * with no font file to download and no first paint in the wrong face.
+   * Headings and the big numbers. Regular system sans so large figures carry weight, as in the reference
+   * design, with no font file to download and no first paint in the wrong face.
    */
   display: {
-    normal: Platform.select({ ios: "System", android: "sans-serif-light", default: "System" }),
+    normal: Platform.select({ ios: "System", android: "sans-serif", default: "System" }),
     bold: Platform.select({ ios: "System", android: "sans-serif-medium", default: "System" }),
   },
 }

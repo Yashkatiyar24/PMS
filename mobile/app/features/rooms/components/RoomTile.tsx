@@ -19,7 +19,7 @@ export function RoomTile({ room, onPress }: { room: Room; onPress: () => void })
   const taken = occ.key === "occupied" || (occ.key === "beds" && (occ.taken ?? 0) > 0)
   const clean = room.status === "clean" || room.status === "inspected"
   const bg = taken ? theme.colors.palette.brand : clean ? theme.colors.surface : tone.soft
-  const fg = taken ? theme.colors.onSolid : theme.colors.text
+  const fg = taken ? theme.colors.onSolid : clean ? theme.colors.text : tone.solid
   return (
     <Pressable
       onPress={onPress}

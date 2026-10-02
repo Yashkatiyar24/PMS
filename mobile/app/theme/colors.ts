@@ -1,61 +1,61 @@
 /**
- * Light theme — monochrome, matching the web.
+ * Light theme — airy teal on white, after the reference design.
  *
- * Black ink on white, grey for everything that used to be a brand colour. Only the status colours (ok, warn,
- * danger) keep a hue, because "occupied", "due" and "failed" must read at a glance; they use the web's values
- * so both apps say the same thing in the same colour.
+ * White cards on a near-white cool background, one vivid teal for everything interactive (buttons, active
+ * tabs, selected chips), and soft status tints: red for dirty/overdue, green for ok, amber for due. Ink is a
+ * blue-grey near-black so text sits comfortably on the cool palette.
  */
 const palette = {
-  bg: "#f7f7f7",
+  bg: "#f5fafb",
   surface: "#ffffff",
-  surface2: "#fafafa",
+  surface2: "#f2f8f9",
   raised: "#ffffff",
-  ink: "#171717",
-  inkSoft: "#595959",
-  inkFaint: "#8f8f8f",
-  line: "#e8e8e8",
-  lineStrong: "#d4d4d4",
+  ink: "#1f2d3d",
+  inkSoft: "#5f6b7a",
+  inkFaint: "#9aa5b1",
+  line: "#e8eef0",
+  lineStrong: "#d3dde0",
   onSolid: "#ffffff",
 
-  brand: "#171717",
-  brandStrong: "#000000",
-  brandSoft: "#ececec",
-  brandInk: "#171717",
-  teal: "#525252",
-  tealSoft: "#ededed",
-  violet: "#737373",
-  violetSoft: "#f1f1f1",
-  ok: "#107c41",
-  okSoft: "#e2f3e9",
-  warn: "#b25e00",
-  warnSoft: "#fdf0dd",
-  danger: "#c4314b",
-  dangerSoft: "#fbe8ec",
-  info: "#595959",
-  infoSoft: "#ececec",
-  neutral: "#595959",
-  neutralSoft: "#efefef",
-  chart: "#171717",
+  brand: "#1fb6cb",
+  brandStrong: "#0e98ac",
+  brandSoft: "#e0f6f9",
+  brandInk: "#0b7285",
+  teal: "#1fb6cb",
+  tealSoft: "#e0f6f9",
+  violet: "#2c4a77",
+  violetSoft: "#e9eff7",
+  ok: "#12b886",
+  okSoft: "#e6f9f2",
+  warn: "#e8930c",
+  warnSoft: "#fdf1dc",
+  danger: "#f0655d",
+  dangerSoft: "#fdeae9",
+  info: "#3193e3",
+  infoSoft: "#e7f3fc",
+  neutral: "#5f6b7a",
+  neutralSoft: "#eef2f4",
+  chart: "#1fb6cb",
 
   // Aliases the Ignite Toggle components expect; mapped onto the Padav palette.
   neutral100: "#ffffff",
-  neutral200: "#fafafa",
-  neutral300: "#e8e8e8",
-  neutral400: "#d4d4d4",
-  neutral500: "#8f8f8f",
-  neutral600: "#595959",
-  neutral700: "#3a3a3a",
-  neutral800: "#171717",
-  neutral900: "#000000",
-  primary500: "#171717",
-  secondary500: "#171717",
-  accent100: "#ececec",
-  accent500: "#171717",
-  angry100: "#fbe8ec",
-  angry500: "#c4314b",
+  neutral200: "#f2f8f9",
+  neutral300: "#e8eef0",
+  neutral400: "#d3dde0",
+  neutral500: "#9aa5b1",
+  neutral600: "#5f6b7a",
+  neutral700: "#3c4858",
+  neutral800: "#1f2d3d",
+  neutral900: "#102030",
+  primary500: "#1fb6cb",
+  secondary500: "#2c4a77",
+  accent100: "#e0f6f9",
+  accent500: "#1fb6cb",
+  angry100: "#fdeae9",
+  angry500: "#f0655d",
 
-  overlay20: "rgba(0, 0, 0, 0.2)",
-  overlay50: "rgba(0, 0, 0, 0.5)",
+  overlay20: "rgba(16, 32, 48, 0.2)",
+  overlay50: "rgba(16, 32, 48, 0.5)",
 } as const
 
 export const colors = {
@@ -85,6 +85,6 @@ export const colors = {
   errorBackground: palette.dangerSoft,
   /** Text on a solid primary button. */
   onSolid: palette.onSolid,
-  /** Solid button: ink, as on the web. */
+  /** Solid button: the brand teal, as in the reference design. */
   primaryButton: palette.brand,
 } as const
