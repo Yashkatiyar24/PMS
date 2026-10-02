@@ -133,7 +133,8 @@ export class ApiClient {
     path: string,
     body: unknown,
   ): Promise<ApiResult<{ body: T; token: string | null }>> {
-    const response = await this.http.post<T>(path, body)
+    const response = await this.sendWithRetry((config) => this.http.post<T>(path, body, config))
+    if (response instanceof Error) return fail(badData(response.message))
     const problem = problemFrom(response)
     if (problem) return this.failed(problem)
     const header = response.headers?.["set-cookie"] as string | string[] | undefined
@@ -166,19 +167,25 @@ export class ApiClient {
   private async run<T>(
     send: (config?: { timeout?: number }) => Promise<import("apisauce").ApiResponse<T>>,
   ): Promise<ApiResult<T>> {
-    let response = await this.attempt(send)
+    const response = await this.sendWithRetry(send)
     if (response instanceof Error) return fail(badData(response.message))
-
-    let problem = problemFrom(response)
-    if (problem && (problem.kind === "timeout" || problem.kind === "cannot-connect")) {
-      logWarn("api", `${problem.kind} — retrying once while the server wakes`)
-      const second = await this.attempt(send, { timeout: Config.API_COLD_START_TIMEOUT_MS })
-      if (second instanceof Error) return fail(badData(second.message))
-      response = second
-      problem = problemFrom(response)
-    }
+    const problem = problemFrom(response)
     if (problem) return this.failed(problem)
     return ok(response.data as T)
+  }
+
+  private async sendWithRetry<T>(
+    send: (config?: { timeout?: number }) => Promise<import("apisauce").ApiResponse<T>>,
+  ): Promise<import("apisauce").ApiResponse<T> | Error> {
+    const response = await this.attempt(send)
+    if (response instanceof Error) return response
+
+    const problem = problemFrom(response)
+    if (problem && (problem.kind === "timeout" || problem.kind === "cannot-connect")) {
+      logWarn("api", `${problem.kind} — retrying once while the server wakes`)
+      return this.attempt(send, { timeout: Config.API_COLD_START_TIMEOUT_MS })
+    }
+    return response
   }
 
   private async attempt<T>(

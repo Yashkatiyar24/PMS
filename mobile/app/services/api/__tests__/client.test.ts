@@ -48,6 +48,26 @@ describe("a sleeping server", () => {
   })
 })
 
+describe("a sleeping server at sign-in", () => {
+  it("gets the same second chance on the login call itself", async () => {
+    // Sign-in is the first request of the day, so it is the one most likely to meet a sleeping server.
+    const signedIn = {
+      ok: true,
+      status: 200,
+      data: { status: "ok" },
+      headers: { "set-cookie": "pms_session=abc123; Path=/; HttpOnly" },
+    } as unknown as ApiResponse<unknown>
+    const client = new ApiClient("https://api.invalid")
+    const timeouts = stub(client, [timedOut, signedIn])
+
+    const result = await client.login("/api/auth/login", { password: "x" })
+
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.data.token).toBe("abc123")
+    expect(timeouts).toEqual([undefined, Config.API_COLD_START_TIMEOUT_MS])
+  })
+})
+
 describe("an answer from the server", () => {
   it("is never retried, however unwelcome", async () => {
     // A wrong password is an answer, not a failure to reach anybody: asking twice would only slow the screen
