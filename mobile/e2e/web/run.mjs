@@ -78,7 +78,7 @@ await step("rooms: open a tile, mark it clean if it needs cleaning", async () =>
 })
 await step("reports: period report", async () => {
   await tab("Reports")
-  await clickTop(page.getByText("⋯"))
+  await clickTop(page.getByRole("button", { name: "More" }))
   await clickTop(page.getByRole("menuitem", { name: /period/i }))
   await page.waitForTimeout(2500)
   await backToRoot(page, 1)
@@ -102,7 +102,7 @@ await step("new booking → reserved → cancelled with a reason", async () => {
 })
 await step("notifications", async () => {
   await tab("Today")
-  await clickTop(page.getByText("🔔"))
+  await clickTop(page.getByRole("button", { name: "Notifications" }))
   await text("Notifications").locator("visible=true").first().waitFor({ timeout: 8000 })
   await backToRoot(page, 1)
 })

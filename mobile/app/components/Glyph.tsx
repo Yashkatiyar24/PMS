@@ -1,3 +1,4 @@
+import { Platform } from "react-native"
 import Svg from "react-native-svg"
 
 import { useAppTheme } from "@/theme/context"
@@ -32,10 +33,19 @@ export function Glyph({ name, size = 20, color, weight = 1.75 }: GlyphProps) {
     fill: "none" as const,
   }
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" accessibilityElementsHidden>
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...HIDDEN}>
       {shapes[name](common)}
     </Svg>
   )
 }
 
 const shapes: Record<GlyphName, (s: S) => React.ReactNode> = { ...shapesA, ...shapesB }
+
+/** Decorative for assistive tech: the control around the icon carries the name. The browser wants the ARIA form. */
+const HIDDEN =
+  Platform.OS === "web"
+    ? ({ "aria-hidden": true } as const)
+    : ({
+        accessibilityElementsHidden: true,
+        importantForAccessibility: "no-hide-descendants",
+      } as const)

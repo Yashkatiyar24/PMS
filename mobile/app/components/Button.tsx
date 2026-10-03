@@ -115,8 +115,9 @@ export function Button(props: ButtonProps) {
       !!disabled && $disabledTextStyleOverride,
     ]
   }
-  // Small capitals are the reference's voice for its main actions; everything else keeps its case.
-  const label = solid && text ? text.toUpperCase() : text
+  // Small capitals are the reference's voice for its main actions; the style does it, so the label keeps its
+  // written case for screen readers and tests.
+  const label = text
 
   return (
     <AnimatedPressable
@@ -205,7 +206,12 @@ const $baseTextStyle: ThemedStyle<TextStyle> = ({ typography }) => ({
 })
 
 /** The gradient button's label: a little smaller, spaced out, in capitals. */
-const $solidTextStyle: TextStyle = { fontSize: 14, letterSpacing: 1.3, fontWeight: "700" }
+const $solidTextStyle: TextStyle = {
+  fontSize: 14,
+  letterSpacing: 1.3,
+  fontWeight: "700",
+  textTransform: "uppercase",
+}
 
 const $glyphBox: ViewStyle = { zIndex: 2 }
 const $rightAccessoryStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({

@@ -76,7 +76,10 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         style={[$fab, fab.style, { shadowColor: theme.colors.palette.brandStrong }]}
       >
         <Gradient radius={29} angle={45} />
-        <Glyph name="plus" size={28} color={theme.colors.onSolid} weight={2.4} />
+        {/* Above the gradient on every platform: the browser paints an absolutely placed sibling on top. */}
+        <View style={$fabGlyph}>
+          <Glyph name="plus" size={28} color={theme.colors.onSolid} weight={2.4} />
+        </View>
       </AnimatedPressable>
     </View>
   )
@@ -103,6 +106,7 @@ const $glyphBox: ViewStyle = {
 }
 const $label: TextStyle = { fontSize: 11, fontWeight: "600" }
 const $gap: ViewStyle = { width: 62 }
+const $fabGlyph: ViewStyle = { zIndex: 1 }
 const $fab: ViewStyle = {
   position: "absolute",
   alignSelf: "center",

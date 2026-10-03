@@ -82,7 +82,7 @@ export async function settleAndCheckOut(page) {
 }
 
 export async function openStayBySearch(page, name) {
-  await clickTop(page.getByText("⌕"))
+  await clickTop(page.getByRole("button", { name: "Search bookings" }))
   await (await topOf(page.getByTestId("search-input"))).fill(name)
   await page.waitForTimeout(1500)
   await clickTop(text(page, name))

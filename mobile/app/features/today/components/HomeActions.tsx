@@ -3,7 +3,7 @@ import { Pressable, View, type TextStyle, type ViewStyle } from "react-native"
 import { Glyph, type GlyphName, Text } from "@/components"
 import { useAppTheme } from "@/theme/context"
 
-export type HomeAction = { icon: GlyphName; label: string; onPress: () => void }
+export type HomeAction = { icon: GlyphName; label: string; onPress: () => void; testID?: string }
 
 /**
  * The four things the desk does without being asked. A square each, in a row, because a list of four verbs
@@ -18,6 +18,7 @@ export function HomeActions({ actions }: { actions: HomeAction[] }) {
           key={a.label}
           accessibilityRole="button"
           accessibilityLabel={a.label}
+          testID={a.testID}
           onPress={a.onPress}
           style={({ pressed }) => [$item, pressed && { opacity: 0.7 }]}
         >

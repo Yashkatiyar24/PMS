@@ -55,6 +55,7 @@ export const TodayScreen = observer(function TodayScreen() {
       icon: "login",
       label: translate("action.checkIn"),
       onPress: () => navigation.navigate("CheckIn"),
+      testID: "today-checkin",
     },
     {
       icon: "search",
