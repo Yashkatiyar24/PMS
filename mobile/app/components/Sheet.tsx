@@ -1,8 +1,18 @@
-import { type ReactNode } from "react"
-import { Modal, Pressable, ScrollView, View, type ViewStyle, type TextStyle } from "react-native"
-import { KeyboardAvoidingView, Platform } from "react-native"
+import { type ReactNode, useEffect, useRef } from "react"
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+  type ViewStyle,
+  type TextStyle,
+} from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
+import { useReducedMotion } from "@/hooks/useReducedMotion"
 import { useAppTheme } from "@/theme/context"
 
 import { Glyph } from "./Glyph"
@@ -20,8 +30,10 @@ export type SheetProps = {
   locked?: boolean
 }
 
-/** How long a sheet takes to slide away. */
-const DISMISS_MS = 320
+const NATIVE = Platform.OS !== "web"
+
+/** How long a sheet takes to fade away. */
+const DISMISS_MS = 260
 
 /**
  * Run `next` once a sheet that is closing has slid away. Use it when closing a sheet leads to another screen or
@@ -36,6 +48,17 @@ export function afterSheetCloses(next: () => void): void {
 export function Sheet({ open, onClose, title, description, children, footer, locked }: SheetProps) {
   const { theme } = useAppTheme()
   const insets = useSafeAreaInsets()
+  const reduced = useReducedMotion()
+  // The dim fades in with the modal; the sheet itself rises from below and settles, so the two read as one
+  // motion: the room darkens, the form arrives. Reduced motion skips the rise.
+  const rise = useRef(new Animated.Value(reduced ? 0 : 1)).current
+  useEffect(() => {
+    if (!open) return
+    rise.setValue(reduced ? 0 : 1)
+    if (reduced) return
+    Animated.spring(rise, { toValue: 0, speed: 14, bounciness: 2, useNativeDriver: NATIVE }).start()
+  }, [open, reduced, rise])
+  const translateY = rise.interpolate({ inputRange: [0, 1], outputRange: [0, 48] })
   const close = () => {
     if (!locked) onClose()
   }
@@ -43,7 +66,7 @@ export function Sheet({ open, onClose, title, description, children, footer, loc
     <Modal
       visible={open}
       transparent
-      animationType="slide"
+      animationType="fade"
       onRequestClose={close}
       statusBarTranslucent
     >
@@ -53,10 +76,14 @@ export function Sheet({ open, onClose, title, description, children, footer, loc
           onPress={close}
           accessibilityLabel="Close"
         />
-        <View
+        <Animated.View
           style={[
             $sheet,
-            { backgroundColor: theme.colors.surface, paddingBottom: Math.max(insets.bottom, 12) },
+            {
+              backgroundColor: theme.colors.surface,
+              paddingBottom: Math.max(insets.bottom, 12),
+              transform: [{ translateY }],
+            },
           ]}
         >
           <View style={[$handle, { backgroundColor: theme.colors.borderStrong }]} />
@@ -91,7 +118,7 @@ export function Sheet({ open, onClose, title, description, children, footer, loc
             {children}
           </ScrollView>
           {!!footer && <View style={$footer}>{footer}</View>}
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   )

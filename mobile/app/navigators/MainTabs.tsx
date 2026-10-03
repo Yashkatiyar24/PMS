@@ -16,6 +16,7 @@ import { ReportsScreen } from "@/features/reports/screens/ReportsScreen"
 import { RoomsScreen } from "@/features/rooms/screens/RoomsScreen"
 import { SettingsScreen } from "@/features/settings/screens/SettingsScreen"
 import { TodayScreen } from "@/features/today/screens/TodayScreen"
+import { useReducedMotion } from "@/hooks/useReducedMotion"
 import type { TxKeyPath } from "@/i18n"
 import { translate } from "@/i18n/translate"
 import { useStores } from "@/models/useStores"
@@ -96,6 +97,7 @@ const TABS: Record<
 export const MainTabs = observer(function MainTabs() {
   const { auth } = useStores()
   const { theme } = useAppTheme()
+  const reduced = useReducedMotion()
   const user = auth.user
   const tabs = visibleTabs({
     permissions: user?.permissions ?? [],
@@ -106,6 +108,8 @@ export const MainTabs = observer(function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+        // The outgoing tab slides a little aside and the new one in, so a change of tab is seen, not just found.
+        animation: reduced ? "none" : "shift",
         tabBarActiveTintColor: theme.colors.palette.brandInk,
         tabBarInactiveTintColor: theme.colors.textDim,
       }}

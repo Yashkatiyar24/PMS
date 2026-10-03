@@ -4,149 +4,139 @@
  * Designed for a ₹6,000 Android phone held in one hand at a reception desk, often in daylight, and for the
  * owner's laptop in the evening. High contrast, 44px tap targets, no colour-only status, light and dark.
  *
+ * The look is the reference design's: white screens, white cards lifted by a soft shadow rather than a border,
+ * one vivid teal for everything interactive, running into a lighter teal on the main call-to-action, and a
+ * navy-grey ink so text sits warmly on the cool palette. Status is a tint plus a word.
+ *
  * Every colour is a token on :root. Dark mode re-steps the tokens only; no component is styled twice.
  */
 @theme {
   --font-sans: var(--font-inter), var(--font-devanagari), "Noto Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  --color-bg: #f7f7f7;
+  --color-bg: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-2: #fafafa;
-  --color-ink: #171717;
-  --color-ink-soft: #595959;
-  --color-ink-faint: #8f8f8f;
-  --color-line: #e8e8e8;
-  --color-line-strong: #d4d4d4;
+  --color-surface-2: #f3f8f9;
+  --color-ink: #1f2d3d;
+  --color-ink-soft: #6b7a8b;
+  --color-ink-faint: #a3afbb;
+  --color-line: #e6edf0;
+  --color-line-strong: #d5dfe3;
 
-  --color-brand: #171717;
-  --color-brand-strong: #000000;
-  --color-brand-soft: #ececec;
-  --color-brand-ink: #171717;
+  --color-brand: #26b9cd;
+  --color-brand-strong: #1a9db0;
+  --color-brand-soft: #e2f6f9;
+  /* Teal dark enough to read as text on white (4.9:1). */
+  --color-brand-ink: #0f7f90;
+  /* The call-to-action runs from the brand teal into this lighter one, left to right. */
+  --color-brand-grad-a: #23b4c9;
+  --color-brand-grad-b: #5ed1e1;
+  /* The sign-in wedge: a deep navy the teal runs out of. */
+  --color-navy: #16365c;
 
-  --color-teal: #525252;
-  --color-teal-soft: #ededed;
-  --color-violet: #737373;
-  --color-violet-soft: #f1f1f1;
-  --color-ok: #107c41;
-  --color-ok-soft: #e2f3e9;
-  --color-warn: #b25e00;
-  --color-warn-soft: #fdf0dd;
-  --color-danger: #c4314b;
-  --color-danger-soft: #fbe8ec;
-  --color-info: #595959;
-  --color-info-soft: #ececec;
+  --color-teal: #0f7f90;
+  --color-teal-soft: #e2f6f9;
+  --color-violet: #3c5a8a;
+  --color-violet-soft: #e9eff7;
+  --color-ok: #0f8f5c;
+  --color-ok-soft: #e4f7ef;
+  --color-warn: #a8650a;
+  --color-warn-soft: #fdf2dc;
+  --color-danger: #d2423b;
+  --color-danger-soft: #fdecec;
+  --color-info: #1f72b8;
+  --color-info-soft: #e7f3fc;
   /* Text on a solid tone fill: white here, dark in dark mode where the fills turn pastel. */
   --color-on-solid: #ffffff;
   /* The lifted item in a track, like the chosen tab: always lighter than what it sits in. */
   --color-raised: #ffffff;
   /* One chart series: validated against the card surface in each theme (dataviz lightness band, 3:1 contrast). */
-  --color-chart: #171717;
+  --color-chart: #1a9db0;
 
-  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
+  --shadow-card: 0 1px 2px rgb(31 45 61 / 0.04), 0 6px 18px rgb(31 45 61 / 0.07);
+  --shadow-card-hover: 0 2px 4px rgb(31 45 61 / 0.05), 0 12px 28px rgb(31 45 61 / 0.1);
+  --shadow-cta: 0 6px 16px rgb(38 185 205 / 0.28);
   --shadow-pop: 0 12px 32px rgb(16 24 40 / 0.16), 0 2px 6px rgb(16 24 40 / 0.08);
-  --radius-card: 16px;
+  --radius-card: 18px;
 }
 
-/* The login scene: a day sky over a sandstone building. Night re-steps these like any other token. */
-:root {
-  color-scheme: light;
-  --sky-top: #bcbcbc;
-  --sky: #e2e2e2;
-  --cloud: #ffffff;
-  --stone: #d6d6d6;
-  --trim: #9e9e9e;
-  --glass: #9a9a9a;
-  --glass-hi: #e6e6e6;
-  --glow: #d9d9d9;
-  --glow-hi: #f2f2f2;
-  --leaf: #7d7d7d;
-  --leaf-2: #5e5e5e;
-}
+:root { color-scheme: light; }
 
-/* Dark: re-stepped against a #121212 surface, not inverted. */
+/* Dark: re-stepped against a deep teal-navy ground, not inverted. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --color-bg: #121212;
-    --color-surface: #1b1b1b;
-    --color-surface-2: #222222;
-    --color-ink: #ededed;
-    --color-ink-soft: #ababab;
-    --color-ink-faint: #767676;
-    --color-line: #2c2c2c;
-    --color-line-strong: #404040;
-    --color-brand: #ededed;
-    --color-brand-strong: #ffffff;
-    --color-brand-soft: #2f2f2f;
-    --color-brand-ink: #ededed;
-    --color-teal: #b0b0b0;
-    --color-teal-soft: #272727;
-    --color-violet: #949494;
-    --color-violet-soft: #2b2b2b;
-    --color-ok: #52c47e;
-    --color-ok-soft: #112b1b;
-    --color-warn: #f1a54d;
-    --color-warn-soft: #33230f;
-    --color-danger: #f2758d;
-    --color-danger-soft: #35161e;
-    --color-info: #ababab;
-    --color-info-soft: #2f2f2f;
-    --color-on-solid: #121212;
-    --color-raised: #343434;
-    --color-chart: #d4d4d4;
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+    --color-bg: #0f1a20;
+    --color-surface: #152229;
+    --color-surface-2: #1b2b33;
+    --color-ink: #e8f1f4;
+    --color-ink-soft: #a3b4bf;
+    --color-ink-faint: #6f8290;
+    --color-line: #223540;
+    --color-line-strong: #2f4651;
+    --color-brand: #3cc7d9;
+    --color-brand-strong: #5ed1e1;
+    --color-brand-soft: #123a44;
+    --color-brand-ink: #7fdcea;
+    --color-brand-grad-a: #1a9db0;
+    --color-brand-grad-b: #3cc7d9;
+    --color-navy: #0b1f38;
+    --color-teal: #7fdcea;
+    --color-teal-soft: #123a44;
+    --color-violet: #8fa8d6;
+    --color-violet-soft: #1d2a3f;
+    --color-ok: #4fd39a;
+    --color-ok-soft: #0f3327;
+    --color-warn: #f0b14b;
+    --color-warn-soft: #3a2a10;
+    --color-danger: #f0776f;
+    --color-danger-soft: #3d1b1c;
+    --color-info: #6fb4f0;
+    --color-info-soft: #142b40;
+    --color-on-solid: #0f1a20;
+    --color-raised: #27404a;
+    --color-chart: #5ed1e1;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 20px rgb(0 0 0 / 0.3);
+    --shadow-card-hover: 0 2px 4px rgb(0 0 0 / 0.45), 0 14px 30px rgb(0 0 0 / 0.4);
+    --shadow-cta: 0 6px 16px rgb(60 199 217 / 0.22);
     --shadow-pop: 0 16px 40px rgb(0 0 0 / 0.6);
-    --sky-top: #0d0d0d;
-    --sky: #1a1a1a;
-    --cloud: #262626;
-    --stone: #4d4d4d;
-    --trim: #333333;
-    --glass: #2b2b2b;
-    --glass-hi: #4a4a4a;
-    --leaf: #3a3a3a;
-    --leaf-2: #2b2b2b;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --color-bg: #121212;
-  --color-surface: #1b1b1b;
-  --color-surface-2: #222222;
-  --color-ink: #ededed;
-  --color-ink-soft: #ababab;
-  --color-ink-faint: #767676;
-  --color-line: #2c2c2c;
-  --color-line-strong: #404040;
-  --color-brand: #ededed;
-  --color-brand-strong: #ffffff;
-  --color-brand-soft: #2f2f2f;
-  --color-brand-ink: #ededed;
-  --color-teal: #b0b0b0;
-  --color-teal-soft: #272727;
-  --color-violet: #949494;
-  --color-violet-soft: #2b2b2b;
-  --color-ok: #52c47e;
-  --color-ok-soft: #112b1b;
-  --color-warn: #f1a54d;
-  --color-warn-soft: #33230f;
-  --color-danger: #f2758d;
-  --color-danger-soft: #35161e;
-  --color-info: #ababab;
-  --color-info-soft: #2f2f2f;
-  --color-on-solid: #121212;
-  --color-raised: #343434;
-  --color-chart: #d4d4d4;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --color-bg: #0f1a20;
+  --color-surface: #152229;
+  --color-surface-2: #1b2b33;
+  --color-ink: #e8f1f4;
+  --color-ink-soft: #a3b4bf;
+  --color-ink-faint: #6f8290;
+  --color-line: #223540;
+  --color-line-strong: #2f4651;
+  --color-brand: #3cc7d9;
+  --color-brand-strong: #5ed1e1;
+  --color-brand-soft: #123a44;
+  --color-brand-ink: #7fdcea;
+  --color-brand-grad-a: #1a9db0;
+  --color-brand-grad-b: #3cc7d9;
+  --color-navy: #0b1f38;
+  --color-teal: #7fdcea;
+  --color-teal-soft: #123a44;
+  --color-violet: #8fa8d6;
+  --color-violet-soft: #1d2a3f;
+  --color-ok: #4fd39a;
+  --color-ok-soft: #0f3327;
+  --color-warn: #f0b14b;
+  --color-warn-soft: #3a2a10;
+  --color-danger: #f0776f;
+  --color-danger-soft: #3d1b1c;
+  --color-info: #6fb4f0;
+  --color-info-soft: #142b40;
+  --color-on-solid: #0f1a20;
+  --color-raised: #27404a;
+  --color-chart: #5ed1e1;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 20px rgb(0 0 0 / 0.3);
+  --shadow-card-hover: 0 2px 4px rgb(0 0 0 / 0.45), 0 14px 30px rgb(0 0 0 / 0.4);
+  --shadow-cta: 0 6px 16px rgb(60 199 217 / 0.22);
   --shadow-pop: 0 16px 40px rgb(0 0 0 / 0.6);
-  --sky-top: #0d0d0d;
-  --sky: #1a1a1a;
-  --cloud: #262626;
-  --stone: #4d4d4d;
-  --trim: #333333;
-  --glass: #2b2b2b;
-  --glass-hi: #4a4a4a;
-  --leaf: #3a3a3a;
-  --leaf-2: #2b2b2b;
 }
 
 html { -webkit-text-size-adjust: 100%; }
@@ -183,23 +173,28 @@ label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) {
   align-items: center;
 }
 
+/*
+ * Fields are a line, not a box: the reference writes on a hairline, and the line turns teal and thickens under
+ * the field being typed in. The thicker line is a shadow, so nothing below it moves.
+ */
 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea {
   font: inherit;
   min-height: 44px;
   width: 100%;
-  border: 1px solid var(--color-line-strong);
-  border-radius: 10px;
-  padding: 10px 12px;
-  background: var(--color-surface);
+  border: 0;
+  border-bottom: 1px solid var(--color-line-strong);
+  border-radius: 0;
+  padding: 10px 0;
+  background: transparent;
   color: var(--color-ink);
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
 }
 input::placeholder, textarea::placeholder { color: var(--color-ink-faint); }
-input:disabled, select:disabled, textarea:disabled { background: var(--color-surface-2); color: var(--color-ink-soft); }
+input:disabled, select:disabled, textarea:disabled { color: var(--color-ink-soft); border-bottom-style: dashed; }
 input:not([type="checkbox"]):not([type="radio"]):focus-visible, select:focus-visible, textarea:focus-visible {
   outline: none;
-  border-color: var(--color-brand);
-  box-shadow: 0 0 0 3px var(--color-brand-soft);
+  border-bottom-color: var(--color-brand);
+  box-shadow: 0 1px 0 0 var(--color-brand);
 }
 button:focus-visible, a:focus-visible, [role="menuitem"]:focus-visible {
   outline: 2px solid var(--color-brand);
@@ -207,10 +202,10 @@ button:focus-visible, a:focus-visible, [role="menuitem"]:focus-visible {
 }
 select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23596273' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7a8b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 36px;
+  background-position: right 4px center;
+  padding-right: 28px;
 }
 /* iOS zooms the page when a font under 16px gets focus. */
 @supports (-webkit-touch-callout: none) { input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; } }
@@ -220,57 +215,62 @@ details > summary { list-style: none; cursor: pointer; }
 details > summary::-webkit-details-marker { display: none; }
 details[open] .disclosure-chevron { transform: rotate(180deg); }
 
-/* Overlay motion: a sheet slides up on a phone, a dialog fades in on a laptop. */
+/* The main action's fill: the brand teal running into its lighter self, left to right. */
+.cta {
+  background-image: linear-gradient(90deg, var(--color-brand-grad-a), var(--color-brand-grad-b));
+  background-size: 130% 100%;
+  background-position: 0 0;
+  transition: background-position 220ms ease-out, transform 120ms ease-out, box-shadow 120ms ease-out, filter 120ms ease-out;
+}
+.cta:hover { background-position: 100% 0; }
+
+/* The sign-in wedge: navy at the top-left running diagonally into the brand teal, cut off on a slant. */
+.wedge {
+  background-image: linear-gradient(118deg, var(--color-navy) 0%, var(--color-navy) 34%, var(--color-brand-grad-a) 66%, var(--color-brand-grad-b) 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 86%, 0 100%);
+}
+
+/*
+ * Motion. A press squashes; an overlay rises; a skeleton breathes. Each answers something the person did or is
+ * waiting for, and every one of them stands still when the device asks for less motion.
+ */
+.press { transition: transform 120ms ease-out, background-color 150ms ease-out, box-shadow 150ms ease-out, filter 150ms ease-out; }
+.press:active { transform: scale(0.97); }
+
 @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
-@keyframes sheet-up { from { transform: translateY(24px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes sheet-up { from { transform: translateY(32px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
 @keyframes pop-in { from { transform: translateY(6px) scale(.98); opacity: 0 } to { transform: none; opacity: 1 } }
-.anim-fade { animation: fade-in 160ms ease-out both; }
-.anim-sheet { animation: sheet-up 220ms cubic-bezier(.16,1,.3,1) both; }
-.anim-pop { animation: pop-in 160ms cubic-bezier(.16,1,.3,1) both; }
+.anim-fade { animation: fade-in 180ms ease-out both; }
+.anim-sheet { animation: sheet-up 260ms cubic-bezier(.16,1,.3,1) both; }
+.anim-pop { animation: pop-in 180ms cubic-bezier(.16,1,.3,1) both; }
+
+/* A loading row: a band of light crossing a grey block, so the screen reads as "coming", not "stuck". */
+@keyframes shimmer { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+.skeleton {
+  background-color: var(--color-surface-2);
+  background-image: linear-gradient(90deg, var(--color-surface-2) 0%, var(--color-line) 45%, var(--color-surface-2) 90%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* The login hero's one entrance: the headline rises, the lead and the button follow a beat behind. */
+@keyframes rise { from { opacity: 0; transform: translateY(24px) } }
+@keyframes reveal { from { opacity: 0; transform: translateY(40px) } }
+@media (prefers-reduced-motion: no-preference) {
+  .rise { animation: rise 900ms cubic-bezier(.16,1,.3,1) both; }
+  @supports (animation-timeline: scroll()) {
+    .reveal { animation: reveal linear both; animation-timeline: view(); animation-range: entry 5% cover 25%; }
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .anim-fade, .anim-sheet, .anim-pop { animation: none; }
+  .anim-fade, .anim-sheet, .anim-pop, .skeleton { animation: none; }
+  .press:active { transform: none; }
   * { transition-duration: 0ms !important; }
 }
 
 /* Heavy, tight display type. Devanagari keeps its own spacing: squeezing it breaks the headline bar. */
 .display { font-weight: 800; letter-spacing: -0.045em; line-height: 1.02; }
 .display:lang(hi) { letter-spacing: 0; line-height: 1.25; }
-
-/* Sky and clouds are gradients, not blurred images: a cheap phone pays for a blur filter on every frame. */
-.sky {
-  background:
-    radial-gradient(38% 16% at 8% 62%, var(--cloud), transparent 70%),
-    radial-gradient(32% 14% at 94% 48%, var(--cloud), transparent 70%),
-    linear-gradient(var(--sky-top), var(--sky) 60%, var(--color-bg));
-}
-.clouds {
-  background:
-    radial-gradient(45% 60% at 18% 100%, var(--cloud) 40%, transparent 72%),
-    radial-gradient(40% 55% at 58% 100%, var(--cloud) 40%, transparent 72%),
-    radial-gradient(38% 60% at 92% 100%, var(--cloud) 40%, transparent 72%);
-}
-/*
- * Login page motion, all CSS so it plays before the app has loaded on a slow phone. On load the headline
- * rises and the building emerges from the clouds; on scroll it sinks back into them and each section
- * eases in. Scroll-linked parts use scroll-driven animations and simply stand still where a browser lacks them.
- */
-@keyframes rise { from { opacity: 0; transform: translateY(24px) } }
-@keyframes emerge { from { opacity: 0; transform: translateY(22%) } }
-@keyframes depth { to { transform: translate3d(0, var(--depth), 0) } }
-@keyframes reveal { from { opacity: 0; transform: translateY(40px) } }
-@media (prefers-reduced-motion: no-preference) {
-  .rise { animation: rise 900ms cubic-bezier(.16,1,.3,1) both; }
-  .emerge { animation: emerge 1600ms cubic-bezier(.16,1,.3,1) 150ms both; }
-  @supports (animation-timeline: scroll()) {
-    .depth { animation: depth linear both; animation-timeline: scroll(root); animation-range: 0px 100vh; }
-    .reveal { animation: reveal linear both; animation-timeline: view(); animation-range: entry 5% cover 25%; }
-  }
-}
-
-.dh-stone { fill: var(--stone); }
-.dh-trim { fill: var(--trim); }
-.dh-leaf { fill: var(--leaf); }
-.dh-leaf-2 { fill: var(--leaf-2); }
 
 /* Thin scrollbars on the tape chart and menus. */
 .scroll-thin { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }
@@ -280,27 +280,14 @@ details[open] .disclosure-chevron { transform: rotate(180deg); }
   body { background: #fff; }
 }
 
-/* The sign-in form on the landing page: a quiet caption over a hairline, in the landing's own editorial style
-   rather than the desk's boxed fields. Scoped to .line-form, so no other screen's inputs change. */
+/* The sign-in form in the landing's dialog: a quiet caption over the line, larger type than a desk form. */
 .line-form :where(label) > span:first-child {
   font-weight: 500;
   color: var(--color-ink-faint);
 }
 .line-form input:not([type="checkbox"]):not([type="radio"]) {
-  border: 0;
-  border-bottom: 1px solid var(--color-line-strong);
-  border-radius: 0;
-  background: transparent;
-  padding: 10px 0;
   min-height: 52px;
   font-size: 17px;
   font-weight: 600;
 }
 .line-form input::placeholder { color: var(--color-ink-soft); font-weight: 500; }
-.line-form input:not([type="checkbox"]):not([type="radio"]):focus-visible {
-  outline: none;
-  border: 0;
-  border-bottom: 2px solid var(--color-ink);
-  box-shadow: none;
-  padding-bottom: 9px;   /* the extra border pixel comes out of the padding, so nothing below it moves */
-}

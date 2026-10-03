@@ -1,16 +1,19 @@
-import { Pressable, View, type TextStyle, type ViewStyle } from "react-native"
+import { Animated, Pressable, View, type TextStyle, type ViewStyle } from "react-native"
 
 import { Text } from "@/components"
+import { usePressScale } from "@/hooks/usePressScale"
 import { useAppTheme } from "@/theme/context"
 
 import { chipLook } from "../lib/roomLabels"
 import type { Room } from "../types"
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+
 /**
  * One room in the grid, the reference's housekeeping board: a square chip with the number on it, its fill
  * telling the housekeeping state — dirty a pale red, inspected a teal tint, clean plain white, off sale grey —
  * and the dot repeating the tone so status never rides on the fill alone. An occupied room gets a solid ink
- * bar under the number so the board shows fullness at a glance.
+ * bar under the number so the board shows fullness at a glance. The chip dips under the thumb when pressed.
  */
 export function RoomTile({
   room,
@@ -22,22 +25,26 @@ export function RoomTile({
   selected?: boolean
 }) {
   const { theme } = useAppTheme()
+  const press = usePressScale(0.93)
   const look = chipLook(theme.colors, room)
   const bg = selected ? theme.colors.palette.brand : look.bg
   const fg = selected ? theme.colors.onSolid : look.fg
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected }}
       accessibilityLabel={`${room.number} ${room.status}${look.taken ? " occupied" : ""}`}
-      style={({ pressed }) => [
+      style={[
         $chip,
+        press.style,
         {
           backgroundColor: bg,
           borderColor: selected ? theme.colors.palette.brand : look.border,
           shadowColor: theme.colors.palette.shadow,
-          opacity: room.active ? (pressed ? 0.75 : 1) : 0.45,
+          opacity: room.active ? 1 : 0.45,
         },
       ]}
     >
@@ -51,7 +58,7 @@ export function RoomTile({
           <Text text="!" style={[$bang, { color: selected ? fg : theme.colors.palette.warn }]} />
         )}
       </View>
-    </Pressable>
+    </AnimatedPressable>
   )
 }
 

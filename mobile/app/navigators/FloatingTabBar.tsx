@@ -1,10 +1,11 @@
-import { Pressable, View, type TextStyle, type ViewStyle } from "react-native"
+import { Animated, Pressable, View, type TextStyle, type ViewStyle } from "react-native"
 import { type BottomTabBarProps } from "@react-navigation/bottom-tabs"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Text } from "@/components"
 import { Glyph } from "@/components/Glyph"
 import { Gradient } from "@/components/Gradient"
+import { usePressScale } from "@/hooks/usePressScale"
 import { useAppTheme } from "@/theme/context"
 
 /**
@@ -15,8 +16,11 @@ import { useAppTheme } from "@/theme/context"
  * naturally lands. The tabs either side carry the role's own screens, so this is the same navigation the app
  * always had, wearing a different coat.
  */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { theme } = useAppTheme()
+  const fab = usePressScale(0.9)
   const insets = useSafeAreaInsets()
   const routes = state.routes
   const middle = Math.ceil(routes.length / 2)
@@ -63,18 +67,17 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         {routes.slice(middle).map((r, i) => tab(r, i + middle))}
       </View>
       {/* The one action worth a thumb of its own. Centred over the bar, overlapping it, as the desk expects. */}
-      <Pressable
+      <AnimatedPressable
         accessibilityRole="button"
         accessibilityLabel="+"
         onPress={() => navigation.navigate("CheckIn" as never)}
-        style={({ pressed }) => [
-          $fab,
-          { shadowColor: theme.colors.palette.brandStrong, opacity: pressed ? 0.85 : 1 },
-        ]}
+        onPressIn={fab.onPressIn}
+        onPressOut={fab.onPressOut}
+        style={[$fab, fab.style, { shadowColor: theme.colors.palette.brandStrong }]}
       >
         <Gradient radius={29} angle={45} />
         <Glyph name="plus" size={28} color={theme.colors.onSolid} weight={2.4} />
-      </Pressable>
+      </AnimatedPressable>
     </View>
   )
 }

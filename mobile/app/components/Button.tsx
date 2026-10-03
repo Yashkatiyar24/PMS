@@ -1,5 +1,6 @@
-import { ComponentType } from "react"
+import { ComponentType, useState } from "react"
 import {
+  Animated,
   Pressable,
   PressableProps,
   PressableStateCallbackType,
@@ -9,6 +10,7 @@ import {
   ViewStyle,
 } from "react-native"
 
+import { usePressScale } from "@/hooks/usePressScale"
 import { useAppTheme } from "@/theme/context"
 import { $styles } from "@/theme/styles"
 import type { ThemedStyle, ThemedStyleArray } from "@/theme/types"
@@ -54,6 +56,7 @@ export interface ButtonProps extends PressableProps {
 }
 
 const RADIUS = 14
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 /** A button. The main one carries the brand gradient; the rest are quiet. */
 export function Button(props: ButtonProps) {
@@ -77,6 +80,9 @@ export function Button(props: ButtonProps) {
   } = props
 
   const { themed, theme } = useAppTheme()
+  // The whole button dips under the thumb and springs back; the press colour below is only the second cue.
+  const press = usePressScale(0.97)
+  const [pressed, setPressed] = useState(false)
 
   const preset: Presets = props.preset ?? "primary"
   const size: ButtonSize = props.size ?? "md"
@@ -113,11 +119,21 @@ export function Button(props: ButtonProps) {
   const label = solid && text ? text.toUpperCase() : text
 
   return (
-    <Pressable
-      style={$viewStyle}
+    <AnimatedPressable
+      style={[$viewStyle({ pressed }), press.style]}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
       {...rest}
+      onPressIn={(e) => {
+        setPressed(true)
+        press.onPressIn()
+        rest.onPressIn?.(e)
+      }}
+      onPressOut={(e) => {
+        setPressed(false)
+        press.onPressOut()
+        rest.onPressOut?.(e)
+      }}
       disabled={disabled}
     >
       {(state) => (
@@ -156,7 +172,7 @@ export function Button(props: ButtonProps) {
           )}
         </>
       )}
-    </Pressable>
+    </AnimatedPressable>
   )
 }
 
@@ -245,7 +261,7 @@ const $textPresets: Record<Presets, ThemedStyleArray<TextStyle>> = {
 }
 
 const $pressedViewPresets: Record<Presets, ThemedStyle<ViewStyle>> = {
-  primary: () => ({ opacity: 0.92, transform: [{ scale: 0.985 }] }),
+  primary: () => ({ opacity: 0.92 }),
   secondary: ({ colors }) => ({ backgroundColor: colors.surface2 }),
   soft: ({ colors }) => ({ backgroundColor: colors.palette.brandSoft, opacity: 0.85 }),
   danger: () => ({ opacity: 0.9 }),
