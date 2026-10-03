@@ -82,7 +82,10 @@ export async function settleAndCheckOut(page) {
 }
 
 export async function openStayBySearch(page, name) {
-  await clickTop(page.getByRole("button", { name: "Search bookings" }))
+  // The desk's own screen has no header; the search lives on the other tabs' headers.
+  const search = page.getByRole("button", { name: "Search bookings" })
+  if (!(await search.locator("visible=true").count())) await clickTop(text(page, "Bookings"))
+  await clickTop(search)
   await (await topOf(page.getByTestId("search-input"))).fill(name)
   await page.waitForTimeout(1500)
   await clickTop(text(page, name))
