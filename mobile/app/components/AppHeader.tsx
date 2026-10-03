@@ -12,6 +12,7 @@ import { useAppTheme } from "@/theme/context"
 
 import { Avatar } from "./Avatar"
 import { Banner } from "./Banner"
+import { Glyph } from "./Glyph"
 import { Text } from "./Text"
 
 /** The phone header on every tab root: property name, search, bell with unread badge, avatar menu; billing banners. */
@@ -29,8 +30,8 @@ export const AppHeader = observer(function AppHeader() {
     <View style={$wrap}>
       <View style={$row}>
         <View style={$brand}>
-          <View style={[$logo, { backgroundColor: theme.colors.primaryButton }]}>
-            <Text text="⌂" style={{ color: theme.colors.onSolid, fontSize: 18 }} />
+          <View style={[$logo, { backgroundColor: theme.colors.palette.brand }]}>
+            <Glyph name="building" size={18} color={theme.colors.onSolid} weight={2} />
           </View>
           <Text
             text={auth.propertyName || translate("mobile.appName")}
@@ -43,20 +44,25 @@ export const AppHeader = observer(function AppHeader() {
             onPress={() => setSearch(true)}
             accessibilityRole="button"
             accessibilityLabel={translate("mobile.searchBookings")}
-            style={$icon}
+            style={({ pressed }) => [$icon, pressed && { backgroundColor: theme.colors.surface2 }]}
           >
-            <Text text="⌕" style={[$glyph, { color: theme.colors.text }]} />
+            <Glyph name="search" size={22} color={theme.colors.text} />
           </Pressable>
         )}
         <Pressable
           onPress={() => navigation.navigate("Notifications")}
           accessibilityRole="button"
           accessibilityLabel={translate("notif.title")}
-          style={$icon}
+          style={({ pressed }) => [$icon, pressed && { backgroundColor: theme.colors.surface2 }]}
         >
-          <Text text="🔔" style={$glyph} />
+          <Glyph name="bell" size={22} color={theme.colors.text} />
           {unread > 0 && (
-            <View style={[$badge, { backgroundColor: theme.colors.palette.danger }]}>
+            <View
+              style={[
+                $badge,
+                { backgroundColor: theme.colors.palette.danger, borderColor: theme.colors.surface },
+              ]}
+            >
               <Text
                 text={unread > 99 ? "99+" : String(unread)}
                 style={[$badgeText, { color: theme.colors.palette.onSolid }]}
@@ -85,24 +91,30 @@ const $wrap: ViewStyle = { gap: 8, paddingBottom: 4 }
 const $row: ViewStyle = { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 48 }
 const $brand: ViewStyle = { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }
 const $logo: ViewStyle = {
-  width: 32,
-  height: 32,
-  borderRadius: 10,
+  width: 34,
+  height: 34,
+  borderRadius: 11,
   alignItems: "center",
   justifyContent: "center",
 }
 const $name: TextStyle = { fontSize: 17, fontWeight: "800", flex: 1 }
-const $icon: ViewStyle = { width: 40, height: 40, alignItems: "center", justifyContent: "center" }
-const $glyph: TextStyle = { fontSize: 20 }
+const $icon: ViewStyle = {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  alignItems: "center",
+  justifyContent: "center",
+}
 const $badge: ViewStyle = {
   position: "absolute",
-  top: 2,
-  right: 2,
+  top: 4,
+  right: 4,
   minWidth: 18,
   height: 18,
   borderRadius: 9,
   paddingHorizontal: 4,
   alignItems: "center",
   justifyContent: "center",
+  borderWidth: 2,
 }
 const $badgeText: TextStyle = { fontSize: 10, fontWeight: "700" }

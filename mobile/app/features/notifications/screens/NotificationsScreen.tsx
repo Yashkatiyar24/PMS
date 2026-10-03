@@ -13,6 +13,7 @@ import {
   Panel,
   Screen,
 } from "@/components"
+import type { GlyphName } from "@/components/Glyph"
 import { translate } from "@/i18n/translate"
 import { useStores } from "@/models/useStores"
 import { openPath } from "@/navigators/linking"
@@ -22,19 +23,19 @@ import { formatDateTime } from "@/utils/date"
 
 import type { NotificationItem } from "../types"
 
-const LOOK: Record<string, { glyph: string; tone: Tone }> = {
-  new_booking: { glyph: "📅", tone: "brand" },
-  booking_cancelled: { glyph: "✕", tone: "neutral" },
-  payment_received: { glyph: "₹", tone: "ok" },
-  payment_failed: { glyph: "₹", tone: "danger" },
-  payment_after_expiry: { glyph: "₹", tone: "warn" },
-  payment_short: { glyph: "₹", tone: "warn" },
-  check_in: { glyph: "→", tone: "ok" },
-  checkout_reminder: { glyph: "⏰", tone: "warn" },
-  room_ready: { glyph: "✓", tone: "teal" },
-  room_dirty: { glyph: "🧹", tone: "warn" },
-  maintenance: { glyph: "🔧", tone: "warn" },
-  low_stock: { glyph: "📦", tone: "violet" },
+const LOOK: Record<string, { icon: GlyphName; tone: Tone }> = {
+  new_booking: { icon: "calendar", tone: "brand" },
+  booking_cancelled: { icon: "close", tone: "neutral" },
+  payment_received: { icon: "rupee", tone: "ok" },
+  payment_failed: { icon: "rupee", tone: "danger" },
+  payment_after_expiry: { icon: "rupee", tone: "warn" },
+  payment_short: { icon: "rupee", tone: "warn" },
+  check_in: { icon: "login", tone: "ok" },
+  checkout_reminder: { icon: "clock", tone: "warn" },
+  room_ready: { icon: "check", tone: "teal" },
+  room_dirty: { icon: "broom", tone: "warn" },
+  maintenance: { icon: "wrench", tone: "warn" },
+  low_stock: { icon: "bag", tone: "violet" },
 }
 
 /** The feed: everything this role cares about, newest first; opening it marks all seen. */
@@ -79,11 +80,11 @@ export const NotificationsScreen = observer(function NotificationsScreen() {
       {items.length > 0 && (
         <ListCard>
           {items.map((n, i) => {
-            const look = LOOK[n.kind] ?? { glyph: "🔔", tone: "neutral" as Tone }
+            const look = LOOK[n.kind] ?? { icon: "bell", tone: "neutral" as Tone }
             return (
               <ListRow
                 key={n.id}
-                leading={<Avatar glyph={look.glyph} tone={look.tone} />}
+                leading={<Avatar icon={look.icon} tone={look.tone} />}
                 title={n.title}
                 subtitle={`${n.body ? `${n.body} · ` : ""}${formatDateTime(n.createdAt)}`}
                 onPress={n.link ? () => open(n) : undefined}

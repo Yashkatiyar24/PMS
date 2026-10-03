@@ -77,7 +77,9 @@ export function InventoryScreen() {
               {rows.map((it, i) => (
                 <ListRow
                   key={it.id}
-                  leading={<Avatar glyph={it.low ? "⚠" : "📦"} tone={it.low ? "warn" : "teal"} />}
+                  leading={
+                    <Avatar icon={it.low ? "alert" : "bag"} tone={it.low ? "warn" : "teal"} />
+                  }
                   title={it.name}
                   subtitle={
                     it.category === "linen"

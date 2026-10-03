@@ -1,7 +1,7 @@
 import { View, type ViewStyle, type TextStyle } from "react-native"
 import { observer } from "mobx-react-lite"
 
-import { Button, Screen, Text } from "@/components"
+import { Button, Glyph, Screen, Text } from "@/components"
 import { translate } from "@/i18n/translate"
 import { useStores } from "@/models/useStores"
 import { useAppTheme } from "@/theme/context"
@@ -12,7 +12,9 @@ export const BillingClosedScreen = observer(function BillingClosedScreen() {
   const { theme } = useAppTheme()
   return (
     <Screen preset="fixed" safeAreaEdges={["top", "bottom"]} contentContainerStyle={$content}>
-      <Text text="🔒" style={$lock} />
+      <View style={[$lock, { backgroundColor: theme.colors.palette.dangerSoft }]}>
+        <Glyph name="lock" size={32} color={theme.colors.palette.danger} />
+      </View>
       <Text text={auth.propertyName} preset="subheading" style={{ color: theme.colors.text }} />
       <Text
         text={translate("billing.closed")}
@@ -45,6 +47,12 @@ const $content: ViewStyle = {
   justifyContent: "center",
   gap: 12,
 }
-const $lock: TextStyle = { fontSize: 48 }
+const $lock: ViewStyle = {
+  width: 72,
+  height: 72,
+  borderRadius: 36,
+  alignItems: "center",
+  justifyContent: "center",
+}
 const $lead: TextStyle = { textAlign: "center" }
 const $actions: ViewStyle = { alignSelf: "stretch", gap: 10, marginTop: 16 }

@@ -138,7 +138,7 @@ export function CheckInScreen() {
           $footer,
           {
             backgroundColor: theme.colors.surface,
-            borderTopColor: theme.colors.border,
+            shadowColor: theme.colors.palette.shadow,
             paddingBottom: Math.max(insets.bottom, 12),
           },
         ]}
@@ -147,10 +147,13 @@ export function CheckInScreen() {
           label={translate("checkin.total")}
           value={`${rupees(total)}${form.unitLabel ? ` · ${form.unitLabel}` : ""}`}
           strong
+          tone="brand"
+          big
         />
         {!!missing && <Banner tone="info" text={translate(missing as "checkin.need.name")} />}
         <Button
           size="lg"
+          icon="check"
           text={translate("checkin.submit")}
           onPress={submit}
           disabled={busy || !!missing || toPaise(form.advance) < 0}
@@ -163,4 +166,14 @@ export function CheckInScreen() {
 
 const $fill: ViewStyle = { flex: 1 }
 const $content: ViewStyle = { padding: 16, gap: 12, paddingBottom: 24 }
-const $footer: ViewStyle = { padding: 12, gap: 8, borderTopWidth: 1 }
+const $footer: ViewStyle = {
+  padding: 16,
+  paddingTop: 12,
+  gap: 10,
+  borderTopLeftRadius: 24,
+  borderTopRightRadius: 24,
+  shadowOpacity: 0.1,
+  shadowRadius: 18,
+  shadowOffset: { width: 0, height: -6 },
+  elevation: 12,
+}

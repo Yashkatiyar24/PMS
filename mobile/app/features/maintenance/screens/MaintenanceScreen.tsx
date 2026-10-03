@@ -94,7 +94,7 @@ export function MaintenanceScreen() {
           {list.map((t, i) => (
             <ListRow
               key={t.id}
-              leading={<Avatar glyph="🔧" tone={PRIORITY_TONE[t.priority]} />}
+              leading={<Avatar icon="wrench" tone={PRIORITY_TONE[t.priority]} />}
               title={`${t.roomNumber ?? translate("maint.noRoom")} · ${t.issue}`}
               subtitle={`${formatDateTime(t.createdAt)}${t.assignedName ? ` · ${t.assignedName}` : ""}`}
               right={

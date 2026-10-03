@@ -156,7 +156,7 @@ export function ChannelsScreen() {
                   key={l.id}
                   leading={
                     <Avatar
-                      glyph="🔗"
+                      icon="globe"
                       tone={l.lastError ? "danger" : l.conflicts > 0 ? "warn" : "teal"}
                     />
                   }

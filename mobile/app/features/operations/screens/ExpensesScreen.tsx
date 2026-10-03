@@ -61,7 +61,7 @@ export function ExpensesScreen() {
           <Button
             preset="ghost"
             size="sm"
-            text="‹"
+            icon="back"
             onPress={() => setMonth(addMonths(month, -1))}
             accessibilityLabel={translate("cal.earlier")}
           />
@@ -69,7 +69,7 @@ export function ExpensesScreen() {
           <Button
             preset="ghost"
             size="sm"
-            text="›"
+            icon="forward"
             onPress={() => setMonth(addMonths(month, 1))}
             accessibilityLabel={translate("cal.later")}
           />
@@ -92,7 +92,7 @@ export function ExpensesScreen() {
           {s.expenses.map((e, i) => (
             <ListRow
               key={e.id}
-              leading={<Avatar glyph="₹" tone={e.voidedAt ? "neutral" : "warn"} />}
+              leading={<Avatar icon="rupee" tone={e.voidedAt ? "neutral" : "warn"} />}
               title={e.vendor || e.description || translateOr(`expense.${e.category}`, e.category)}
               subtitle={`${formatDate(e.spentOn)} · ${translateOr(`expense.${e.category}`, e.category)} · ${e.paymentMode.toUpperCase()}${e.voidReason ? ` · ${e.voidReason}` : ""}`}
               right={

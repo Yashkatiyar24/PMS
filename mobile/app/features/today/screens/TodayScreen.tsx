@@ -47,23 +47,23 @@ export const TodayScreen = observer(function TodayScreen() {
   // Only what this role may do: a square that refuses is worse than a square that is not there.
   const actions: HomeAction[] = [
     has("reservations.create") && {
-      glyph: "＋",
+      icon: "plus",
       label: translate("action.newBooking"),
       onPress: () => navigation.navigate("NewBooking"),
     },
     has("checkin") && {
-      glyph: "→",
+      icon: "login",
       label: translate("action.checkIn"),
       onPress: () => navigation.navigate("CheckIn"),
     },
     {
-      glyph: "⌕",
+      icon: "search",
       label: translate("mobile.findGuest"),
       // Across to another tab, which is the tab navigator's business rather than this stack's.
       onPress: () => navigation.getParent()?.navigate("GuestsTab" as never),
     },
     has("revenue.view") && {
-      glyph: "▥",
+      icon: "chart",
       label: translate("nav.reports"),
       onPress: () => navigation.getParent()?.navigate("ReportsTab" as never),
     },

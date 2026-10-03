@@ -23,7 +23,7 @@ export function GuestStep({ form, patch, photoRequired, maxPhotoKb }: GuestStepP
   const summary = [
     form.idType && translateOr(`id.${form.idType}`, form.idType),
     form.idLast4 && `••${form.idLast4}`,
-    hasPhoto && "📷",
+    hasPhoto && translate("checkin.idPhoto"),
   ]
     .filter(Boolean)
     .join(" · ")

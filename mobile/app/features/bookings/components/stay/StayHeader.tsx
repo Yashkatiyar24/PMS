@@ -1,6 +1,6 @@
 import { Linking, Pressable, View, type ViewStyle, type TextStyle } from "react-native"
 
-import { Chip, Panel, Text } from "@/components"
+import { Chip, Glyph, Panel, Text } from "@/components"
 import type { Folio } from "@/features/folio/types"
 import { translate } from "@/i18n/translate"
 import { useAppTheme } from "@/theme/context"
@@ -39,10 +39,13 @@ export function StayHeader({ booking, folio }: { booking: Booking; folio: Folio 
           onPress={() => Linking.openURL(`tel:${booking.guestPhone}`)}
           accessibilityRole="link"
         >
-          <Text
-            text={`☎ ${formatPhone(booking.guestPhone)}`}
-            style={[$phone, { color: theme.colors.palette.brandInk }]}
-          />
+          <View style={$phoneRow}>
+            <Glyph name="phone" size={15} color={theme.colors.palette.brandInk} weight={2} />
+            <Text
+              text={formatPhone(booking.guestPhone)}
+              style={[$phone, { color: theme.colors.palette.brandInk }]}
+            />
+          </View>
         </Pressable>
       )}
       <Panel>
@@ -93,6 +96,7 @@ function Fact({ label, value, tone }: { label: string; value: string; tone?: "da
 
 const $wrap: ViewStyle = { gap: 8 }
 const $chips: ViewStyle = { flexDirection: "row", flexWrap: "wrap", gap: 6 }
+const $phoneRow: ViewStyle = { flexDirection: "row", alignItems: "center", gap: 6 }
 const $phone: TextStyle = { fontSize: 15, fontWeight: "600" }
 const $grid: ViewStyle = { flexDirection: "row", flexWrap: "wrap" }
 const $fact: ViewStyle = { width: "50%", paddingRight: 8, paddingVertical: 6, gap: 1 }

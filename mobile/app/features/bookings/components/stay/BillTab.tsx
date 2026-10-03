@@ -50,7 +50,7 @@ export function BillTab({ folio, onProvisionalReceipt, onRemoveLine }: BillTabPr
                   <Button
                     preset="ghost"
                     size="sm"
-                    text="✕"
+                    icon="close"
                     accessibilityLabel={`${translate("stay.removeLine")}: ${l.description}`}
                     onPress={() => onRemoveLine?.(l)}
                     testID={`remove-line-${i}`}

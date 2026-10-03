@@ -3,6 +3,7 @@ import { Pressable, View, type ViewStyle, type TextStyle } from "react-native"
 import { useAppTheme } from "@/theme/context"
 import { toneColors, type Tone } from "@/theme/tones"
 
+import { Glyph, type GlyphName } from "./Glyph"
 import { Text } from "./Text"
 
 export type BannerTone = Extract<Tone, "info" | "ok" | "warn" | "danger">
@@ -19,7 +20,14 @@ export type BannerProps = {
   style?: ViewStyle
 }
 
-/** A full-width message strip: offline, saved, error, billing state. */
+const ICON: Record<BannerTone, GlyphName> = {
+  info: "info",
+  ok: "check",
+  warn: "alert",
+  danger: "alert",
+}
+
+/** A full-width message strip: offline, saved, error, billing state. A tinted card with the tone's icon in a white disc. */
 export function Banner({
   tone = "info",
   text,
@@ -34,8 +42,11 @@ export function Banner({
   return (
     <View
       accessibilityRole={tone === "danger" ? "alert" : "text"}
-      style={[$banner, { backgroundColor: soft, borderColor: solid }, style]}
+      style={[$banner, { backgroundColor: soft }, style]}
     >
+      <View style={[$iconBox, { backgroundColor: theme.colors.surface }]}>
+        <Glyph name={ICON[tone]} size={16} color={solid} weight={2} />
+      </View>
       <View style={$body}>
         <Text text={text} style={[$text, { color: theme.colors.text }]} />
         {!!detail && <Text text={detail} size="xs" style={{ color: theme.colors.textDim }} />}
@@ -52,7 +63,7 @@ export function Banner({
           accessibilityLabel="Close"
           hitSlop={12}
         >
-          <Text text="✕" style={{ color: theme.colors.textDim }} />
+          <Glyph name="close" size={16} color={theme.colors.textDim} />
         </Pressable>
       )}
     </View>
@@ -62,12 +73,18 @@ export function Banner({
 const $banner: ViewStyle = {
   flexDirection: "row",
   alignItems: "flex-start",
-  borderRadius: 12,
-  borderLeftWidth: 3,
+  borderRadius: 14,
   paddingVertical: 10,
   paddingHorizontal: 12,
-  gap: 8,
+  gap: 10,
 }
-const $body: ViewStyle = { flex: 1, gap: 2 }
+const $body: ViewStyle = { flex: 1, gap: 2, paddingTop: 4 }
+const $iconBox: ViewStyle = {
+  width: 28,
+  height: 28,
+  borderRadius: 14,
+  alignItems: "center",
+  justifyContent: "center",
+}
 const $text: TextStyle = { fontSize: 14, lineHeight: 20, fontWeight: "600" }
 const $action: TextStyle = { fontSize: 14, fontWeight: "700", marginTop: 4 }

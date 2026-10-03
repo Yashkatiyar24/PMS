@@ -169,15 +169,16 @@ export function NewBookingScreen() {
           $footer,
           {
             backgroundColor: theme.colors.surface,
-            borderTopColor: theme.colors.border,
+            shadowColor: theme.colors.palette.shadow,
             paddingBottom: Math.max(insets.bottom, 12),
           },
         ]}
       >
-        <KV label={translate("stay.total")} value={rupees(total)} strong />
+        <KV label={translate("stay.total")} value={rupees(total)} strong tone="brand" big />
         {!!missing && <Banner tone="info" text={translate(missing as "checkin.need.name")} />}
         <Button
           size="lg"
+          icon="check"
           text={translate("booking.create")}
           onPress={submit}
           disabled={busy || !!missing}
@@ -190,4 +191,14 @@ export function NewBookingScreen() {
 
 const $fill: ViewStyle = { flex: 1 }
 const $content: ViewStyle = { padding: 16, gap: 12, paddingBottom: 24 }
-const $footer: ViewStyle = { padding: 12, gap: 8, borderTopWidth: 1 }
+const $footer: ViewStyle = {
+  padding: 16,
+  paddingTop: 12,
+  gap: 10,
+  borderTopLeftRadius: 24,
+  borderTopRightRadius: 24,
+  shadowOpacity: 0.1,
+  shadowRadius: 18,
+  shadowOffset: { width: 0, height: -6 },
+  elevation: 12,
+}

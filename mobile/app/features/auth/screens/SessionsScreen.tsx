@@ -48,7 +48,7 @@ export function SessionsScreen() {
           {sessions.data.map((s, i) => (
             <ListRow
               key={s.id}
-              leading={<Avatar glyph="📱" tone={s.current ? "ok" : "neutral"} />}
+              leading={<Avatar icon="phone" tone={s.current ? "ok" : "neutral"} />}
               title={s.current ? translate("mobile.thisDevice") : s.deviceName || "—"}
               subtitle={translate("mobile.lastSeen", { when: formatDateTime(s.lastSeenAt) })}
               right={

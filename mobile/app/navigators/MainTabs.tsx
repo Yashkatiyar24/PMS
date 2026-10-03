@@ -2,11 +2,12 @@
  * The bottom tabs. Which tabs exist follows the signed-in role exactly as the web's BottomNav does; each tab holds
  * its own stack so a stay opened from Today does not move the desk off the Today tab.
  */
+import type { ComponentType } from "react"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { observer } from "mobx-react-lite"
 
-import { Text } from "@/components"
+import { Glyph, type GlyphName } from "@/components/Glyph"
 import { PlatformListScreen } from "@/features/admin/screens/PlatformListScreen"
 import { TapeChartScreen } from "@/features/bookings/screens/TapeChartScreen"
 import { GuestsScreen } from "@/features/guests/screens/GuestsScreen"
@@ -15,6 +16,7 @@ import { ReportsScreen } from "@/features/reports/screens/ReportsScreen"
 import { RoomsScreen } from "@/features/rooms/screens/RoomsScreen"
 import { SettingsScreen } from "@/features/settings/screens/SettingsScreen"
 import { TodayScreen } from "@/features/today/screens/TodayScreen"
+import type { TxKeyPath } from "@/i18n"
 import { translate } from "@/i18n/translate"
 import { useStores } from "@/models/useStores"
 import { useAppTheme } from "@/theme/context"
@@ -63,15 +65,33 @@ const PlatformStack = makeStack({
   component: gated(PlatformListScreen, { superAdmin: true }),
 })
 
-const TABS = {
-  Today: { route: "TodayTab", label: "nav.today", glyph: "⌂", component: TodayStack },
-  Guests: { route: "GuestsTab", label: "guests.title", glyph: "☺", component: GuestsStack },
-  Bookings: { route: "BookingsTab", label: "nav.bookings", glyph: "▦", component: BookingsStack },
-  Rooms: { route: "RoomsTab", label: "nav.rooms", glyph: "⌸", component: RoomsStack },
-  Reports: { route: "ReportsTab", label: "nav.reports", glyph: "▥", component: ReportsStack },
-  Settings: { route: "SettingsTab", label: "nav.settings", glyph: "⚙", component: SettingsStack },
-  Platform: { route: "PlatformTab", label: "admin.title", glyph: "⛨", component: PlatformStack },
-} as const
+const TABS: Record<
+  string,
+  { route: keyof MainTabParamList; label: TxKeyPath; icon: GlyphName; component: ComponentType }
+> = {
+  Today: { route: "TodayTab", label: "nav.today", icon: "home", component: TodayStack },
+  Guests: { route: "GuestsTab", label: "guests.title", icon: "users", component: GuestsStack },
+  Bookings: {
+    route: "BookingsTab",
+    label: "nav.bookings",
+    icon: "calendar",
+    component: BookingsStack,
+  },
+  Rooms: { route: "RoomsTab", label: "nav.rooms", icon: "bed", component: RoomsStack },
+  Reports: { route: "ReportsTab", label: "nav.reports", icon: "chart", component: ReportsStack },
+  Settings: {
+    route: "SettingsTab",
+    label: "nav.settings",
+    icon: "settings",
+    component: SettingsStack,
+  },
+  Platform: {
+    route: "PlatformTab",
+    label: "admin.title",
+    icon: "shield",
+    component: PlatformStack,
+  },
+}
 
 export const MainTabs = observer(function MainTabs() {
   const { auth } = useStores()
@@ -100,8 +120,8 @@ export const MainTabs = observer(function MainTabs() {
             component={tab.component}
             options={{
               title: translate(tab.label),
-              tabBarIcon: ({ color }) => (
-                <Text text={tab.glyph} style={{ color, fontSize: 20, lineHeight: 24 }} />
+              tabBarIcon: ({ color, focused }) => (
+                <Glyph name={tab.icon} size={22} color={color} weight={focused ? 2.2 : 1.75} />
               ),
             }}
           />

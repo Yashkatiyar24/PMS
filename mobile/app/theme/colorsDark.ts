@@ -1,4 +1,4 @@
-/** Dark theme: the same teal-on-slate idea at night. Same keys as `colors.ts`. */
+/** Dark theme: the same teal-on-white idea at night, re-stepped on slate rather than inverted. Same keys as `colors.ts`. */
 const palette = {
   bg: "#0e1518",
   surface: "#152024",
@@ -15,6 +15,9 @@ const palette = {
   brandStrong: "#6adcea",
   brandSoft: "#12343c",
   brandInk: "#8ae2ec",
+  brandGradientStart: "#2fc3d6",
+  brandGradientEnd: "#6adcea",
+  navy: "#0b1a2e",
   teal: "#3ecfe0",
   tealSoft: "#12343c",
   violet: "#7e9dd8",
@@ -30,6 +33,7 @@ const palette = {
   neutral: "#a3b4b8",
   neutralSoft: "#1f2a2e",
   chart: "#3ecfe0",
+  shadow: "#000000",
 
   neutral100: "#152024",
   neutral200: "#1a272c",
@@ -47,6 +51,10 @@ const palette = {
   angry100: "#3c1f1d",
   angry500: "#f27b74",
 
+  /** White at three strengths, for text and glass on the teal gradient and the navy wedge. */
+  onSolidSoft: "rgba(255, 255, 255, 0.72)",
+  onSolidFaint: "rgba(255, 255, 255, 0.3)",
+  onSolidGlass: "rgba(255, 255, 255, 0.16)",
   overlay20: "rgba(0, 0, 0, 0.3)",
   overlay50: "rgba(0, 0, 0, 0.6)",
 } as const

@@ -115,7 +115,7 @@ export function RestaurantScreen() {
                   key={o.id}
                   leading={
                     <Avatar
-                      glyph={o.bookingId ? "🛏" : "🍽"}
+                      icon={o.bookingId ? "bed" : "receipt"}
                       tone={o.status === "open" ? "ok" : "neutral"}
                     />
                   }

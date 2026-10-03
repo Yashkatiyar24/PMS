@@ -1,4 +1,5 @@
 import type { Tone } from "@/theme/tones"
+import type { Colors } from "@/theme/types"
 
 import type { Room, RoomStatus } from "../types"
 
@@ -91,5 +92,27 @@ export function nextStatuses(status: RoomStatus): { to: RoomStatus; label: strin
       ]
     case "inspected":
       return [{ to: "dirty", label: "rooms.markDirty" }]
+  }
+}
+
+/** The board's colour for one room: a fill, its ink, the edge and the status dot. Occupied is told by `taken`. */
+export function chipLook(
+  colors: Colors,
+  room: Room,
+): { bg: string; fg: string; border: string; dot: string; taken: boolean } {
+  const p = colors.palette
+  const occ = occupancySummary(room)
+  const taken = occ.key === "occupied" || (occ.key === "beds" && (occ.taken ?? 0) > 0)
+  switch (room.status) {
+    case "dirty":
+      return { bg: p.dangerSoft, fg: p.danger, border: p.dangerSoft, dot: p.danger, taken }
+    case "cleaning":
+      return { bg: p.warnSoft, fg: p.warn, border: p.warnSoft, dot: p.warn, taken }
+    case "inspected":
+      return { bg: p.brandSoft, fg: p.brandInk, border: p.brandSoft, dot: p.brand, taken }
+    case "clean":
+      return { bg: colors.surface, fg: colors.text, border: colors.border, dot: p.ok, taken }
+    default:
+      return { bg: p.neutralSoft, fg: colors.textDim, border: p.neutralSoft, dot: p.neutral, taken }
   }
 }

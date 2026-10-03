@@ -2,6 +2,7 @@ import { Pressable, View, type ViewStyle, type TextStyle } from "react-native"
 
 import { useAppTheme } from "@/theme/context"
 
+import { Glyph } from "./Glyph"
 import { Text } from "./Text"
 
 export type StepperProps = {
@@ -12,51 +13,51 @@ export type StepperProps = {
   onChange: (value: number) => void
 }
 
-/** − value + for adults, children, nights, quantities. */
+/** A caption over the figure, with − and + in soft teal discs: adults, children, nights, quantities. */
 export function Stepper({ label, value, min = 0, max = 999, onChange }: StepperProps) {
   const { theme } = useAppTheme()
-  const button = (text: string, next: number, disabled: boolean, a11y: string) => (
+  const button = (icon: "minus" | "plus", next: number, disabled: boolean, a11y: string) => (
     <Pressable
       onPress={() => onChange(next)}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={`${a11y} ${label}`}
-      style={[
+      style={({ pressed }) => [
         $button,
         {
-          borderColor: theme.colors.borderStrong,
-          backgroundColor: theme.colors.surface,
-          opacity: disabled ? 0.4 : 1,
+          backgroundColor: theme.colors.palette.brandSoft,
+          opacity: disabled ? 0.35 : pressed ? 0.7 : 1,
         },
       ]}
     >
-      <Text text={text} style={[$sign, { color: theme.colors.text }]} />
+      <Glyph name={icon} size={16} color={theme.colors.palette.brandInk} weight={2.2} />
     </Pressable>
   )
   return (
     <View style={$row}>
-      <Text text={label} size="sm" style={{ color: theme.colors.textDim, flex: 1 }} />
-      {button("−", value - 1, value <= min, "Decrease")}
-      <Text text={String(value)} style={[$value, { color: theme.colors.text }]} />
-      {button("+", value + 1, value >= max, "Increase")}
+      <View style={$text}>
+        <Text text={label} style={[$label, { color: theme.colors.textDim }]} />
+        <Text text={String(value)} style={[$value, { color: theme.colors.text }]} />
+      </View>
+      {button("minus", value - 1, value <= min, "Decrease")}
+      {button("plus", value + 1, value >= max, "Increase")}
     </View>
   )
 }
 
-const $row: ViewStyle = { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 44 }
+const $row: ViewStyle = { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 48 }
+const $text: ViewStyle = { flex: 1 }
+const $label: TextStyle = { fontSize: 12, lineHeight: 16, fontWeight: "500" }
+const $value: TextStyle = {
+  fontSize: 18,
+  lineHeight: 24,
+  fontWeight: "600",
+  fontVariant: ["tabular-nums"],
+}
 const $button: ViewStyle = {
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  borderWidth: 1,
+  width: 38,
+  height: 38,
+  borderRadius: 19,
   alignItems: "center",
   justifyContent: "center",
-}
-const $sign: TextStyle = { fontSize: 20, lineHeight: 24, fontWeight: "600" }
-const $value: TextStyle = {
-  minWidth: 28,
-  textAlign: "center",
-  fontSize: 18,
-  fontWeight: "700",
-  fontVariant: ["tabular-nums"],
 }

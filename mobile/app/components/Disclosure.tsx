@@ -3,6 +3,7 @@ import { Pressable, View, type ViewStyle, type TextStyle } from "react-native"
 
 import { useAppTheme } from "@/theme/context"
 
+import { Glyph } from "./Glyph"
 import { Text } from "./Text"
 
 export type DisclosureProps = {
@@ -37,7 +38,7 @@ export function Disclosure({ title, summary, defaultOpen = false, children }: Di
             />
           )}
         </View>
-        <Text text={open ? "⌃" : "⌄"} style={{ color: theme.colors.textDim, fontSize: 18 }} />
+        <Glyph name={open ? "chevronUp" : "chevronDown"} size={18} color={theme.colors.textDim} />
       </Pressable>
       {!!open && <View style={$body}>{children}</View>}
     </View>

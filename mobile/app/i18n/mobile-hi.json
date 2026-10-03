@@ -65,5 +65,6 @@
   "mobile.alreadyIn": "{n} आ चुके",
   "mobile.quickActions": "तुरंत काम",
   "mobile.findGuest": "अतिथि खोजें",
-  "mobile.inHouse": "ठहरे हुए"
+  "mobile.inHouse": "ठहरे हुए",
+  "ocr.filled": "फ़ोटो से पढ़ा: अंतिम 4 अंक {last4} — जाँच लें।"
 }

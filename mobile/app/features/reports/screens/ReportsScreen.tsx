@@ -85,7 +85,7 @@ export const ReportsScreen = observer(function ReportsScreen() {
           <Button
             preset="secondary"
             size="sm"
-            text="⋯"
+            icon="more"
             accessibilityLabel={translate("common.more")}
             onPress={() => setMenu(true)}
           />

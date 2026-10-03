@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { useAppTheme } from "@/theme/context"
 
+import { Glyph } from "./Glyph"
 import { Text } from "./Text"
 
 export type SheetProps = {
@@ -61,7 +62,11 @@ export function Sheet({ open, onClose, title, description, children, footer, loc
           <View style={[$handle, { backgroundColor: theme.colors.borderStrong }]} />
           <View style={$header}>
             <View style={$fill}>
-              <Text text={title} preset="subheading" style={{ color: theme.colors.text }} />
+              <Text
+                text={title}
+                preset="subheading"
+                style={[$title, { color: theme.colors.text }]}
+              />
               {!!description && (
                 <Text text={description} size="xs" style={{ color: theme.colors.textDim }} />
               )}
@@ -74,7 +79,7 @@ export function Sheet({ open, onClose, title, description, children, footer, loc
                 hitSlop={12}
                 style={$close}
               >
-                <Text text="✕" style={[$closeText, { color: theme.colors.textDim }]} />
+                <Glyph name="close" size={18} color={theme.colors.textDim} />
               </Pressable>
             )}
           </View>
@@ -93,11 +98,12 @@ export function Sheet({ open, onClose, title, description, children, footer, loc
 }
 
 const $fill: ViewStyle = { flex: 1 }
+const $title: TextStyle = { fontSize: 22, lineHeight: 28, letterSpacing: -0.4 }
 const $backdrop: ViewStyle = { flex: 1 }
 const $sheet: ViewStyle = {
   maxHeight: "92%",
-  borderTopLeftRadius: 20,
-  borderTopRightRadius: 20,
+  borderTopLeftRadius: 24,
+  borderTopRightRadius: 24,
   paddingHorizontal: 16,
   paddingTop: 8,
 }
@@ -114,8 +120,7 @@ const $header: ViewStyle = {
   gap: 12,
   paddingBottom: 8,
 }
-const $close: ViewStyle = { width: 36, height: 36, alignItems: "center", justifyContent: "center" }
-const $closeText: TextStyle = { fontSize: 18 }
+const $close: ViewStyle = { width: 44, height: 44, alignItems: "center", justifyContent: "center" }
 const $body: ViewStyle = { flexGrow: 0 }
 const $bodyContent: ViewStyle = { paddingBottom: 8, gap: 12 }
 const $footer: ViewStyle = { paddingTop: 8, gap: 8 }

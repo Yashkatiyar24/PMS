@@ -14,7 +14,7 @@ export type SegmentedProps<T extends string> = {
   scroll?: boolean
 }
 
-/** A pill track of exclusive options, with optional counts. */
+/** A row of exclusive options on a pale track; the chosen one lifts to white with its words in teal. */
 export function Segmented<T extends string>({ value, onChange, items, scroll }: SegmentedProps<T>) {
   const { theme } = useAppTheme()
   const track = (
@@ -29,17 +29,33 @@ export function Segmented<T extends string>({ value, onChange, items, scroll }: 
             accessibilityState={{ selected: active }}
             style={[
               $item,
-              active && { backgroundColor: theme.colors.surface },
+              active && {
+                backgroundColor: theme.colors.surface,
+                shadowColor: theme.colors.palette.shadow,
+                shadowOpacity: 0.08,
+                shadowRadius: 6,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 1,
+              },
               !scroll && { flex: 1 },
             ]}
           >
             <Text
               text={item.label}
-              style={[$label, { color: active ? theme.colors.text : theme.colors.textDim }]}
+              style={[
+                $label,
+                { color: active ? theme.colors.palette.brandInk : theme.colors.textDim },
+              ]}
               numberOfLines={1}
             />
             {item.count !== undefined && (
-              <Text text={String(item.count)} style={[$count, { color: theme.colors.textFaint }]} />
+              <Text
+                text={String(item.count)}
+                style={[
+                  $count,
+                  { color: active ? theme.colors.palette.brand : theme.colors.textFaint },
+                ]}
+              />
             )}
           </Pressable>
         )
@@ -55,15 +71,15 @@ export function Segmented<T extends string>({ value, onChange, items, scroll }: 
   )
 }
 
-const $track: ViewStyle = { flexDirection: "row", borderRadius: 999, padding: 3, gap: 2 }
+const $track: ViewStyle = { flexDirection: "row", borderRadius: 14, padding: 3, gap: 2 }
 const $item: ViewStyle = {
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "center",
-  gap: 4,
-  minHeight: 36,
-  paddingHorizontal: 12,
-  borderRadius: 999,
+  gap: 5,
+  minHeight: 38,
+  paddingHorizontal: 14,
+  borderRadius: 11,
 }
 const $label: TextStyle = { fontSize: 13, fontWeight: "600" }
-const $count: TextStyle = { fontSize: 12, fontVariant: ["tabular-nums"] }
+const $count: TextStyle = { fontSize: 12, fontWeight: "600", fontVariant: ["tabular-nums"] }

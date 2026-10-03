@@ -5,6 +5,7 @@ import {
   PressableStateCallbackType,
   StyleProp,
   TextStyle,
+  View,
   ViewStyle,
 } from "react-native"
 
@@ -12,9 +13,14 @@ import { useAppTheme } from "@/theme/context"
 import { $styles } from "@/theme/styles"
 import type { ThemedStyle, ThemedStyleArray } from "@/theme/types"
 
+import { Glyph, type GlyphName } from "./Glyph"
+import { Gradient } from "./Gradient"
 import { Text, TextProps } from "./Text"
 
-/** primary = solid ink pill (the web's default), secondary = outlined, soft = brand tint, danger, ghost. */
+/**
+ * primary = the teal gradient call-to-action, its label set in small capitals as the reference does
+ * ("COMPLETE ✓", "SIGN IN →"); secondary = outlined; soft = a teal tint; danger; ghost = text only.
+ */
 type Presets = "primary" | "secondary" | "soft" | "danger" | "ghost"
 export type ButtonSize = "sm" | "md" | "lg"
 
@@ -25,86 +31,31 @@ export interface ButtonAccessoryProps {
 }
 
 export interface ButtonProps extends PressableProps {
-  /**
-   * Text which is looked up via i18n.
-   */
   tx?: TextProps["tx"]
-  /**
-   * The text to display if not using `tx` or nested components.
-   */
   text?: TextProps["text"]
-  /**
-   * Optional options to pass to i18n. Useful for interpolation
-   * as well as explicitly setting locale or translation fallbacks.
-   */
   txOptions?: TextProps["txOptions"]
-  /**
-   * An optional style override useful for padding & margin.
-   */
   style?: StyleProp<ViewStyle>
-  /**
-   * An optional style override for the "pressed" state.
-   */
   pressedStyle?: StyleProp<ViewStyle>
-  /**
-   * An optional style override for the button text.
-   */
   textStyle?: StyleProp<TextStyle>
-  /**
-   * An optional style override for the button text when in the "pressed" state.
-   */
   pressedTextStyle?: StyleProp<TextStyle>
-  /**
-   * An optional style override for the button text when in the "disabled" state.
-   */
   disabledTextStyle?: StyleProp<TextStyle>
-  /**
-   * One of the different types of button presets.
-   */
   preset?: Presets
-  /**
-   * Height: sm 36, md 44 (default), lg 52.
-   */
+  /** Height: sm 36, md 46 (default), lg 54. */
   size?: ButtonSize
-  /**
-   * An optional component to render on the right side of the text.
-   * Example: `RightAccessory={(props) => <View {...props} />}`
-   */
+  /** An icon after the label, as the reference puts a tick or an arrow at the end of its main button. */
+  icon?: GlyphName
+  /** An icon before the label. */
+  leadingIcon?: GlyphName
   RightAccessory?: ComponentType<ButtonAccessoryProps>
-  /**
-   * An optional component to render on the left side of the text.
-   * Example: `LeftAccessory={(props) => <View {...props} />}`
-   */
   LeftAccessory?: ComponentType<ButtonAccessoryProps>
-  /**
-   * Children components.
-   */
   children?: React.ReactNode
-  /**
-   * disabled prop, accessed directly for declarative styling reasons.
-   * https://reactnative.dev/docs/pressable#disabled
-   */
   disabled?: boolean
-  /**
-   * An optional style override for the disabled state
-   */
   disabledStyle?: StyleProp<ViewStyle>
 }
 
-/**
- * A component that allows users to take actions and make choices.
- * Wraps the Text component with a Pressable component.
- * @see [Documentation and Examples]{@link https://docs.infinite.red/ignite-cli/boilerplate/app/components/Button/}
- * @param {ButtonProps} props - The props for the `Button` component.
- * @returns {JSX.Element} The rendered `Button` component.
- * @example
- * <Button
- *   tx="common:ok"
- *   style={styles.button}
- *   textStyle={styles.buttonText}
- *   onPress={handleButtonPress}
- * />
- */
+const RADIUS = 14
+
+/** A button. The main one carries the brand gradient; the rest are quiet. */
 export function Button(props: ButtonProps) {
   const {
     tx,
@@ -116,6 +67,8 @@ export function Button(props: ButtonProps) {
     pressedTextStyle: $pressedTextStyleOverride,
     disabledTextStyle: $disabledTextStyleOverride,
     children,
+    icon,
+    leadingIcon,
     RightAccessory,
     LeftAccessory,
     disabled,
@@ -123,15 +76,20 @@ export function Button(props: ButtonProps) {
     ...rest
   } = props
 
-  const { themed } = useAppTheme()
+  const { themed, theme } = useAppTheme()
 
   const preset: Presets = props.preset ?? "primary"
   const size: ButtonSize = props.size ?? "md"
-  /**
-   * @param {PressableStateCallbackType} root0 - The root object containing the pressed state.
-   * @param {boolean} root0.pressed - The pressed state.
-   * @returns {StyleProp<ViewStyle>} The view style based on the pressed state.
-   */
+  const solid = preset === "primary" || preset === "danger"
+  const iconColor = {
+    primary: theme.colors.onSolid,
+    danger: theme.colors.onSolid,
+    secondary: theme.colors.text,
+    soft: theme.colors.palette.brandInk,
+    ghost: theme.colors.palette.brandInk,
+  }[preset]
+  const iconSize = size === "sm" ? 15 : 18
+
   function $viewStyle({ pressed }: PressableStateCallbackType): StyleProp<ViewStyle> {
     return [
       themed($viewPresets[preset]),
@@ -142,20 +100,17 @@ export function Button(props: ButtonProps) {
       !!disabled && $disabledViewStyleOverride,
     ]
   }
-  /**
-   * @param {PressableStateCallbackType} root0 - The root object containing the pressed state.
-   * @param {boolean} root0.pressed - The pressed state.
-   * @returns {StyleProp<TextStyle>} The text style based on the pressed state.
-   */
   function $textStyle({ pressed }: PressableStateCallbackType): StyleProp<TextStyle> {
     return [
       themed($textPresets[preset]),
-      size === "sm" && { fontSize: 14 },
+      size === "sm" && { fontSize: 12.5, letterSpacing: solid ? 0.8 : 0 },
       $textStyleOverride,
       !!pressed && themed([$pressedTextPresets[preset], $pressedTextStyleOverride]),
       !!disabled && $disabledTextStyleOverride,
     ]
   }
+  // Small capitals are the reference's voice for its main actions; everything else keeps its case.
+  const label = solid && text ? text.toUpperCase() : text
 
   return (
     <Pressable
@@ -167,6 +122,9 @@ export function Button(props: ButtonProps) {
     >
       {(state) => (
         <>
+          {preset === "primary" && (
+            <Gradient radius={RADIUS} style={state.pressed ? { opacity: 0.88 } : undefined} />
+          )}
           {!!LeftAccessory && (
             <LeftAccessory
               style={themed($leftAccessoryStyle)}
@@ -174,11 +132,21 @@ export function Button(props: ButtonProps) {
               disabled={disabled}
             />
           )}
-
-          <Text tx={tx} text={text} txOptions={txOptions} style={$textStyle(state)}>
-            {children}
-          </Text>
-
+          {!!leadingIcon && (
+            <View style={$glyphBox}>
+              <Glyph name={leadingIcon} size={iconSize} color={iconColor} weight={2} />
+            </View>
+          )}
+          {(!!tx || !!text || !!children) && (
+            <Text tx={tx} text={label} txOptions={txOptions} style={$textStyle(state)}>
+              {children}
+            </Text>
+          )}
+          {!!icon && (
+            <View style={$glyphBox}>
+              <Glyph name={icon} size={iconSize} color={iconColor} weight={2} />
+            </View>
+          )}
           {!!RightAccessory && (
             <RightAccessory
               style={themed($rightAccessoryStyle)}
@@ -193,8 +161,8 @@ export function Button(props: ButtonProps) {
 }
 
 const $baseViewStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  minHeight: 44,
-  borderRadius: 999,
+  minHeight: 46,
+  borderRadius: RADIUS,
   justifyContent: "center",
   alignItems: "center",
   paddingVertical: spacing.xs,
@@ -204,13 +172,13 @@ const $baseViewStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 })
 
 const $sizeStyles: Record<ButtonSize, ViewStyle> = {
-  sm: { minHeight: 36, paddingHorizontal: 12 },
-  md: { minHeight: 44 },
-  lg: { minHeight: 52, paddingHorizontal: 20 },
+  sm: { minHeight: 36, paddingHorizontal: 12, borderRadius: 11 },
+  md: { minHeight: 46 },
+  lg: { minHeight: 54, paddingHorizontal: 20 },
 }
 
 const $baseTextStyle: ThemedStyle<TextStyle> = ({ typography }) => ({
-  fontSize: 16,
+  fontSize: 15,
   lineHeight: 20,
   fontFamily: typography.primary.medium,
   fontWeight: "600",
@@ -220,6 +188,10 @@ const $baseTextStyle: ThemedStyle<TextStyle> = ({ typography }) => ({
   zIndex: 2,
 })
 
+/** The gradient button's label: a little smaller, spaced out, in capitals. */
+const $solidTextStyle: TextStyle = { fontSize: 14, letterSpacing: 1.3, fontWeight: "700" }
+
+const $glyphBox: ViewStyle = { zIndex: 2 }
 const $rightAccessoryStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginStart: spacing.xxs,
   zIndex: 1,
@@ -233,7 +205,14 @@ const $viewPresets: Record<Presets, ThemedStyleArray<ViewStyle>> = {
   primary: [
     $styles.row,
     $baseViewStyle,
-    ({ colors }) => ({ backgroundColor: colors.primaryButton }),
+    ({ colors }) => ({
+      backgroundColor: colors.palette.brand,
+      shadowColor: colors.palette.brand,
+      shadowOpacity: 0.28,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 5 },
+      elevation: 3,
+    }),
   ],
   secondary: [
     $styles.row,
@@ -258,25 +237,25 @@ const $viewPresets: Record<Presets, ThemedStyleArray<ViewStyle>> = {
 }
 
 const $textPresets: Record<Presets, ThemedStyleArray<TextStyle>> = {
-  primary: [$baseTextStyle, ({ colors }) => ({ color: colors.onSolid })],
+  primary: [$baseTextStyle, $solidTextStyle, ({ colors }) => ({ color: colors.onSolid })],
   secondary: [$baseTextStyle, ({ colors }) => ({ color: colors.text })],
   soft: [$baseTextStyle, ({ colors }) => ({ color: colors.palette.brandInk })],
-  danger: [$baseTextStyle, ({ colors }) => ({ color: colors.palette.onSolid })],
+  danger: [$baseTextStyle, $solidTextStyle, ({ colors }) => ({ color: colors.onSolid })],
   ghost: [$baseTextStyle, ({ colors }) => ({ color: colors.palette.brandInk })],
 }
 
 const $pressedViewPresets: Record<Presets, ThemedStyle<ViewStyle>> = {
-  primary: () => ({ opacity: 0.85, transform: [{ scale: 0.985 }] }),
+  primary: () => ({ opacity: 0.92, transform: [{ scale: 0.985 }] }),
   secondary: ({ colors }) => ({ backgroundColor: colors.surface2 }),
-  soft: () => ({ opacity: 0.85 }),
-  danger: () => ({ opacity: 0.85 }),
+  soft: ({ colors }) => ({ backgroundColor: colors.palette.brandSoft, opacity: 0.85 }),
+  danger: () => ({ opacity: 0.9 }),
   ghost: ({ colors }) => ({ backgroundColor: colors.surface2 }),
 }
 
 const $pressedTextPresets: Record<Presets, ThemedStyle<TextStyle>> = {
-  primary: () => ({ opacity: 0.9 }),
+  primary: () => ({ opacity: 0.95 }),
   secondary: () => ({ opacity: 0.9 }),
   soft: () => ({ opacity: 0.9 }),
-  danger: () => ({ opacity: 0.9 }),
+  danger: () => ({ opacity: 0.95 }),
   ghost: () => ({ opacity: 0.9 }),
 }

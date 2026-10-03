@@ -114,11 +114,13 @@ export function RoomSheet({
       </View>
       {!!canStatus && (
         <View style={$actions}>
-          {nextStatuses(room.status).map((n) => (
+          {nextStatuses(room.status).map((n, i) => (
             <Button
               key={n.to}
-              preset="secondary"
-              size="sm"
+              preset={i === 0 ? "primary" : "secondary"}
+              icon={i === 0 ? "check" : undefined}
+              size={i === 0 ? "md" : "sm"}
+              style={i === 0 ? $primaryAction : undefined}
               text={translate(n.label as "rooms.markClean")}
               onPress={() => onStatus(n.to, null)}
             />
@@ -202,4 +204,5 @@ export function RoomSheet({
 
 const $row: ViewStyle = { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }
 const $actions: ViewStyle = { flexDirection: "row", flexWrap: "wrap", gap: 8 }
+const $primaryAction: ViewStyle = { flexBasis: "100%" }
 const $block: ViewStyle = { gap: 8 }

@@ -66,7 +66,7 @@ export function LostFoundScreen() {
           {list.map((it, i) => (
             <ListRow
               key={it.id}
-              leading={<Avatar glyph="🎒" tone="teal" />}
+              leading={<Avatar icon="bag" tone="teal" />}
               title={it.description}
               subtitle={`${it.roomNumber ?? "—"} · ${formatDateTime(it.foundAt)} · ${it.foundByName}`}
               right={

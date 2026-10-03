@@ -1,6 +1,6 @@
 import { View, type TextStyle, type ViewStyle } from "react-native"
 
-import { Text } from "@/components"
+import { Glyph, type GlyphName, Text } from "@/components"
 import type { Today } from "@/features/bookings/types"
 import { translate } from "@/i18n/translate"
 import { useAppTheme } from "@/theme/context"
@@ -9,13 +9,13 @@ import { typography } from "@/theme/typography"
 
 /** One number worth knowing before the desk opens, with the one line that explains it. */
 function Tile({
-  glyph,
+  icon,
   tone,
   value,
   label,
   hint,
 }: {
-  glyph: string
+  icon: GlyphName
   tone: Tone
   value: string
   label: string
@@ -25,10 +25,13 @@ function Tile({
   const { solid, soft } = toneColors(theme.colors, tone)
   return (
     <View
-      style={[$tile, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+      style={[
+        $tile,
+        { backgroundColor: theme.colors.surface, shadowColor: theme.colors.palette.shadow },
+      ]}
     >
       <View style={[$glyph, { backgroundColor: soft }]}>
-        <Text text={glyph} style={{ fontSize: 15, lineHeight: 19, color: solid }} />
+        <Glyph name={icon} size={16} color={solid} weight={2} />
       </View>
       <Text
         text={value}
@@ -49,7 +52,7 @@ export function HomeTiles({ today }: { today: Today }) {
   return (
     <View style={$row}>
       <Tile
-        glyph="→"
+        icon="logout"
         tone="warn"
         value={String(today.departures.length)}
         label={translate("mobile.dueOut")}
@@ -60,7 +63,7 @@ export function HomeTiles({ today }: { today: Today }) {
         }
       />
       <Tile
-        glyph="⌸"
+        icon="bed"
         tone="ok"
         value={String(free)}
         label={translate("mobile.freeRooms")}
@@ -71,7 +74,7 @@ export function HomeTiles({ today }: { today: Today }) {
         }
       />
       <Tile
-        glyph="←"
+        icon="login"
         tone="brand"
         value={String(today.arrivals.length)}
         label={translate("mobile.arrivingToday")}
@@ -82,7 +85,16 @@ export function HomeTiles({ today }: { today: Today }) {
 }
 
 const $row: ViewStyle = { flexDirection: "row", gap: 10 }
-const $tile: ViewStyle = { flex: 1, borderRadius: 18, borderWidth: 1, padding: 12, gap: 3 }
+const $tile: ViewStyle = {
+  flex: 1,
+  borderRadius: 18,
+  padding: 12,
+  gap: 3,
+  shadowOpacity: 0.07,
+  shadowRadius: 14,
+  shadowOffset: { width: 0, height: 6 },
+  elevation: 2,
+}
 const $glyph: ViewStyle = {
   width: 30,
   height: 30,

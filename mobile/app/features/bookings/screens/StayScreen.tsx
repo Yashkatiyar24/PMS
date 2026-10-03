@@ -117,7 +117,7 @@ export const StayScreen = observer(function StayScreen() {
           <Button
             preset="secondary"
             size="sm"
-            text="⋯"
+            icon="more"
             accessibilityLabel={translate("common.more")}
             onPress={() => setMenu(true)}
             testID="stay-menu"

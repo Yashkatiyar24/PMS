@@ -13,7 +13,7 @@ export type ChipProps = {
   style?: ViewStyle
 }
 
-/** A small tinted pill: state, payment status, count. */
+/** A small tinted pill: state, payment status, count. Status never rides on the colour alone; the word is there. */
 export function Chip({ tone = "neutral", text, dot, style }: ChipProps) {
   const { theme } = useAppTheme()
   const { solid, soft } = toneColors(theme.colors, tone)
@@ -30,8 +30,8 @@ const $chip: ViewStyle = {
   alignItems: "center",
   alignSelf: "flex-start",
   borderRadius: 999,
-  paddingHorizontal: 8,
-  paddingVertical: 2,
+  paddingHorizontal: 9,
+  paddingVertical: 3,
   gap: 6,
   minHeight: 22,
 }

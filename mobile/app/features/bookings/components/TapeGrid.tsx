@@ -167,7 +167,7 @@ export function TapeGrid({ days, groups, load, onBar, onLongBar, onCell }: TapeG
                         ]}
                       >
                         <Text
-                          text={`${b.occupancy.source === "website" ? "🌐 " : b.occupancy.source === "ota" ? "🔗 " : ""}${b.occupancy.guest_name}`}
+                          text={`${b.occupancy.source === "website" ? "W · " : b.occupancy.source === "ota" ? "OTA · " : ""}${b.occupancy.guest_name}`}
                           size="xxs"
                           weight="bold"
                           style={{ color: theme.colors.palette.onSolid }}

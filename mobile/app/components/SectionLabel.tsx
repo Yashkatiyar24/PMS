@@ -3,27 +3,42 @@ import { View, type ViewStyle, type TextStyle } from "react-native"
 
 import { useAppTheme } from "@/theme/context"
 
+import { Glyph, type GlyphName } from "./Glyph"
 import { Text } from "./Text"
 
-/** Small uppercase label above a group, with an optional right slot. */
-export function SectionLabel({ text, right }: { text: string; right?: ReactNode }) {
+/**
+ * A group's heading as the reference sets it: a small line icon and the words in spaced capitals, grey, so the
+ * eye reads the fields under it before the heading itself. An optional slot at the right for a total.
+ */
+export function SectionLabel({
+  text,
+  icon,
+  right,
+}: {
+  text: string
+  icon?: GlyphName
+  right?: ReactNode
+}) {
   const { theme } = useAppTheme()
   return (
     <View style={$row}>
-      <Text text={text.toUpperCase()} style={[$label, { color: theme.colors.textFaint }]} />
+      <View style={$left}>
+        {!!icon && <Glyph name={icon} size={15} color={theme.colors.textDim} />}
+        <Text text={text.toUpperCase()} style={[$label, { color: theme.colors.textDim }]} />
+      </View>
       {right}
     </View>
   )
 }
 
-/** A surface card with padding; the container most screens build from. */
+/** A white card lifted by a soft shadow rather than a border; the container most screens build from. */
 export function Panel({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const { theme } = useAppTheme()
   return (
     <View
       style={[
         $panel,
-        { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+        { backgroundColor: theme.colors.surface, shadowColor: theme.colors.palette.shadow },
         style,
       ]}
     >
@@ -36,8 +51,18 @@ const $row: ViewStyle = {
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
-  marginTop: 12,
+  marginTop: 14,
   marginBottom: 6,
+  paddingHorizontal: 2,
 }
-const $label: TextStyle = { fontSize: 11, fontWeight: "700", letterSpacing: 0.8 }
-const $panel: ViewStyle = { borderRadius: 16, borderWidth: 1, padding: 14, gap: 10 }
+const $left: ViewStyle = { flexDirection: "row", alignItems: "center", gap: 7 }
+const $label: TextStyle = { fontSize: 11, lineHeight: 14, fontWeight: "700", letterSpacing: 1.2 }
+const $panel: ViewStyle = {
+  borderRadius: 18,
+  padding: 16,
+  gap: 12,
+  shadowOpacity: 0.07,
+  shadowRadius: 14,
+  shadowOffset: { width: 0, height: 6 },
+  elevation: 2,
+}

@@ -3,6 +3,7 @@ import { Pressable, View, type ViewStyle, type TextStyle } from "react-native"
 
 import { useAppTheme } from "@/theme/context"
 
+import { Glyph } from "./Glyph"
 import { Text } from "./Text"
 
 export type ListRowProps = {
@@ -12,7 +13,7 @@ export type ListRowProps = {
   right?: ReactNode
   onPress?: () => void
   onLongPress?: () => void
-  /** Show › at the end (default when pressable). */
+  /** Show a chevron at the end (default when pressable). */
   chevron?: boolean
   /** Strike the title (voided, inactive). */
   struck?: boolean
@@ -52,7 +53,7 @@ export function ListRow({
         )}
       </View>
       {right}
-      {!!showChevron && <Text text="›" style={[$chev, { color: theme.colors.textFaint }]} />}
+      {!!showChevron && <Glyph name="chevronRight" size={18} color={theme.colors.textFaint} />}
     </>
   )
   const $line: ViewStyle = last
@@ -77,14 +78,14 @@ export function ListRow({
   return <View style={[$row, $line]}>{body}</View>
 }
 
-/** A card that holds ListRows with hairline dividers. */
+/** A white card that holds ListRows with hairline dividers, lifted by a soft shadow rather than a border. */
 export function ListCard({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const { theme } = useAppTheme()
   return (
     <View
       style={[
         $card,
-        { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+        { backgroundColor: theme.colors.surface, shadowColor: theme.colors.palette.shadow },
         style,
       ]}
     >
@@ -104,5 +105,11 @@ const $row: ViewStyle = {
 const $text: ViewStyle = { flex: 1, gap: 2 }
 const $title: TextStyle = { fontSize: 15, fontWeight: "600" }
 const $struck: TextStyle = { textDecorationLine: "line-through", opacity: 0.6 }
-const $chev: TextStyle = { fontSize: 22, lineHeight: 24 }
-const $card: ViewStyle = { borderRadius: 16, borderWidth: 1, overflow: "hidden" }
+const $card: ViewStyle = {
+  borderRadius: 18,
+  overflow: "hidden",
+  shadowOpacity: 0.07,
+  shadowRadius: 14,
+  shadowOffset: { width: 0, height: 6 },
+  elevation: 2,
+}

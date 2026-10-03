@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { RefreshControl, View, type ViewStyle } from "react-native"
+import { RefreshControl, View, type TextStyle, type ViewStyle } from "react-native"
 import { observer } from "mobx-react-lite"
 
 import {
@@ -91,7 +91,7 @@ export const RoomsScreen = observer(function RoomsScreen() {
             <Button
               preset="secondary"
               size="sm"
-              text="⋯"
+              icon="more"
               accessibilityLabel={translate("common.more")}
               onPress={() => setMenu(true)}
             />
@@ -120,7 +120,12 @@ export const RoomsScreen = observer(function RoomsScreen() {
           <SectionLabel text={g.title} />
           <View style={$grid}>
             {g.rooms.map((r) => (
-              <RoomTile key={r.id} room={r} onPress={() => setOpen(r)} />
+              <RoomTile
+                key={r.id}
+                room={r}
+                selected={open?.id === r.id}
+                onPress={() => setOpen(r)}
+              />
             ))}
           </View>
         </View>
@@ -169,21 +174,26 @@ export const RoomsScreen = observer(function RoomsScreen() {
   )
 })
 
-/** What the chip colours mean, in the words the status chips already use. */
+/** What the chip fills mean — the reference's Dirty / Inspected / Clean / Out of service line, as small swatches. */
 function Legend() {
   const { theme } = useAppTheme()
-  const entries: { color: string; label: string }[] = [
-    { color: theme.colors.palette.brand, label: translate("rooms.occupied") },
-    { color: theme.colors.palette.ok, label: translate("rooms.status.clean") },
-    { color: theme.colors.palette.warn, label: translate("rooms.status.dirty") },
-    { color: theme.colors.palette.danger, label: translate("rooms.status.blocked") },
+  const p = theme.colors.palette
+  const entries: { fill: string; edge: string; label: string }[] = [
+    { fill: p.dangerSoft, edge: p.danger, label: translate("rooms.status.dirty") },
+    { fill: p.brandSoft, edge: p.brand, label: translate("rooms.status.inspected") },
+    {
+      fill: theme.colors.surface,
+      edge: theme.colors.borderStrong,
+      label: translate("rooms.status.clean"),
+    },
+    { fill: p.neutralSoft, edge: p.neutral, label: translate("rooms.status.blocked") },
   ]
   return (
     <View style={$legend}>
       {entries.map((e) => (
         <View key={e.label} style={$legendItem}>
-          <View style={[$legendDot, { backgroundColor: e.color }]} />
-          <Text text={e.label} size="xxs" style={{ color: theme.colors.textDim }} />
+          <View style={[$legendSwatch, { backgroundColor: e.fill, borderColor: e.edge }]} />
+          <Text text={e.label} size="xxs" style={[$legendText, { color: theme.colors.textDim }]} />
         </View>
       ))}
     </View>
@@ -191,7 +201,8 @@ function Legend() {
 }
 
 const $content: ViewStyle = { padding: 16, gap: 8, paddingBottom: 32 }
-const $grid: ViewStyle = { flexDirection: "row", flexWrap: "wrap", gap: 8 }
-const $legend: ViewStyle = { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingVertical: 2 }
-const $legendItem: ViewStyle = { flexDirection: "row", alignItems: "center", gap: 5 }
-const $legendDot: ViewStyle = { width: 7, height: 7, borderRadius: 4 }
+const $grid: ViewStyle = { flexDirection: "row", flexWrap: "wrap", gap: 10 }
+const $legend: ViewStyle = { flexDirection: "row", flexWrap: "wrap", gap: 14, paddingVertical: 4 }
+const $legendItem: ViewStyle = { flexDirection: "row", alignItems: "center", gap: 6 }
+const $legendSwatch: ViewStyle = { width: 12, height: 12, borderRadius: 4, borderWidth: 1 }
+const $legendText: TextStyle = { fontWeight: "600", letterSpacing: 0.3 }
