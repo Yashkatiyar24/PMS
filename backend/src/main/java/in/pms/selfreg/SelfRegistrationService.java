@@ -74,6 +74,23 @@ public class SelfRegistrationService {
     public record GuestForm(String propertyName, String language, boolean askPhoto, boolean askConsent,
                             String consentText, boolean alreadyDone) {}
 
+    /**
+     * The live check-in, as the guest's phone sees it: their own draft and nothing else. No property id, no
+     * booking, no room, no amount, no other guest — the same rule the form endpoint follows.
+     */
+    public record Session(String state, String status, int version, Map<String, Object> draft,
+                          Map<String, Object> ocr, boolean hasIdPhoto, OffsetDateTime expiresAt) {}
+
+    /**
+     * A field-level write of the shared draft, from either side.
+     *
+     * @param fields only the fields whose value changed; everything else in the draft is left alone
+     * @param ocr    what a document read suggests, with its confidence. Merged into the suggestions, never
+     *               into the draft: a suggestion is offered to a human, not written over their typing
+     * @param status what the desk's status line should say ("filling", "reading_id", ...)
+     */
+    public record Patch(Map<String, Object> fields, Map<String, Object> ocr, String status) {}
+
     // ---------- Desk side ----------
 
     /**
@@ -140,7 +157,9 @@ public class SelfRegistrationService {
     @Transactional
     public UUID apply(UUID id, GuestService.GuestInput corrected, UUID userId) {
         SelfRegistration reg = get(id);
-        if (reg.submitted() == null) throw new BadRequestException("The guest has not filled the form yet");
+        // The desk's own corrected copy stands in for a submission: it is the draft on their screen, which
+        // the guest filled in field by field. Without one, there must be something the guest actually sent.
+        if (reg.submitted() == null && corrected == null) throw new BadRequestException("The guest has not filled the form yet");
         if ("applied".equals(reg.state())) throw new BadRequestException("These details have already been saved");
 
         var in = reg.submitted();
@@ -212,6 +231,10 @@ public class SelfRegistrationService {
         // A second phone posting the same link at the same time loses the race rather than overwriting.
         if (changed == 0) throw new BadRequestException("These details have already been sent");
 
+        // The draft is the one copy both screens read, so the final answers land in it as well: the desk's
+        // form shows what was sent, not the last keystroke before the guest pressed the button.
+        writeDraft(link.id(), new Patch(json.convertValue(clean, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}), null, "submitted"), "guest", null);
+
         // Attributed to no user, because no user did it. The desk sees it as a self-registration.
         audit.record("guest_registrations", link.id().toString(), "guest_submit", null, Map.of("name", clean.name()), null);
     }
@@ -235,6 +258,78 @@ public class SelfRegistrationService {
         jdbc.sql("update guest_registrations set id_photo_key = ? where id = ? and property_id = ?")
                 .params(key, link.id(), TenantContext.require()).update();
         if (previous != null) storage.delete(previous); // a retake replaces the photo; the first one is not kept
+    }
+
+    // ---------- The live draft: one row, two screens ----------
+
+    /**
+     * Merge a patch into the shared draft. Both sides come through here, which is why the owner's screen and
+     * the guest's phone can never disagree about what a field is called or how long it may be.
+     *
+     * <p>The merge is done by Postgres with jsonb {@code ||}, so a write touches only the fields it names:
+     * the desk correcting a name while the guest types their address cannot overwrite the address, and there
+     * is no read-modify-write window in which a keystroke could be lost. Each write bumps
+     * {@code draft_version}; the other side polls with the version it last saw, so it applies real changes
+     * and ignores its own echo. When both sides do change the same field, the later write wins — and the
+     * value it replaced is in the audit log rather than silently gone.
+     *
+     * @param source guest | owner | ocr, which is what the other screen labels the change
+     */
+    @Transactional
+    public void writeDraft(UUID id, Patch patch, String source, UUID userId) {
+        Map<String, Object> fields = CheckInFields.clean(patch == null ? null : patch.fields());
+        Map<String, Object> ocr = CheckInFields.cleanOcr(patch == null ? null : patch.ocr());
+        String status = CheckInFields.cleanStatus(patch == null ? null : patch.status());
+
+        Map<String, Object> before = fields.isEmpty() ? Map.of() : readDraft(id);
+        int changed = jdbc.sql("""
+                update guest_registrations
+                   set draft = draft || ?::jsonb,
+                       ocr = coalesce(ocr, '{}'::jsonb) || ?::jsonb,
+                       status = ?,
+                       draft_version = draft_version + 1,
+                       draft_updated_at = now(),
+                       draft_source = ?,
+                       guest_seen_at = case when ? then now() else guest_seen_at end
+                 where id = ? and property_id = ?""")
+                .params(toJson(fields), toJson(ocr), status == null ? statusOf(id) : status, source,
+                        !"owner".equals(source), id, TenantContext.require())
+                .update();
+        if (changed == 0) throw new NotFoundException("Registration link");
+
+        // What changed, who changed it, and the value it replaced where the value is safe to keep. A patch
+        // that moved nothing is not worth a row: text fields are debounced, so empty patches do arrive.
+        Map<String, Object> diff = CheckInFields.changes(before, fields);
+        if (!diff.isEmpty())
+            audit.record("guest_registrations", id.toString(), "draft_" + source, null, diff, userId);
+    }
+
+    /** The guest's phone asking what the session now holds — their own draft, including the desk's corrections. */
+    @Transactional(readOnly = true)
+    public Session session(UUID id) {
+        var reg = get(id);
+        return new Session(reg.state(), reg.status(), reg.version(), reg.draft(), reg.ocr(), reg.hasIdPhoto(), reg.expiresAt());
+    }
+
+    /** Note that the guest has the form open, so the desk's status line stops saying "waiting". */
+    @Transactional
+    public void seen(UUID id, String status) {
+        jdbc.sql("""
+                update guest_registrations set guest_seen_at = now(),
+                       status = case when status = 'waiting' then ? else status end
+                 where id = ? and property_id = ? and state = 'open'""")
+                .params(CheckInFields.cleanStatus(status) == null ? "opened" : status, id, TenantContext.require()).update();
+    }
+
+    private Map<String, Object> readDraft(UUID id) {
+        String raw = jdbc.sql("select draft from guest_registrations where id = ? and property_id = ?")
+                .params(id, TenantContext.require()).query(String.class).optional().orElse(null);
+        return fromJson(raw);
+    }
+
+    private String statusOf(UUID id) {
+        return jdbc.sql("select status from guest_registrations where id = ? and property_id = ?")
+                .params(id, TenantContext.require()).query(String.class).optional().orElse("waiting");
     }
 
     // ---------- Validation ----------
@@ -285,9 +380,16 @@ public class SelfRegistrationService {
             try { submitted = json.readValue(raw, SelfRegistration.Submission.class); }
             catch (Exception e) { throw new IllegalStateException("Unreadable self-registration payload", e); }
         }
-        return new SelfRegistration(rs.getObject("id", UUID.class), rs.getString("state"),
+        return new SelfRegistration(rs.getObject("id", UUID.class), rs.getString("state"), rs.getString("status"),
+                rs.getInt("draft_version"), fromJson(rs.getString("draft")), fromJson(rs.getString("ocr")),
                 rs.getObject("expires_at", OffsetDateTime.class), rs.getObject("submitted_at", OffsetDateTime.class),
                 submitted, rs.getString("id_photo_key") != null);
+    }
+
+    private Map<String, Object> fromJson(String raw) {
+        if (raw == null || raw.isBlank()) return Map.of();
+        try { return json.readValue(raw, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}); }
+        catch (Exception e) { throw new IllegalStateException("Unreadable check-in draft", e); }
     }
 
     private String toJson(Object o) {

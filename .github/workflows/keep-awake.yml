@@ -1,0 +1,37 @@
+# Keeps the API awake.
+#
+# The API runs on Render's free plan, which stops the container after fifteen idle minutes; the next request
+# then waits through a cold start — measured at fifty-one seconds, against two seconds once it is warm. A desk
+# opening check-in first thing in the morning should not be the one paying that.
+#
+# Set the repository variable PMS_API_URL (Settings → Secrets and variables → Actions → Variables) to the
+# Render service URL, e.g. https://padav-api.onrender.com. Without it this does nothing.
+#
+# Two caveats worth knowing: GitHub's scheduler is best-effort and can run late under load, and scheduled
+# workflows are switched off automatically after 60 days without a commit. The permanent fix is Render's
+# starter plan, which does not sleep.
+name: Keep the API awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/health
+        env:
+          API: ${{ vars.PMS_API_URL }}
+        run: |
+          if [ -z "$API" ]; then
+            echo "PMS_API_URL is not set; nothing to ping."
+            exit 0
+          fi
+          # A cold start takes most of a minute, so allow for it and report what it cost.
+          code=$(curl -s -o /dev/null -w '%{http_code} %{time_total}s' --max-time 120 "${API%/}/api/health")
+          echo "health: $code"
+          case "$code" in 200*) ;; *) echo "::warning::API did not answer 200 ($code)" ;; esac

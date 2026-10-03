@@ -18,7 +18,7 @@ import { formatDate, rupees, toPaise, unitName } from "@/lib/format"
 import { DESK_SOURCES, type Booking, type FreeUnit, type Guest, type Room, type RoomType } from "@/lib/types"
 import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
-import { Banner, Button, Card, Chip, ChoiceChips, Disclosure, Field, KV, Loading, PageHeader, Stepper } from "@/components/ui"
+import { Alert, Button, Card, Chip, ChoiceChips, Disclosure, Field, KV, Loading, PageHeader, PhoneInput, Stepper } from "@/components/ui"
 
 type Settings = Record<string, unknown>
 type Source = (typeof DESK_SOURCES)[number]
@@ -174,7 +174,8 @@ export default function NewBookingPage() {
   return (
     <div className="space-y-4">
       <PageHeader title={t("booking.new")} back="/bookings" />
-      {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
+      {/* Same as check-in: a booking the server refused is told to the person who pressed the button. */}
+      <Alert message={error} onClose={() => setError("")} />
 
       {/* A phone reads the form top to bottom and finds the summary and the button at the end. A laptop keeps the
           summary in view beside the form, so the total and what is still missing are always in sight. */}
@@ -183,7 +184,7 @@ export default function NewBookingPage() {
       <Card title={t("checkin.guest")}>
         <div className="space-y-3">
           <Field label={t("checkin.phoneLookup")}>
-            <input inputMode="numeric" value={phone} onChange={(e) => { setPhone(e.target.value); setGuestId(null) }} onBlur={lookup} placeholder="9876543210" />
+            <PhoneInput value={phone} onChange={(digits) => { setPhone(digits); setGuestId(null) }} onBlur={lookup} />
           </Field>
           {matches.length > 0 && (
             <ul className="overflow-hidden rounded-xl border border-line divide-y divide-line">

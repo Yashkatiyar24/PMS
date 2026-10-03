@@ -119,6 +119,26 @@ connections.
    `https://pms.vercel.app`) and `PMS_COOKIE_SECURE=true`. If signing in on a preview deployment fails with
    "forbidden", add that preview's address to `PMS_ALLOWED_ORIGINS` as well.
 
+### Putting the platform back office on its own domain
+
+`/admin` is Padav's own back office, not a property's. One deployment can serve it on a hostname of its own,
+so a property's staff never see a door they cannot open:
+
+1. In Vercel, add the domain (**Settings → Domains**), e.g. `admin.padav.in`, to the same project.
+2. At the registrar, point it at Vercel with the record Vercel shows — a `CNAME` to `cname.vercel-dns.com`
+   for a subdomain.
+3. Set `PMS_ADMIN_HOST=admin.padav.in` on the Vercel project and redeploy.
+
+The back office then answers only on that hostname, and `/admin` on the app's own domain sends staff back to
+their home screen. Leave `PMS_ADMIN_HOST` unset and nothing changes: `/admin` stays where it is, which is
+what development and the current deployment do.
+
+Two things follow from the split, both wanted. The session cookie carries no `Domain`, so signing in to the
+app does not sign you in to the back office — a platform admin signs in again at
+`https://admin.padav.in/login`, leaving the property code blank. And the API is still the thing that
+actually guards it: every `/api/admin` request is checked for `SUPER_ADMIN` whatever hostname asked, so the
+hostname is separation, not the security boundary.
+
 Every default above is chosen to make a fresh clone run, which also makes it unsafe to deploy. So the
 server refuses to start outside the `dev` and `test` profiles while any of them are still in place — the
 shipped session secret, a fixed login code, the demo seeder, a cookie that would travel over plain HTTP,

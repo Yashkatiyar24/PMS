@@ -50,9 +50,16 @@ public class OnlineBookingService {
     /** {@code status} is reserved, or pending while an online payment is awaited; {@code payment} is how to pay, when there is one. */
     public record Confirmation(String reference, String guestName, String propertyName, String propertyPhone, String roomType,
                                String arrive, String depart, long nights, long totalPaise, String checkinTime,
-                               String status, long paidPaise, in.pms.payments.PaymentService.Checkout payment) {
+                               String status, long paidPaise, in.pms.payments.PaymentService.Checkout payment, String stayUrl) {
         public Confirmation withPayment(in.pms.payments.PaymentService.Checkout checkout) {
-            return new Confirmation(reference, guestName, propertyName, propertyPhone, roomType, arrive, depart, nights, totalPaise, checkinTime, status, paidPaise, checkout);
+            return new Confirmation(reference, guestName, propertyName, propertyPhone, roomType, arrive, depart, nights, totalPaise, checkinTime, status, paidPaise, checkout, stayUrl);
+        }
+        /**
+         * The guest's link to their own stay. Minted once, when the booking is made, because the token is kept
+         * only as a hash and cannot be recovered afterwards: the page holds on to it from here.
+         */
+        public Confirmation withStayUrl(String url) {
+            return new Confirmation(reference, guestName, propertyName, propertyPhone, roomType, arrive, depart, nights, totalPaise, checkinTime, status, paidPaise, payment, url);
         }
     }
 
@@ -106,7 +113,7 @@ public class OnlineBookingService {
         LocalDate depart = b.departAt().atZoneSameInstant(zone).toLocalDate();
         return new Confirmation(reference(b.id()), b.guestName(), (String) p.get("name"), (String) p.get("phone"), roomType,
                 arrive.toString(), depart.toString(), ChronoUnit.DAYS.between(arrive, depart), b.totalPaise(),
-                settings.current().checkinTime().toString(), b.state(), b.paidPaise(), null);
+                settings.current().checkinTime().toString(), b.state(), b.paidPaise(), null, null);
     }
 
     /** The first eight characters of the booking id: short enough to read out over the phone. */

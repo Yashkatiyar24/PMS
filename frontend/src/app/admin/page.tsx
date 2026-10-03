@@ -19,7 +19,7 @@ import { formatDateTime, rupees } from "@/lib/format"
 import { useResource } from "@/lib/use-resource"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
-import { Avatar, Banner, Button, Chip, ChoiceChips, Empty, Field, Loading, PageHeader, Segmented, Sheet, StatTile, TONE } from "@/components/ui"
+import { Avatar, Banner, Button, Chip, ChoiceChips, Empty, Field, Loading, PageHeader, PhoneInput, Segmented, Sheet, StatTile, TONE } from "@/components/ui"
 import { Credentials } from "@/components/Credentials"
 import { BILLING_TONE, isQuiet, needsAttention, QUIET_DAYS, type Plan, type PropertyHealth } from "./shared"
 
@@ -233,7 +233,7 @@ function PlatformList() {
           <Field label={t("setup.phone")}><input inputMode="tel" {...field("phone")} /></Field>
           <div className="grid grid-cols-2 gap-2">
             <Field label={t("admin.ownerName")}><input {...field("ownerName")} /></Field>
-            <Field label={t("admin.ownerPhone")}><input inputMode="numeric" {...field("ownerPhone")} placeholder="9876543210" /></Field>
+            <Field label={t("admin.ownerPhone")}><PhoneInput value={form.ownerPhone} onChange={(digits) => setForm({ ...form, ownerPhone: digits })} /></Field>
           </div>
           <Field label={t("admin.ownerEmail")} hint={t("admin.ownerEmailHint")}><input type="email" {...field("ownerEmail")} placeholder="name@example.in" /></Field>
           <Field group label={t("admin.plan")}>

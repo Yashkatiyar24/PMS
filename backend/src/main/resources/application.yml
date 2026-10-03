@@ -48,6 +48,17 @@ pms:
   # credentialed requests cannot use "*", and we would not want them to.
   allowed-origins: ${PMS_ALLOWED_ORIGINS:http://localhost:3000}
   default-timezone: ${PMS_DEFAULT_TIMEZONE:Asia/Kolkata}
+  # The floor plan a newly onboarded property opens with: three floors of 10, 10 and 5 rooms, numbered
+  # 101-110, 201-210, 301-305. The room count is the sum of this list, so changing the list is the only place
+  # the default inventory size is decided. The owner re-plans it from the rooms screen whenever they like.
+  rooms:
+    rooms-per-floor: ${PMS_DEFAULT_ROOMS_PER_FLOOR:10,10,5}
+    first-floor: ${PMS_FIRST_FLOOR:1}
+    number-digits: 2         # 101, not 11
+    default-type-name: Standard
+    default-max-occupancy: 2
+    max-floors: 30
+    max-rooms-per-floor: 200
   # The first platform admin on a fresh database (who onboards properties); ignored once one exists.
   bootstrap-admin:
     email: ${PMS_ADMIN_EMAIL:}

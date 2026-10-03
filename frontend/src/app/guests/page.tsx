@@ -11,7 +11,6 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Search, UserRound } from "lucide-react"
-import { clsx } from "clsx"
 import { api } from "@/lib/api"
 import type { Booking, Guest } from "@/lib/types"
 import { formatDate, formatTime, rupees, unitName } from "@/lib/format"
@@ -26,16 +25,6 @@ type View = "staying" | "all"
 /** Nights left to run, counted from tonight; 0 on the morning someone leaves. */
 const nightsLeft = (departAt: string) => Math.max(0, Math.ceil((new Date(departAt).getTime() - Date.now()) / 86_400_000))
 
-/** One fact under its own caption, as on the platform's property cards. */
-function Fact({ label, value, tone }: { label: string; value: React.ReactNode; tone?: string }) {
-  return (
-    <div className="min-w-0">
-      <dt className="truncate text-[11px] font-semibold uppercase tracking-wide text-ink-soft">{label}</dt>
-      <dd className={clsx("truncate text-[15px] font-bold leading-tight tabular-nums", tone)}>{value}</dd>
-    </div>
-  )
-}
-
 /** A guest who is in the house: the card the desk reads across the counter. */
 function StayingCard({ booking, leavingToday }: { booking: Booking; leavingToday: boolean }) {
   const { t } = useI18n()
@@ -43,38 +32,52 @@ function StayingCard({ booking, leavingToday }: { booking: Booking; leavingToday
   const party = booking.adults + booking.children
   const due = booking.balanceDuePaise
   const nights = nightsLeft(booking.departAt)
+  // Everything the desk needs before it speaks, read left to right in one line rather than stacked in boxes
+  // with captions: who, how many, how long, until when. Captions on single numbers take more room than the
+  // numbers and make four facts look like four panels.
+  const facts = [
+    t("guests.peopleN", { n: party }),
+    // Nothing about leaving today here: the chip at the foot of the card already says it, and a card that
+    // says the same thing twice reads as a card that is padding.
+    nights > 0 ? t("guests.nightsN", { n: nights }) : null,
+    t("guests.until", { date: formatDate(booking.departAt) }),
+  ].filter(Boolean)
   return (
     <li>
       {/* To the stay, not the profile: while someone is in the house, that is the record the desk works in. */}
       <Link
         href={`/stays/${booking.id}`}
-        className="flex h-full flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--shadow-card)] transition-colors hover:bg-surface-2 focus-visible:-outline-offset-2!"
+        className="flex h-full flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--shadow-card)] transition-colors hover:border-line-strong hover:bg-surface-2 focus-visible:-outline-offset-2!"
       >
-        <div className="flex items-start gap-3">
-          <Avatar name={booking.guestName} size={44} tone="warn" />
+        <div className="flex items-baseline gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-[17px] font-bold leading-snug">{booking.guestName}</p>
             <p className="truncate text-sm tabular-nums text-ink-soft">{booking.guestPhone || "—"}</p>
           </div>
-          {/* The room is what tells one family at the counter from the next, so it carries the most weight. */}
+          {/* The room is what tells one family at the counter from the next, so it is the one number that is
+              allowed to shout. No box around it: it is already the largest thing on the right. */}
           {rooms && (
-            <span className="shrink-0 rounded-xl bg-teal-soft px-2.5 py-1 text-center">
-              <span className="block text-[10px] font-semibold uppercase tracking-wide text-teal">{t("dash.col.room")}</span>
-              <span className="block text-[15px] font-extrabold leading-tight text-teal">{rooms}</span>
-            </span>
+            <p className="shrink-0 text-right leading-none">
+              <span className="text-[11px] text-ink-faint">{t("dash.col.room")} </span>
+              <span className="text-xl font-extrabold tabular-nums">{rooms}</span>
+            </p>
           )}
         </div>
 
-        <dl className="grid grid-cols-3 gap-3 rounded-xl bg-surface-2 px-3 py-2">
-          <Fact label={t("guests.people")} value={party} />
-          <Fact label={t("guests.nightsLeft")} value={nights} />
-          <Fact label={t("dash.col.balance")} value={due > 0 ? rupees(due) : t("payment.paid")} tone={due > 0 ? "text-danger" : "text-ok"} />
-        </dl>
+        <p className="truncate text-[13px] text-ink-soft">{facts.join(" · ")}</p>
 
-        <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-faint">
-          <span className="truncate">{t("guests.until", { date: formatDate(booking.departAt) })}</span>
-          {booking.checkedInAt && <span className="truncate">· {t("guests.arrivedAt", { time: formatTime(booking.checkedInAt) })}</span>}
-          {leavingToday && <Chip tone="violet">{t("today.departures")}</Chip>}
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
+          {/* Money only when money is owed. "Paid" in green on every card is noise the eye learns to skip,
+              and then it skips the one card that is not. */}
+          {due > 0 ? (
+            <span className="text-[15px] font-bold tabular-nums text-danger">{t("guests.dueAmount", { amount: rupees(due) })}</span>
+          ) : (
+            <span className="text-[13px] text-ink-faint">{t("payment.paid")}</span>
+          )}
+          <span className="flex items-center gap-2">
+            {booking.checkedInAt && <span className="text-xs text-ink-faint">{t("guests.arrivedAt", { time: formatTime(booking.checkedInAt) })}</span>}
+            {leavingToday && <Chip tone="violet">{t("today.departures")}</Chip>}
+          </span>
         </div>
       </Link>
     </li>

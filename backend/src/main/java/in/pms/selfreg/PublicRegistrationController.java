@@ -35,6 +35,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/public/registration")
 public class PublicRegistrationController {
+    /** Enough for a phone sending a field as it is typed and polling the desk's side every two seconds. */
+    private static final int DRAFT_PER_MINUTE = 240;
+
     private final SelfRegistrationService service;
     private final PublicRateLimiter limiter;
 
@@ -47,6 +50,43 @@ public class PublicRegistrationController {
     public ResponseEntity<SelfRegistrationService.GuestForm> form(@PathVariable String token, HttpServletRequest req) {
         Resolved link = open(token, req);
         return noStore(TenantContext.runAs(link.propertyId(), () -> service.form(link)));
+    }
+
+    /**
+     * The live session: what the shared draft now holds, including anything the desk corrected on its own
+     * screen. This is the one endpoint that returns personal data to a caller with no account, and it returns
+     * exactly one thing — the draft this token's own session is for. Still no guest record, no booking, no
+     * room, no amount, and no full document number, because none of those can be written into a draft.
+     *
+     * <p>It is what lets a guest reload their phone mid-form without losing what they typed, and what carries
+     * the desk's corrections back to them.
+     */
+    @GetMapping("/{token}/session")
+    public ResponseEntity<SelfRegistrationService.Session> session(@PathVariable String token, HttpServletRequest req) {
+        Resolved link = open(token, req, DRAFT_PER_MINUTE);
+        return noStore(TenantContext.runAs(link.propertyId(), () -> {
+            service.seen(link.id(), "opened");
+            return service.session(link.id());
+        }));
+    }
+
+    /**
+     * One field the guest just filled, or what reading their ID suggests. Sent as it is typed (debounced on
+     * the phone), so the desk watches the register fill in rather than waiting for a button.
+     *
+     * <p>A session the guest has already sent is closed to them: from then on only the desk may change it.
+     */
+    @PatchMapping("/{token}")
+    public ResponseEntity<SelfRegistrationService.Session> patch(@PathVariable String token, HttpServletRequest req,
+                                                                 @RequestBody SelfRegistrationService.Patch in) {
+        Resolved link = open(token, req, DRAFT_PER_MINUTE);
+        if (!"open".equals(link.state())) throw new in.pms.common.BadRequestException("These details have already been sent");
+        return noStore(TenantContext.runAs(link.propertyId(), () -> {
+            // "ocr" when the patch carries what a document read, so the desk's status line can say so and the
+            // suggestion is labelled as the machine's guess rather than the guest's own words.
+            service.writeDraft(link.id(), in, in != null && in.ocr() != null && !in.ocr().isEmpty() ? "ocr" : "guest", null);
+            return service.session(link.id());
+        }));
     }
 
     @PostMapping("/{token}")
@@ -76,6 +116,21 @@ public class PublicRegistrationController {
      */
     private Resolved open(String token, HttpServletRequest req) {
         if (!limiter.allow(req.getRemoteAddr())) throw new ForbiddenException("Too many attempts; please wait a minute");
+        return resolve(token);
+    }
+
+    /**
+     * The draft channel gets an allowance of its own: a guest filling a form sends a field as they type and
+     * asks for the desk's side every couple of seconds, which is far more requests than opening a form once —
+     * but all of them against a token that is already known to be good.
+     */
+    private Resolved open(String token, HttpServletRequest req, int perMinute) {
+        if (!limiter.allow("draft:" + req.getRemoteAddr(), perMinute))
+            throw new ForbiddenException("Too many attempts; please wait a minute");
+        return resolve(token);
+    }
+
+    private Resolved resolve(String token) {
         return service.resolve(token).orElseThrow(() -> new NotFoundException("This link has expired. Please ask the desk for a new one."));
     }
 

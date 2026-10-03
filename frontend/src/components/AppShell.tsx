@@ -17,6 +17,7 @@ import { BottomNav, SideRail } from "./BottomNav"
 import { OfflineBar } from "./OfflineBar"
 import { SearchBox } from "./SearchBox"
 import { Avatar, Banner, Button, Empty, IconButton, Loading, Logo, Menu, Sheet, Wordmark, type MenuItem } from "./ui"
+import { isGuestScreen, isPublicScreen } from "@/lib/public-screens"
 
 // Every working screen uses a laptop's width and puts its context beside its content (see SplitPage). Only
 // screens that are a single readable thing, such as one guest's record, keep the narrow column.
@@ -47,11 +48,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { t, language, setLanguage, textSize, setTextSize, theme, setTheme } = useI18n()
   const [searching, setSearching] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
-  const anonymous = path.startsWith("/g/") || path.startsWith("/book/") || path.startsWith("/login")
+  const anonymous = isPublicScreen(path)
   const unread = useUnreadNotifications(!anonymous && !!user?.propertyId)
 
   // The guest self-registration form and the public booking page are opened by people with no account: they carry themselves.
-  if (path.startsWith("/g/") || path.startsWith("/book/")) return <>{children}</>
+  // A guest's own screen draws its own page; wrapping it in the desk's chrome would show a stranger the
+  // navigation of a system they have no account for.
+  if (isGuestScreen(path)) return <>{children}</>
   if (path.startsWith("/login")) return <main>{children}</main>
   if (loading) return <main className="mx-auto max-w-3xl p-4"><Loading /></main>
 

@@ -13,7 +13,7 @@ import { use, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import * as Tabs from "@radix-ui/react-tabs"
-import { ArrowLeft, BedDouble, CheckCircle2, FilePen, IndianRupee, LogIn, LogOut, Minus, Percent, Phone, Plus, Printer, Receipt as ReceiptIcon, Trash2, Undo2, UserRound, Users, UserX, XCircle } from "lucide-react"
+import { ArrowLeft, BedDouble, Check, CheckCircle2, FilePen, IndianRupee, LogIn, LogOut, Minus, Percent, Phone, Plus, Printer, QrCode, Receipt as ReceiptIcon, Trash2, Undo2, UserRound, Users, UserX, XCircle } from "lucide-react"
 import { clsx } from "clsx"
 import { api, API_BASE, ApiError, newClientUuid, QueuedOffline } from "@/lib/api"
 import { useResource } from "@/lib/use-resource"
@@ -22,6 +22,7 @@ import { CHARGE_CATEGORIES, type Booking, type BookingState, type Folio, type Fo
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
 import { Banner, Button, Chip, ChoiceChips, Empty, Field, KV, Loading, Menu, Sheet, type MenuItem, type Tone } from "@/components/ui"
+import { copyText } from "@/components/SelfRegistrationQr"
 
 const STATE_TONE: Record<BookingState, Tone> = { pending: "warn", reserved: "brand", checked_in: "ok", checked_out: "neutral", no_show: "danger", cancelled: "neutral" }
 const PAYMENT_TONE: Record<Booking["paymentStatus"], Tone> = { unpaid: "danger", partial: "warn", paid: "ok" }
@@ -29,7 +30,7 @@ const MODES = ["cash", "upi", "card", "bank"]
 const DAY = 86_400_000
 const LIVE: BookingState[] = ["pending", "reserved", "checked_in"]
 
-type Panel = "pay" | "extra" | "checkout" | "cancel" | "noShow" | "details" | "party" | "addUnit" | "changeUnit" | "release" | "discount" | "refund" | "creditNote" | "removeLine" | null
+type Panel = "pay" | "extra" | "checkout" | "cancel" | "noShow" | "details" | "party" | "addUnit" | "changeUnit" | "release" | "discount" | "refund" | "creditNote" | "removeLine" | "guestLink" | null
 type Activity = { at: string; table: string; action: string; userName: string | null }
 
 /** A stay already under way can only take a room from now on. */
@@ -72,6 +73,10 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
   const [panel, setPanel] = useState<Panel>(null)
+  // The guest's own link. Held only while the sheet is open: the token is never returned twice, so leaving
+  // the screen means minting a fresh one rather than digging the old one back out.
+  const [guestLink, setGuestLink] = useState<{ url: string; qrDataUri: string } | null>(null)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   const [payAmount, setPayAmount] = useState("")
   const [payMode, setPayMode] = useState("cash")
@@ -178,6 +183,37 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
       window.open(`${API_BASE}/api/receipts/${receipt.id}/html`, "_blank", "noopener,noreferrer")
     })
 
+  /**
+   * Mint the guest's own link to this stay, to show as a QR or send them.
+   *
+   * Deliberately not through `run`: that helper closes the open sheet when the action succeeds, which is
+   * right for saving something and wrong here, where succeeding is what opens the sheet. Nothing about the
+   * booking changes either, so there is nothing to reload.
+   */
+  async function openGuestLink() {
+    setLinkCopied(false)
+    setGuestLink(null)
+    setError("")
+    setPanel("guestLink")
+    try {
+      setGuestLink(await api<{ url: string; qrDataUri: string }>(`/api/bookings/${id}/stay-link`, { method: "POST" }))
+    } catch (e) {
+      setPanel(null)
+      setError(e instanceof ApiError ? e.message : t("error.generic"))
+    }
+  }
+
+  const copyGuestLink = async () => {
+    if (!guestLink) return
+    try {
+      await copyText(guestLink.url)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2500)
+    } catch {
+      /* nothing to copy with; the code on screen still scans */
+    }
+  }
+
   /** A receipt for money just received: not a tax invoice, which comes at checkout. */
   const paymentReceipt = (paise: number) =>
     run(async () => {
@@ -279,6 +315,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
     ...(state === "checked_out" && folio ? [{ label: t("stay.invoice"), icon: ReceiptIcon, onSelect: () => void issueInvoice() }] : []),
     ...(live && edit
       ? [
+          { label: t("stay.guestLink"), icon: QrCode, onSelect: () => void openGuestLink() },
           { label: t("stay.editDetails"), icon: FilePen, separator: true, onSelect: () => {
             setDetails({ specialRequests: booking.specialRequests ?? "", notes: booking.notes ?? "", groupName: booking.groupName ?? "", organization: booking.organization ?? "", billingGstin: booking.billingGstin ?? "" })
             setPanel("details")
@@ -594,6 +631,21 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
           <Field label={t("common.reason")}><input value={reason} onChange={(e) => setReason(e.target.value)} autoFocus /></Field>
           {pin("discount.apply") && <PinField value={approvalPin} onChange={setApprovalPin} />}
         </div>
+      </Sheet>
+
+      <Sheet open={panel === "guestLink"} onOpenChange={(o) => !o && setPanel(null)} title={t("stay.guestLink")} description={t("stay.guestLinkHint")}>
+        {guestLink ? (
+          <div className="space-y-3 text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={guestLink.qrDataUri} alt={t("stay.guestLink")} className="mx-auto w-full max-w-[240px] rounded-2xl border border-line bg-white p-2" />
+            <p className="break-all text-xs text-ink-soft">{guestLink.url}</p>
+            <Button variant="secondary" onClick={() => void copyGuestLink()}>
+              {linkCopied ? <><Check size={16} aria-hidden /> {t("selfreg.copied")}</> : t("channels.copy")}
+            </Button>
+          </div>
+        ) : (
+          <Loading rows={2} />
+        )}
       </Sheet>
 
       <Sheet open={panel === "details"} onOpenChange={(o) => !o && setPanel(null)} title={t("stay.editDetails")}

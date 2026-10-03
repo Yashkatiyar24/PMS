@@ -25,8 +25,16 @@ const check = (label, ok, detail = "") => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${label}${detail ? `  [${detail}]` : ""}`)
 }
 
-/** The smallest valid PNG there is: one white pixel. Stands in for the guest's photo of their ID. */
-const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==", "base64")
+/** Polls a value until it is what we expect, the way a person watching a screen waits for it to change. */
+const until = async (read, want, ms = 15000) => {
+  const deadline = Date.now() + ms
+  for (;;) {
+    const got = await read()
+    if (got === want) return got
+    if (Date.now() > deadline) return got
+    await new Promise((r) => setTimeout(r, 300))
+  }
+}
 
 /** Nothing may spill past the right edge of the phone; a stepper's + button once did. */
 const overflows = async (page, where) => {
@@ -118,13 +126,75 @@ try {
   await guest.getByPlaceholder(/^नाम$|^Name$/).fill("Ram Prasad")
   await overflows(guest, "the guest's form")
 
-  // Their own photo of their own ID, taken before they save.
+  // --- The whole point: the desk's form fills in while the guest types, with nobody pressing anything ---
+  const deskName = desk.getByLabel("Name").first()
+  check("the guest's name reaches the desk before they press save",
+    (await until(() => deskName.inputValue(), guestName)) === guestName, await deskName.inputValue())
+  const deskCity = desk.getByLabel("City or village")
+  check("so does every other field, as it is typed",
+    (await until(() => deskCity.inputValue(), "Rishikesh")) === "Rishikesh", await deskCity.inputValue())
+  check("the desk is told the guest is working, not merely connected",
+    await desk.getByText(/Guest is filling|Guest connected/i).first().isVisible())
+  await desk.screenshot({ path: "ui-check-shots/selfreg-desk-live.png", fullPage: true })
+
+  // --- And the other way: the clerk corrects a field at the counter and the guest's phone shows it ---
+  await deskCity.fill("Haridwar")
+  await deskCity.blur()
+  const guestCity = guest.getByLabel(/शहर या गाँव|City or village/)
+  check("the desk's correction reaches the guest's phone",
+    (await until(() => guestCity.inputValue(), "Haridwar")) === "Haridwar", await guestCity.inputValue())
+  await guestCity.fill("Rishikesh") // put the guest's own answer back for the rest of the run
+  check("the guest can take their own answer back",
+    (await until(() => deskCity.inputValue(), "Rishikesh")) === "Rishikesh", await deskCity.inputValue())
+
+  // --- Neither side loses anything by reloading ---
+  await guest.reload({ waitUntil: "networkidle" })
+  const afterReload = guest.getByLabel(/पूरा नाम|Full name/)
+  check("the guest reloading their phone keeps what they typed",
+    (await until(() => afterReload.inputValue(), guestName)) === guestName, await afterReload.inputValue())
+
+  // Their own photo of their own ID, taken before they save — and read on their own phone.
   const photoInput = guest.locator("input[type=file]")
   const asksPhoto = (await photoInput.count()) > 0
   if (asksPhoto) {
-    await photoInput.setInputFiles({ name: "id.png", mimeType: "image/png", buffer: PNG })
-    await guest.getByText(/फोटो भेज दी गई|Photo sent/).waitFor({ timeout: 15000 })
+    // A card drawn on a canvas rather than a stock photo: the reader has to do real work on real glyphs, and
+    // the file never has to live in the repository. The fields on it are the ones a register asks for.
+    await guest.evaluate(async () => {
+      const card = document.createElement("canvas")
+      card.width = 760
+      card.height = 460
+      const d = card.getContext("2d")
+      d.fillStyle = "#fff"
+      d.fillRect(0, 0, card.width, card.height)
+      d.fillStyle = "#000"
+      d.font = "bold 36px Helvetica, Arial"
+      const lines = ["Government of India", "Rahul Sharma", "DOB: 14/03/1988", "Male",
+        "9876 5432 1098", "Address: 12 Temple Road,", "Haridwar, Uttarakhand - 249401"]
+      lines.forEach((line, i) => d.fillText(line, 28, 62 + i * 56))
+      const blob = await new Promise((done) => card.toBlob(done, "image/png"))
+      const transfer = new DataTransfer()
+      transfer.items.add(new File([blob], "id.png", { type: "image/png" }))
+      const input = document.querySelector("input[type=file]")
+      input.files = transfer.files
+      input.dispatchEvent(new Event("change", { bubbles: true }))
+    })
+    await guest.getByText(/फोटो भेज दी गई|Photo sent/).waitFor({ timeout: 20000 })
     check("the guest's ID photo is accepted before they save", true)
+
+    // Reading happens on the phone; the fields it finds are the register's own, not raw text.
+    const guestDob = guest.getByLabel(/जन्म तिथि|Date of birth/)
+    const readDob = await until(() => guestDob.inputValue(), "1988-03-14", 60000)
+    check("the photo is read into the register's own fields", readDob === "1988-03-14", readDob || "nothing read")
+    check("the reading reaches the desk without anyone pressing anything",
+      (await until(() => desk.getByLabel(/Date of birth/).inputValue(), "1988-03-14", 20000)) === "1988-03-14")
+
+    // The name the guest typed themselves is not replaced by the card's: it is offered beside it.
+    const typedName = await guest.getByLabel(/पूरा नाम|Full name/).inputValue()
+    check("what the guest typed is not overwritten by the photo", typedName === guestName, typedName)
+    check("the card's version is offered instead", await guest.getByRole("button", { name: /यही लें|Use this/ }).first().isVisible())
+    check("the desk is offered the same correction", await desk.getByRole("button", { name: /Use this/ }).first().isVisible())
+    await guest.screenshot({ path: "ui-check-shots/selfreg-guest-ocr.png", fullPage: true })
+    await desk.screenshot({ path: "ui-check-shots/selfreg-desk-ocr.png", fullPage: true })
   }
 
   for (const boxEl of await guest.locator("input[type=checkbox]").all()) await boxEl.check()
@@ -141,6 +211,9 @@ try {
   await guest.screenshot({ path: "ui-check-shots/selfreg-guest-done.png", fullPage: true })
 
   // --- Back at the desk, without anyone pressing refresh ---
+  await desk.reload({ waitUntil: "networkidle" })
+  check("the desk reloading its browser comes back to the same session",
+    (await until(() => desk.getByLabel("Name").first().inputValue(), guestName)) === guestName)
   await desk.getByText(/Details received from/i).waitFor({ timeout: 20000 })
   check("the desk notices without being touched", true)
   const filledName = await desk.getByLabel("Name").first().inputValue()

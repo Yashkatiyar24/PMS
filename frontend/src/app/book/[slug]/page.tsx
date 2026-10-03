@@ -20,7 +20,7 @@ import {
 import { openRazorpay, type CheckoutResult } from "@/lib/checkout"
 import { formatDate, formatDateTime, rupees } from "@/lib/format"
 import { useI18n } from "@/i18n"
-import { Banner, Button, Empty, Field, Loading, Logo, Sheet, Stepper } from "@/components/ui"
+import { Banner, Button, Empty, Field, Loading, Logo, PhoneInput, Sheet, Stepper } from "@/components/ui"
 
 /** yyyy-mm-dd plus whole days, in UTC both ways so no time zone can shift the date. */
 const addDays = (iso: string, days: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10)
@@ -47,6 +47,9 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
   // One id per attempt: pressing Confirm twice, or retrying after a dropped connection, books once.
   const [attempt, setAttempt] = useState("")
   const [done, setDone] = useState<Confirmation | null>(null)
+  // The guest's link to their own stay. Returned once, when the booking is made, and never again — the
+  // server keeps only its hash — so it is held here across the payment step rather than re-read.
+  const [stayUrl, setStayUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [payNow, setPayNow] = useState(true)
@@ -89,6 +92,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
     run(async () => {
       const booked = await bookOnline(slug, { roomTypeId: chosen?.roomTypeId, arrive, depart, adults, children, name, phone, city, consent, whatsappOptIn: whatsapp, clientUuid: attempt, payNow })
       setDone(booked)
+      if (booked.stayUrl) setStayUrl(booked.stayUrl)
       if (booked.payment) await pay(booked.payment)
     })
 
@@ -130,6 +134,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
 
   function startOver() {
     setDone(null)
+    setStayUrl(null)
     setChosen(null)
     setOffers(null)
     setName("")
@@ -175,7 +180,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
         ) : !page ? (
           <Loading />
         ) : done ? (
-          <Done confirmation={done} onAgain={startOver} onPay={lastOrder ? payAgain : undefined} payError={payError} busy={busy} error={error} />
+          <Done confirmation={done} stayUrl={stayUrl} onAgain={startOver} onPay={lastOrder ? payAgain : undefined} payError={payError} busy={busy} error={error} />
         ) : chosen ? (
           <form onSubmit={(e) => { e.preventDefault(); void confirm() }} className="space-y-4 pt-6">
             <button type="button" onClick={() => setChosen(null)} className="-ml-2 inline-flex items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-ink-soft hover:text-ink">
@@ -190,7 +195,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label={t("book.phone")}>
-                  <input type="tel" inputMode="numeric" autoComplete="tel" placeholder="9876543210" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                  <PhoneInput value={phone} onChange={setPhone} required />
                 </Field>
                 <Field label={t("book.city")}>
                   <input autoComplete="address-level2" value={city} onChange={(e) => setCity(e.target.value)} />
@@ -327,8 +332,8 @@ function StaySummary({ offer, arrive, depart, party }: { offer: Offer; arrive: s
   )
 }
 
-function Done({ confirmation: c, onAgain, onPay, payError, busy, error }: {
-  confirmation: Confirmation; onAgain: () => void; onPay?: () => void; payError: string; busy: boolean; error: string
+function Done({ confirmation: c, stayUrl, onAgain, onPay, payError, busy, error }: {
+  confirmation: Confirmation; stayUrl: string | null; onAgain: () => void; onPay?: () => void; payError: string; busy: boolean; error: string
 }) {
   const { t } = useI18n()
   const pending = c.status === "pending"
@@ -358,6 +363,12 @@ function Done({ confirmation: c, onAgain, onPay, payError, busy, error }: {
         </div>
       </div>
       <p className="text-sm text-ink-soft">{t("book.showAtDesk", { phone: c.propertyPhone })}</p>
+      {/* The one link worth keeping: it opens this booking again, on this phone, without an account. */}
+      {stayUrl && (
+        <a href={stayUrl} className="mx-auto flex max-w-md items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-3 font-semibold shadow-[var(--shadow-card)]">
+          <CalendarDays size={18} aria-hidden /> {t("book.viewStay")}
+        </a>
+      )}
       <Button variant="secondary" onClick={onAgain}>{t("book.another")}</Button>
     </div>
   )

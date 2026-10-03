@@ -4,6 +4,7 @@ import in.pms.audit.AuditService;
 import in.pms.auth.Permissions;
 import in.pms.common.BadRequestException;
 import in.pms.common.NotFoundException;
+import in.pms.config.RoomDefaults;
 import in.pms.notifications.Notifier;
 import in.pms.tenant.TenantContext;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -30,8 +31,14 @@ public class InventoryService {
     private final JdbcClient jdbc;
     private final AuditService audit;
     private final Notifier notifier;
+    private final RoomDefaults defaults;
 
-    public InventoryService(@Qualifier("jdbc") JdbcClient jdbc, AuditService audit, Notifier notifier) { this.jdbc = jdbc; this.audit = audit; this.notifier = notifier; }
+    public InventoryService(@Qualifier("jdbc") JdbcClient jdbc, AuditService audit, Notifier notifier, RoomDefaults defaults) {
+        this.jdbc = jdbc; this.audit = audit; this.notifier = notifier; this.defaults = defaults;
+    }
+
+    /** The shape a new property opens with, so the setup screen can offer it and the owner can change it. */
+    public RoomDefaults defaults() { return defaults; }
 
     // ---------- Room types ----------
 
@@ -98,7 +105,13 @@ public class InventoryService {
 
     // ---------- Rooms ----------
 
-    public record RoomInput(UUID roomTypeId, String number, int floor, boolean active, String building) {}
+    /** {@code name}, {@code bedType} and {@code description} are the room's own; its rate and occupancy come from its type. */
+    public record RoomInput(UUID roomTypeId, String number, int floor, boolean active, String building,
+                            String name, String bedType, String description) {
+        public RoomInput(UUID roomTypeId, String number, int floor, boolean active, String building) {
+            this(roomTypeId, number, floor, active, building, null, null, null);
+        }
+    }
     public record BulkRoomsInput(UUID roomTypeId, String range, int floor, String building) {}
 
     @Transactional(readOnly = true)
@@ -147,12 +160,22 @@ public class InventoryService {
 
     @Transactional
     public Room createRoom(RoomInput in, UUID userId) {
-        if (in.number() == null || in.number().isBlank()) throw new BadRequestException("Room number is required");
+        String number = number(in.number());
+        if (in.floor() < 0 || in.floor() > defaults.maxFloors()) throw new BadRequestException("Floor must be between 0 and " + defaults.maxFloors());
+        // The type is read inside this property, so a room can never be given another property's room type.
         RoomType type = roomType(in.roomTypeId());
-        UUID id = jdbc.sql("insert into rooms(property_id, room_type_id, number, floor, active, building) values (?, ?, ?, ?, ?, ?) returning id")
-                .params(TenantContext.require(), type.id(), in.number().trim(), in.floor(), in.active(), nz(in.building())).query(UUID.class).single();
+        UUID id;
+        try {
+            id = jdbc.sql("""
+                    insert into rooms(property_id, room_type_id, number, floor, active, building, name, bed_type, description)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?) returning id""")
+                    .params(TenantContext.require(), type.id(), number, in.floor(), in.active(), nz(in.building()),
+                            cap(in.name(), 60), cap(in.bedType(), 30), cap(in.description(), 500)).query(UUID.class).single();
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            throw new BadRequestException("Room " + number + " already exists here");
+        }
         if (type.dormitory()) for (int b = 1; b <= type.bedCount(); b++)
-            jdbc.sql("insert into beds(property_id, room_id, label) values (?, ?, ?)").params(TenantContext.require(), id, in.number().trim() + "-" + b).update();
+            jdbc.sql("insert into beds(property_id, room_id, label) values (?, ?, ?)").params(TenantContext.require(), id, number + "-" + b).update();
         Room created = room(id);
         audit.record("rooms", id.toString(), "create", null, created, userId);
         return created;
@@ -177,11 +200,26 @@ public class InventoryService {
     @Transactional
     public Room updateRoom(UUID id, RoomInput in, UUID userId) {
         Room before = room(id);
+        String number = number(in.number());
+        if (in.floor() < 0 || in.floor() > defaults.maxFloors()) throw new BadRequestException("Floor must be between 0 and " + defaults.maxFloors());
         // A room cannot become a dormitory or stop being one: its beds and their bookings would no longer fit it.
         if (roomType(in.roomTypeId()).dormitory() != roomType(before.roomTypeId()).dormitory())
             throw new BadRequestException("A room cannot change between a dormitory and an ordinary room; add a new room instead");
-        jdbc.sql("update rooms set room_type_id = ?, number = ?, floor = ?, active = ?, building = ?, updated_at = now() where id = ? and property_id = ?")
-                .params(in.roomTypeId(), in.number().trim(), in.floor(), in.active(), in.building() == null ? before.building() : in.building().trim(), id, TenantContext.require()).update();
+        if (before.active() && !in.active()) refuseIfBooked(before);
+        try {
+            jdbc.sql("""
+                    update rooms set room_type_id = ?, number = ?, floor = ?, active = ?, building = ?,
+                           name = ?, bed_type = ?, description = ?, updated_at = now()
+                    where id = ? and property_id = ?""")
+                    .params(in.roomTypeId(), number, in.floor(), in.active(),
+                            in.building() == null ? before.building() : in.building().trim(),
+                            in.name() == null ? before.name() : cap(in.name(), 60),
+                            in.bedType() == null ? before.bedType() : cap(in.bedType(), 30),
+                            in.description() == null ? before.description() : cap(in.description(), 500),
+                            id, TenantContext.require()).update();
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            throw new BadRequestException("Room " + number + " already exists here");
+        }
         Room after = room(id);
         audit.record("rooms", id.toString(), "update", before, after, userId);
         return after;
@@ -249,6 +287,203 @@ public class InventoryService {
                 .params(TenantContext.require(), roles).query((rs, i) -> new Person(rs.getObject("id", UUID.class), rs.getString("name"), rs.getString("role"))).list();
     }
 
+    // ---------- Floors ----------
+
+    /**
+     * The property's floors: every floor that has rooms on it, plus any that has been named or added ahead of
+     * its rooms. Derived and stored are merged here so a floor cannot go missing from the screen merely
+     * because nobody named it.
+     */
+    @Transactional(readOnly = true)
+    public List<Floor> floors() {
+        UUID p = TenantContext.require();
+        return jdbc.sql("""
+                select f.id, n.number, coalesce(f.name, '') as name, coalesce(f.sort_order, n.number) as sort_order,
+                       (select count(*) from rooms r where r.property_id = ? and r.floor = n.number) as rooms
+                from (select distinct floor as number from rooms where property_id = ?
+                      union select number from floors where property_id = ?) n
+                left join floors f on f.property_id = ? and f.number = n.number
+                order by sort_order, n.number""")
+                .params(p, p, p, p)
+                .query((rs, i) -> new Floor(rs.getObject("id", UUID.class), rs.getInt("number"), rs.getString("name"),
+                        rs.getInt("sort_order"), rs.getInt("rooms"))).list();
+    }
+
+    public record FloorInput(int number, String name, Integer sortOrder) {}
+
+    /** Name a floor, or add one before its rooms exist. A floor already there is renamed rather than refused. */
+    @Transactional
+    public Floor saveFloor(FloorInput in, UUID userId) {
+        if (in.number() < 0 || in.number() > defaults.maxFloors())
+            throw new BadRequestException("Floor must be between 0 and " + defaults.maxFloors());
+        String name = in.name() == null ? "" : in.name().trim();
+        if (name.length() > 40) name = name.substring(0, 40);
+        jdbc.sql("""
+                insert into floors(property_id, number, name, sort_order) values (?, ?, ?, ?)
+                on conflict (property_id, number) do update set name = excluded.name, sort_order = excluded.sort_order, updated_at = now()""")
+                .params(TenantContext.require(), in.number(), name, in.sortOrder() == null ? in.number() : in.sortOrder()).update();
+        audit.record("floors", String.valueOf(in.number()), "save", null, Map.of("name", name), userId);
+        return floors().stream().filter(f -> f.number() == in.number()).findFirst().orElseThrow(() -> new NotFoundException("Floor"));
+    }
+
+    /**
+     * Forget a floor's label. Its rooms are not touched — a floor is only a name here, and emptying it of
+     * rooms is done by moving or deactivating them, each of which checks its own bookings.
+     */
+    @Transactional
+    public void deleteFloor(int number, UUID userId) {
+        int rooms = jdbc.sql("select count(*) from rooms where property_id = ? and floor = ?")
+                .params(TenantContext.require(), number).query(Integer.class).single();
+        if (rooms > 0) throw new BadRequestException("Floor " + number + " still has " + rooms + " rooms; move or deactivate them first");
+        jdbc.sql("delete from floors where property_id = ? and number = ?").params(TenantContext.require(), number).update();
+        audit.record("floors", String.valueOf(number), "delete", null, null, userId);
+    }
+
+    // ---------- Laying out the rooms ----------
+
+    /** One floor of a plan: how many rooms the owner wants on it, and what to call it. */
+    public record FloorSpec(int floor, int rooms, String name) {}
+    /** A plan the owner asked for; {@code apply} false is the preview the setup screen shows first. */
+    public record SetupInput(List<FloorSpec> floors, UUID roomTypeId, boolean apply) {}
+    /**
+     * What a plan would do to one floor.
+     *
+     * @param create  numbers that do not exist yet and would be added
+     * @param keep    numbers already there that the plan covers; they are never recreated or renumbered
+     * @param surplus rooms beyond what the plan asks for. Nothing happens to them: reducing an inventory is a
+     *                decision about which rooms, which only the owner can make, so they are reported for the
+     *                screen to offer and left exactly where they are.
+     */
+    public record FloorPlan(int floor, String name, List<String> create, List<String> keep, List<String> surplus) {}
+    public record SetupPlan(List<FloorPlan> floors, int total, int created, int kept, int surplus) {}
+
+    /**
+     * Lay out, or re-lay out, a property's rooms.
+     *
+     * <p>The same method answers the preview and does the work, so what the owner confirms is exactly what
+     * happens. It only ever adds: a number that already exists is left alone (so going from 25 rooms to 40
+     * adds fifteen and renumbers nothing), and a floor asked to shrink reports its surplus rooms instead of
+     * deleting anything. Rooms hold bookings and history; nothing here destroys one.
+     */
+    @Transactional
+    public SetupPlan setup(SetupInput in, UUID userId) {
+        List<FloorSpec> wanted;
+        wanted = in == null || in.floors() == null || in.floors().isEmpty()
+                ? defaults.defaultPlan().stream().map(f -> new FloorSpec(f[0], f[1], null)).toList()
+                : in.floors();
+        if (wanted.size() > defaults.maxFloors()) throw new BadRequestException("At most " + defaults.maxFloors() + " floors");
+        for (FloorSpec f : wanted) {
+            if (f.floor() < 0 || f.floor() > defaults.maxFloors()) throw new BadRequestException("Floor must be between 0 and " + defaults.maxFloors());
+            if (f.rooms() < 0 || f.rooms() > defaults.maxRoomsPerFloor())
+                throw new BadRequestException("A floor can have at most " + defaults.maxRoomsPerFloor() + " rooms");
+        }
+        if (wanted.stream().map(FloorSpec::floor).distinct().count() != wanted.size())
+            throw new BadRequestException("The same floor is listed twice");
+
+        // A plan describes the whole building, so a floor the owner left out of it is a floor they are asking
+        // for nothing on. Its rooms are not deleted — they are counted as surplus and reported, which is the
+        // only way "take me from 25 rooms down to 20" can be answered honestly.
+        var named = wanted.stream().map(FloorSpec::floor).collect(java.util.stream.Collectors.toSet());
+        var forgotten = jdbc.sql("select distinct floor from rooms where property_id = ? order by floor")
+                .param(TenantContext.require()).query(Integer.class).list().stream()
+                .filter(floor -> !named.contains(floor)).map(floor -> new FloorSpec(floor, 0, null)).toList();
+        wanted = java.util.stream.Stream.concat(wanted.stream(), forgotten.stream()).toList();
+
+        UUID type = in != null && in.roomTypeId() != null ? roomType(in.roomTypeId()).id() : defaultType(userId);
+        Set<String> taken = new HashSet<>(jdbc.sql("select number from rooms where property_id = ?").param(TenantContext.require()).query(String.class).list());
+        List<FloorPlan> plans = new ArrayList<>();
+
+        for (FloorSpec spec : wanted) {
+            List<String> onFloor = jdbc.sql("select number from rooms where property_id = ? and floor = ? order by number")
+                    .params(TenantContext.require(), spec.floor()).query(String.class).list();
+            List<String> create = new ArrayList<>(), keep = new ArrayList<>();
+            // Numbering walks past anything already taken, so a plan never collides with a renamed room.
+            for (int n = 1, made = 0; made < spec.rooms() && n <= defaults.maxRoomsPerFloor() * 2; n++) {
+                String number = defaults.number(spec.floor(), n);
+                if (taken.contains(number)) { keep.add(number); made++; }
+                else { create.add(number); taken.add(number); made++; }
+            }
+            List<String> surplus = onFloor.stream().filter(number -> !keep.contains(number)).toList();
+            plans.add(new FloorPlan(spec.floor(), spec.name() == null ? "" : spec.name().trim(), create, keep, surplus));
+        }
+
+        if (in != null && in.apply()) {
+            for (FloorPlan plan : plans) {
+                saveFloor(new FloorInput(plan.floor(), plan.name(), plan.floor()), userId);
+                for (String number : plan.create()) createRoom(new RoomInput(type, number, plan.floor(), true, null), userId);
+            }
+            audit.record("rooms", TenantContext.require().toString(), "setup", null,
+                    Map.of("floors", plans.stream().map(FloorPlan::floor).toList(),
+                           "created", plans.stream().mapToInt(f -> f.create().size()).sum()), userId);
+        }
+        return new SetupPlan(plans,
+                plans.stream().mapToInt(f -> f.create().size() + f.keep().size()).sum(),
+                plans.stream().mapToInt(f -> f.create().size()).sum(),
+                plans.stream().mapToInt(f -> f.keep().size()).sum(),
+                plans.stream().mapToInt(f -> f.surplus().size()).sum());
+    }
+
+    /** The type new rooms are made with when the owner has not said: the first one there is, else a Standard. */
+    private UUID defaultType(UUID userId) {
+        var existing = roomTypes().stream().filter(RoomType::active).findFirst();
+        if (existing.isPresent()) return existing.get().id();
+        return createRoomType(new RoomTypeInput(defaults.defaultTypeName(), 0, defaults.defaultMaxOccupancy(), 0,
+                false, 0, 0, true, List.of()), userId).id();
+    }
+
+    /** The number to offer for one more room on a floor: the next one free in that floor's own series. */
+    @Transactional(readOnly = true)
+    public String nextNumber(int floor) {
+        Set<String> taken = new HashSet<>(jdbc.sql("select number from rooms where property_id = ?").param(TenantContext.require()).query(String.class).list());
+        for (int n = 1; n <= defaults.maxRoomsPerFloor() * 2; n++) {
+            String number = defaults.number(floor, n);
+            if (!taken.contains(number)) return number;
+        }
+        return "";
+    }
+
+    public record BulkUpdateInput(List<UUID> roomIds, UUID roomTypeId, Integer floor, Boolean active) {}
+
+    /**
+     * One change across a block of rooms: the five rooms the owner just selected become Deluxe, or move to
+     * another floor, or go out of use. Each room goes through the single-room path, so every rule that holds
+     * for one room — its property, its type, a booking that stops it being deactivated — holds for all of them,
+     * and the whole block is one transaction: either they all change or none does.
+     */
+    @Transactional
+    public List<Room> bulkUpdate(BulkUpdateInput in, UUID userId) {
+        if (in.roomIds() == null || in.roomIds().isEmpty()) throw new BadRequestException("Select at least one room");
+        if (in.roomIds().size() > 500) throw new BadRequestException("That is too many rooms at once");
+        if (in.roomTypeId() == null && in.floor() == null && in.active() == null) throw new BadRequestException("Nothing to change");
+        List<Room> out = new ArrayList<>();
+        for (UUID id : in.roomIds().stream().distinct().toList()) {
+            Room room = room(id);
+            out.add(updateRoom(id, new RoomInput(in.roomTypeId() == null ? room.roomTypeId() : in.roomTypeId(),
+                    room.number(), in.floor() == null ? room.floor() : in.floor(),
+                    in.active() == null ? room.active() : in.active(), room.building(),
+                    room.name(), room.bedType(), room.description()), userId));
+        }
+        return out;
+    }
+
+    /**
+     * Whether a room can be taken out of use: not while somebody is in it or booked into it.
+     *
+     * <p>A room is never deleted — it is the thing a stay, a folio and a receipt point at, and history that
+     * says "room 101" must go on saying it. Deactivating is as far as it goes, and even that waits until the
+     * bookings are dealt with, because a guest arriving on Friday to a room that has quietly left the
+     * inventory is the desk's problem, not the database's.
+     */
+    private void refuseIfBooked(Room room) {
+        int bookings = jdbc.sql("""
+                select count(*) from booking_units bu join bookings bk on bk.id = bu.booking_id
+                where bu.room_id = ? and bu.property_id = ? and bu.cancelled_at is null
+                  and bk.state::text in ('pending', 'reserved', 'checked_in') and bu.depart_at > now()""")
+                .params(room.id(), TenantContext.require()).query(Integer.class).single();
+        if (bookings > 0) throw new BadRequestException("Room " + room.number() + " has " + bookings
+                + " current or future booking(s). Move or cancel them before taking it out of use.");
+    }
+
     // ---------- Beds ----------
 
     /** One more bed in a dormitory room. */
@@ -289,8 +524,21 @@ public class InventoryService {
         return new Room(id, rs.getObject("room_type_id", UUID.class), rs.getString("type_name"), rs.getString("number"), rs.getInt("floor"),
                 rs.getString("status"), rs.getString("blocked_reason"), rs.getObject("blocked_until", OffsetDateTime.class), rs.getBoolean("active"), beds,
                 rs.getString("building"), rs.getObject("housekeeper_id", UUID.class), rs.getString("housekeeper_name"), rs.getString("hk_priority"), rs.getString("hk_note"),
-                occupancy.get(id));
+                occupancy.get(id), rs.getString("name"), rs.getString("bed_type"), rs.getString("description"));
     }
 
     private static String nz(String s) { return s == null ? "" : s.trim(); }
+
+    private static String cap(String s, int max) {
+        String t = nz(s);
+        return t.length() <= max ? t : t.substring(0, max);
+    }
+
+    /** A room number: required, short, and without the spaces that make "101 " a second room 101. */
+    private static String number(String raw) {
+        String number = nz(raw).replaceAll("\\s+", " ");
+        if (number.isEmpty()) throw new BadRequestException("Room number is required");
+        if (number.length() > 12) throw new BadRequestException("A room number can be at most 12 characters");
+        return number;
+    }
 }

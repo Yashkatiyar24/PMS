@@ -35,3 +35,21 @@ export const unitName = (roomNumber: string, bedLabel?: string | null) =>
 
 export const formatDateTime = (iso: string | null | undefined) =>
   iso ? `${DATE.format(new Date(iso))} ${TIME.format(new Date(iso))}` : ""
+
+/**
+ * The ten digits of an Indian mobile number, whatever was typed or pasted.
+ *
+ * Everything that is not a digit goes; a country code or a trunk zero in front of a full number goes with it
+ * ("+91 98765 43210", "098765 43210" → "9876543210"); and nothing beyond the tenth digit is kept, so an
+ * eleventh keystroke does nothing rather than producing a number the server will refuse. A short number is
+ * left short — somebody is still typing it, and a lookup by the last few digits is a thing the desk does.
+ *
+ * The same rules the backend applies when it stores a guest, so what the screen shows is what gets saved.
+ */
+export function phoneDigits(input: string): string {
+  let digits = (input ?? "").replace(/\D/g, "")
+  // Only while the number is too long to be one on its own: 9123456789 is a real mobile, not 91 + 23456789.
+  while (digits.length > 10 && (digits.startsWith("91") || digits.startsWith("0")))
+    digits = digits.startsWith("91") ? digits.slice(2) : digits.slice(1)
+  return digits.slice(0, 10)
+}

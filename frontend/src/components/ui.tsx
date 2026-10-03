@@ -6,11 +6,13 @@
  * The rule the kit enforces: a screen shows its status and its one main action; every other form lives in
  * a Sheet and every other action in a Menu, so nothing is on screen that the desk did not ask for.
  */
+import { useEffect, useState } from "react"
 import * as Dialog from "@radix-ui/react-dialog"
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu"
 import Link from "next/link"
 import { AlertTriangle, ArrowLeft, Check, ChevronDown, ChevronRight, Info, Inbox, MoreHorizontal, X, XCircle } from "lucide-react"
 import { clsx } from "clsx"
+import { phoneDigits } from "@/lib/format"
 import { useI18n } from "@/i18n"
 export type Tone = "neutral" | "brand" | "teal" | "violet" | "ok" | "warn" | "danger" | "info"
 
@@ -85,19 +87,21 @@ export function IconButton({ label, className, ...props }: React.ButtonHTMLAttri
 /** The house mark, in ink like the buttons. */
 export function Logo({ size = 36 }: { size?: number }) {
   return (
-    <span aria-hidden style={{ width: size, height: size }} className="grid shrink-0 place-items-center rounded-xl bg-ink text-bg">
-      <svg width={size / 2} height={size / 2} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 11 12 4l9 7" /><path d="M5 10v10h14V10" /><path d="M10 20v-6h4v6" />
-      </svg>
-    </span>
+    /* The mark itself, not a stand-in: a plain <img> because it is a fixed local file with its own colours,
+       and next/image would only add a loader between it and the header. */
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/padav-mark.png"
+      alt=""
+      aria-hidden
+      width={size}
+      height={size}
+      className="shrink-0 object-contain"
+      style={{ width: size, height: size }}
+    />
   )
 }
 
-/**
- * The product's own wordmark. It is painted as a mask rather than shown as a picture, so it takes the colour
- * of whatever it sits in: ink on the page, white on the dark footer, and the right one in dark mode, from a
- * single file. Give it a height; the width follows the letters' own proportions.
- */
 export function Wordmark({ className, label, decorative }: { className?: string; label?: string; decorative?: boolean }) {
   return (
     <span
@@ -106,7 +110,7 @@ export function Wordmark({ className, label, decorative }: { className?: string;
       aria-label={decorative ? undefined : label ?? "Padav"}
       className={clsx("inline-block shrink-0 bg-current", className)}
       style={{
-        aspectRatio: "1126 / 186",
+        aspectRatio: "881 / 133",
         maskImage: "url(/padav-wordmark.png)", WebkitMaskImage: "url(/padav-wordmark.png)",
         maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat",
         maskSize: "contain", WebkitMaskSize: "contain",
@@ -328,6 +332,36 @@ export function Disclosure({
   )
 }
 
+/**
+ * A mobile number, and nothing else.
+ *
+ * One component for every phone field in the app, because the rule has to hold in all of them: digits only,
+ * ten at most, a pasted +91 or leading zero stripped. The tenth digit is the end of it — an eleventh does not
+ * appear, rather than being typed in and refused on save. The keyboard is numeric on a phone and the browser
+ * offers the person's own number to fill in.
+ */
+export function PhoneInput({
+  value,
+  onChange,
+  ...props
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
+  value: string
+  onChange: (digits: string) => void
+}) {
+  return (
+    <input
+      type="tel"
+      inputMode="numeric"
+      autoComplete="tel"
+      maxLength={10}
+      placeholder="9876543210"
+      {...props}
+      value={value}
+      onChange={(e) => onChange(phoneDigits(e.target.value))}
+    />
+  )
+}
+
 /** Segmented control: one row of choices, the chosen one lifted. */
 export function Segmented<T extends string>({
   value,
@@ -427,6 +461,50 @@ export function Sheet({
           </div>
           <div className={clsx("scroll-thin min-h-0 flex-1 overflow-y-auto", hero ? "px-6 pb-8 md:px-12 md:pb-12" : "px-5 pb-4")}>{children}</div>
           {footer && <div className="flex gap-2 border-t border-line px-5 py-3 pb-[max(12px,env(safe-area-inset-bottom))]">{footer}</div>}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}
+
+/**
+ * Something went wrong, in the middle of the screen.
+ *
+ * A banner at the top of a long form is read by whoever happens to be looking at the top of a long form. A
+ * refused check-in is not that kind of news: the desk has pressed the button, is looking at the button, and
+ * has to know the guest is not checked in. So this stops everything, in the centre, until it is dismissed —
+ * which is also what makes it safe to keep banners for the quiet things.
+ *
+ * Only for a failure the person must act on. Anything a screen merely wants to mention stays a Banner.
+ */
+export function Alert({
+  message,
+  title,
+  onClose,
+}: {
+  /** The failure, in the words the server or the screen used. Empty closes it. */
+  message: string
+  title?: string
+  onClose: () => void
+}) {
+  const { t } = useI18n()
+  return (
+    <Dialog.Root open={Boolean(message)} onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="anim-fade fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]" />
+        <Dialog.Content
+          role="alertdialog"
+          className="anim-pop fixed left-1/2 top-1/2 z-50 w-[min(26rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-surface p-5 text-center text-ink shadow-[var(--shadow-pop)] outline-none"
+        >
+          <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-danger-soft">
+            <AlertTriangle size={24} className="text-danger" aria-hidden />
+          </div>
+          <Dialog.Title className="text-lg font-bold leading-tight">{title ?? t("error.title")}</Dialog.Title>
+          <Dialog.Description className="mt-1 text-[15px] text-ink-soft">{message}</Dialog.Description>
+          <Dialog.Close asChild>
+            {/* Autofocused: the keyboard and a screen reader both land on the way out of the problem. */}
+            <Button className="mt-4 w-full" autoFocus>{t("action.ok")}</Button>
+          </Dialog.Close>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
@@ -605,14 +683,27 @@ export function Banner({ tone = "info", children, onClose }: { tone?: "info" | "
   )
 }
 
+/**
+ * The skeleton, and — if it is still there after a few seconds — a word about why.
+ *
+ * A grey screen that never changes reads as broken. The API sleeps when nobody has used it for a while and
+ * takes the best part of a minute to wake, which is exactly the case where somebody is left staring at this;
+ * saying so is the difference between waiting and reloading the page four times.
+ */
 export function Loading({ rows = 3 }: { rows?: number }) {
   const { t } = useI18n()
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 5000)
+    return () => clearTimeout(timer)
+  }, [])
   return (
     <div role="status" aria-label={t("common.loading")} className="space-y-3">
       <div className="h-7 w-40 animate-pulse rounded-lg bg-line" />
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="h-20 animate-pulse rounded-[var(--radius-card)] bg-line" style={{ animationDelay: `${i * 80}ms` }} />
       ))}
+      {slow && <p className="anim-pop text-center text-sm text-ink-soft">{t("common.stillLoading")}</p>}
     </div>
   )
 }

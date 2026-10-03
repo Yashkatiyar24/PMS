@@ -38,9 +38,12 @@ public class AdminService {
     private final AuditService audit;
     private final StorageProvider storage;
     private final SessionService sessions;
+    /** Lays the configured floor plan into a property; the only place the default inventory is decided. */
+    private final in.pms.inventory.DefaultInventory rooms;
 
-    public AdminService(@Qualifier("adminJdbc") JdbcClient admin, PasswordService passwords, AuditService audit, StorageProvider storage, SessionService sessions) {
-        this.admin = admin; this.passwords = passwords; this.audit = audit; this.storage = storage; this.sessions = sessions;
+    public AdminService(@Qualifier("adminJdbc") JdbcClient admin, PasswordService passwords, AuditService audit, StorageProvider storage,
+                        SessionService sessions, in.pms.inventory.DefaultInventory rooms) {
+        this.admin = admin; this.passwords = passwords; this.audit = audit; this.storage = storage; this.sessions = sessions; this.rooms = rooms;
     }
 
     public record PropertyHealth(
@@ -234,6 +237,10 @@ public class AdminService {
                 insert into property_users(property_id, user_id, role) values (?, ?, 'owner')
                 on conflict (property_id, user_id) do update set role = 'owner', active = true""")
                 .params(propertyId, ownerId).update();
+
+        // The same plan an existing property gets on start-up, inside this transaction: a property is never
+        // left half furnished — if a room fails, the organisation, property, owner and membership roll back.
+        rooms.seed(propertyId);
 
         audit.recordPlatform(propertyId, "properties", propertyId.toString(), "onboard", null,
                 Map.of("org", in.orgName(), "property", in.propertyName(), "ownerPhone", mask(ownerPhone)), actor.id());

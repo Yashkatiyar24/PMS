@@ -42,11 +42,12 @@ public class PublicChannelController {
     private final PaymentService payments;
     private final SettingsService settings;
     private final PaymentGateway gateway;
+    private final in.pms.stay.StayService stays;
 
     public PublicChannelController(ChannelService channels, OnlineBookingService online, BookingService bookings, PublicRateLimiter limiter,
-                                   PaymentService payments, SettingsService settings, PaymentGateway gateway) {
+                                   PaymentService payments, SettingsService settings, PaymentGateway gateway, in.pms.stay.StayService stays) {
         this.channels = channels; this.online = online; this.bookings = bookings; this.limiter = limiter;
-        this.payments = payments; this.settings = settings; this.gateway = gateway;
+        this.payments = payments; this.settings = settings; this.gateway = gateway; this.stays = stays;
     }
 
     /** OTAs often insist the address ends in ".ics", so the suffix is accepted and ignored. */
@@ -84,7 +85,8 @@ public class PublicChannelController {
             String mode = online.paymentMode(settings.current());
             boolean pay = "required".equals(mode) || ("optional".equals(mode) && Boolean.TRUE.equals(in.payNow()));
             Booking booked = bookings.reserveOnline(in, pay);
-            var confirmation = online.confirmation(booked);
+            // Minted here and nowhere else: the token exists only in this response, so the page keeps it.
+            var confirmation = online.confirmation(booked).withStayUrl(stays.create(booked.id(), null).url());
             if (!pay || !"pending".equals(booked.state())) return confirmation; // a replayed request finds the booking as it now is
             long advance = Math.max(100, (booked.totalPaise() * settings.current().onlinePaymentAdvancePct() + 99) / 100);
             return confirmation.withPayment(payments.start(booked.id(), advance));
