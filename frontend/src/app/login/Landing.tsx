@@ -41,7 +41,7 @@ function Split({ label, children, className }: { label: React.ReactNode; childre
   )
 }
 
-const CTA = "inline-flex min-h-[52px] items-center gap-2 rounded-full bg-ink px-6 font-semibold text-bg transition-colors hover:bg-ink/85"
+const CTA = "cta press inline-flex min-h-[54px] items-center gap-2 rounded-[14px] px-6 text-[14px] font-bold uppercase tracking-[0.09em] text-on-solid shadow-[var(--shadow-cta)]"
 
 export function Landing({ onSignIn }: { onSignIn: () => void }) {
   const { t } = useI18n()

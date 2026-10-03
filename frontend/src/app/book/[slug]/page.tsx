@@ -154,7 +154,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
           <button
             onClick={() => setLanguage(language === "hi" ? "en" : "hi")}
             aria-label={t("common.language")}
-            className="shrink-0 rounded-full bg-ink px-5 text-sm font-semibold text-bg transition-colors hover:bg-ink/85"
+            className="cta press shrink-0 rounded-[14px] px-5 text-[13px] font-bold uppercase tracking-[0.09em] text-on-solid shadow-[var(--shadow-cta)]"
           >
             {language === "hi" ? "EN" : "हिं"}
           </button>

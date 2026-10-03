@@ -9,8 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#f7f7f7",   // --color-bg
-    theme_color: "#171717",        // --color-ink, the wordmark's own dark
+    background_color: "#ffffff",   // --color-bg
+    theme_color: "#26b9cd",        // --color-brand
     lang: "hi",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

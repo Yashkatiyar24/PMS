@@ -44,9 +44,9 @@ export function BottomNav() {
   const items = useItems()
   const path = usePathname()
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 backdrop-blur no-print md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <nav className="fixed inset-x-0 bottom-0 z-20 bg-surface/95 shadow-[0_-6px_24px_rgb(31_45_61/0.08)] backdrop-blur no-print md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       <ul className="mx-auto flex max-w-2xl">
-        {items.map(({ href, label, icon: Icon, tone }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const active = isActive(href, path)
           return (
             <li key={href} className="flex-1">
@@ -59,7 +59,7 @@ export function BottomNav() {
                 )}
               >
                 <span className={clsx("inline-flex h-7 w-12 items-center justify-center rounded-full transition-colors", active && "bg-brand-soft")}>
-                  <Icon size={20} aria-hidden className={tone} />
+                  <Icon size={20} aria-hidden strokeWidth={active ? 2.2 : 1.75} />
                 </span>
                 {label}
               </Link>
@@ -72,7 +72,7 @@ export function BottomNav() {
 }
 
 /** One rail entry; the focus ring sits inside the pill, so a focused active item is not a box around a box. */
-function RailLink({ href, label, icon: Icon, tone, active, count }: { href: string; label: string; icon: React.ComponentType<{ size?: number; className?: string; "aria-hidden"?: boolean }>; tone: string; active: boolean; count?: number }) {
+function RailLink({ href, label, icon: Icon, active, count }: { href: string; label: string; icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number; "aria-hidden"?: boolean }>; tone: string; active: boolean; count?: number }) {
   return (
     <li>
       <Link
@@ -83,7 +83,7 @@ function RailLink({ href, label, icon: Icon, tone, active, count }: { href: stri
           active ? "bg-brand-soft text-brand-ink" : "text-ink-soft hover:bg-surface-2 hover:text-ink",
         )}
       >
-        <Icon size={18} aria-hidden className={tone} />
+        <Icon size={18} aria-hidden strokeWidth={active ? 2.2 : 1.75} />
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {count !== undefined && count > 0 && (
           <span className={clsx("rounded-full px-2 py-0.5 text-[11px] tabular-nums", active ? "bg-raised text-brand-ink" : "bg-surface-2 text-ink-soft")}>{count}</span>
