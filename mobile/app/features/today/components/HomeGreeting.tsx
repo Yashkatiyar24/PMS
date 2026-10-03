@@ -1,14 +1,24 @@
-import { View, type TextStyle, type ViewStyle } from "react-native"
+import { useState } from "react"
+import { Animated, Pressable, View, type TextStyle, type ViewStyle } from "react-native"
 
 import { Avatar, Text } from "@/components"
+import { UserMenuSheet } from "@/features/auth/components/UserMenuSheet"
+import { usePressScale } from "@/hooks/usePressScale"
 import { translate } from "@/i18n/translate"
 import { useAppTheme } from "@/theme/context"
 import { typography } from "@/theme/typography"
 import { formatDate } from "@/utils/date"
 
-/** The date, the person, and nothing else: the top of the desk's own screen. */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+
+/**
+ * The date, the person, and nothing else: the top of the desk's own screen. The avatar is the same door to the
+ * person's menu (language, appearance, log out) that every other screen's header has.
+ */
 export function HomeGreeting({ name, date }: { name: string; date?: string }) {
   const { theme } = useAppTheme()
+  const [menu, setMenu] = useState(false)
+  const press = usePressScale(0.92)
   const hour = new Date().getHours()
   const greeting =
     hour < 12
@@ -30,7 +40,18 @@ export function HomeGreeting({ name, date }: { name: string; date?: string }) {
           numberOfLines={2}
         />
       </View>
-      <Avatar name={name} size={46} />
+      <AnimatedPressable
+        onPress={() => setMenu(true)}
+        onPressIn={press.onPressIn}
+        onPressOut={press.onPressOut}
+        accessibilityRole="button"
+        accessibilityLabel={name}
+        testID="user-menu"
+        style={press.style}
+      >
+        <Avatar name={name} size={46} />
+      </AnimatedPressable>
+      <UserMenuSheet open={menu} onClose={() => setMenu(false)} />
     </View>
   )
 }
