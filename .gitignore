@@ -19,3 +19,5 @@ assets/
 data/
 projects/
 .jetro/
+# claude skills
+.claude/skills/**/__pycache__
