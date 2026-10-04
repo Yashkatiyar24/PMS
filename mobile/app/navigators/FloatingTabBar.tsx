@@ -34,7 +34,10 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
 
   const tab = (route: (typeof routes)[number]) => {
     const { options } = descriptors[route.key]
+    // Lit is what the bar shows; current is where the app is. On Guests the More tab is lit, and a tap on it
+    // must still go to the More screen, so the two are kept apart.
     const focused = route.name === lit
+    const isCurrent = route.name === current
     const label = typeof options.title === "string" ? options.title : route.name
     const color = focused ? theme.colors.palette.brandInk : theme.colors.textDim
     return (
@@ -49,7 +52,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             target: route.key,
             canPreventDefault: true,
           })
-          if (!focused && !event.defaultPrevented) navigation.navigate(route.name)
+          if (!isCurrent && !event.defaultPrevented) navigation.navigate(route.name)
         }}
         style={({ pressed }) => [$tab, pressed && { opacity: 0.6 }]}
       >

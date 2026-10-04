@@ -85,7 +85,9 @@ await step("rooms: open a tile, mark it clean if it needs cleaning", async () =>
   await clickTop(page.getByLabel("Close"), 3000).catch(() => {})
 })
 await step("reports: period report", async () => {
-  await tab("Reports")
+  await tab("More")
+  await page.waitForTimeout(600)
+  await clickTop(text("Reports"))
   await clickTop(page.getByRole("button", { name: "More" }))
   await clickTop(page.getByRole("menuitem", { name: /period/i }))
   await page.waitForTimeout(2500)
