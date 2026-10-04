@@ -13,12 +13,12 @@ import { use, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import * as Tabs from "@radix-ui/react-tabs"
-import { ArrowLeft, BedDouble, Check, CheckCircle2, FilePen, IndianRupee, LogIn, LogOut, Minus, Percent, Phone, Plus, Printer, QrCode, Receipt as ReceiptIcon, Undo2, UserRound, Users, UserX, XCircle } from "lucide-react"
+import { ArrowLeft, BedDouble, Check, CheckCircle2, FilePen, IndianRupee, LogIn, LogOut, Minus, Percent, Phone, Plus, Printer, QrCode, Receipt as ReceiptIcon, Trash2, Undo2, UserRound, Users, UserX, XCircle } from "lucide-react"
 import { clsx } from "clsx"
 import { api, API_BASE, ApiError, newClientUuid, QueuedOffline } from "@/lib/api"
 import { useResource } from "@/lib/use-resource"
 import { formatDate, formatDateTime, formatTime, rupees, toPaise, unitName } from "@/lib/format"
-import { CHARGE_CATEGORIES, type Booking, type BookingState, type Folio, type FreeUnit, type Guest, type Member, type Receipt } from "@/lib/types"
+import { CHARGE_CATEGORIES, type Booking, type BookingState, type Folio, type FolioLine, type FreeUnit, type Guest, type Member, type Receipt } from "@/lib/types"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
 import { Banner, Button, Chip, ChoiceChips, Empty, Field, KV, Loading, Menu, Sheet, type MenuItem, type Tone } from "@/components/ui"
@@ -30,7 +30,7 @@ const MODES = ["cash", "upi", "card", "bank"]
 const DAY = 86_400_000
 const LIVE: BookingState[] = ["pending", "reserved", "checked_in"]
 
-type Panel = "pay" | "extra" | "checkout" | "cancel" | "noShow" | "details" | "party" | "addUnit" | "changeUnit" | "release" | "discount" | "refund" | "creditNote" | "guestLink" | null
+type Panel = "pay" | "extra" | "checkout" | "cancel" | "noShow" | "details" | "party" | "addUnit" | "changeUnit" | "release" | "discount" | "refund" | "creditNote" | "removeLine" | "guestLink" | null
 type Activity = { at: string; table: string; action: string; userName: string | null }
 
 /** A stay already under way can only take a room from now on. */
@@ -95,6 +95,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
   const [unitId, setUnitId] = useState<string | null>(null)
   const [freeKey, setFreeKey] = useState("")
   const [noteFor, setNoteFor] = useState<Receipt | null>(null)
+  const [lineToRemove, setLineToRemove] = useState<FolioLine | null>(null)
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
@@ -245,6 +246,14 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
       })
       setAmount(""); setReason(""); setNoteFor(null)
       window.open(`${API_BASE}/api/receipts/${note.id}/html`, "_blank", "noopener,noreferrer")
+    })
+
+  const removeLine = () =>
+    run(async () => {
+      await api(`/api/folios/${booking!.folioId}/lines/${lineToRemove!.id}`, {
+        method: "DELETE", body: { reason, approverId: user?.id, pin: approvalPin },
+      })
+      setReason(""); setLineToRemove(null)
     })
 
   const saveDetails = () =>
@@ -452,12 +461,19 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
           {!folio ? <Empty /> : (
             <>
               <Table
-                head={[t("common.details"), t("res.col.dates"), "GST", t("stay.total")]}
+                head={[t("common.details"), t("res.col.dates"), "GST", t("stay.total"), ""]}
                 rows={folio.lines.map((line) => [
                   <span key="d">{line.description}{line.category && line.category !== "room" && <Chip tone="neutral" className="ml-2">{label(`category.${line.category}`, line.category)}</Chip>}</span>,
                   formatDate(line.lineDate),
                   line.taxRateBp > 0 ? `${line.taxRateBp / 100}%${line.igstPaise ? " IGST" : ""}` : "—",
                   <span key="a" className="tabular-nums">{rupees(line.unitPaise * line.qty + line.cgstPaise + line.sgstPaise + (line.igstPaise ?? 0))}</span>,
+                  // Room charges come from the stay's dates; only charges someone added can be taken off, with a reason.
+                  !line.auto && folio.status === "open" ? (
+                    <Button key="x" variant="ghost" size="sm" aria-label={t("stay.removeLine")} disabled={busy}
+                      onClick={() => { setReason(""); setApprovalPin(""); setLineToRemove(line); setPanel("removeLine") }}>
+                      <Trash2 size={15} aria-hidden />
+                    </Button>
+                  ) : "",
                 ])}
               />
               <dl className="ml-auto mt-4 max-w-xs">
@@ -599,6 +615,21 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
           )}
           <Field label={t("common.reason")}><input value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
           {pin(panel === "discount" ? "discount.apply" : panel === "refund" ? "refund" : "invoice.edit") && <PinField value={approvalPin} onChange={setApprovalPin} />}
+        </div>
+      </Sheet>
+
+      {/* Taking a charge off the bill: a reason for the audit trail, and a PIN like any other reduction. */}
+      <Sheet open={panel === "removeLine"} onOpenChange={(o) => { if (!o) { setPanel(null); setLineToRemove(null) } }}
+        title={t("stay.removeLine")}
+        description={lineToRemove ? `${lineToRemove.description} · ${rupees(lineToRemove.unitPaise * lineToRemove.qty + lineToRemove.cgstPaise + lineToRemove.sgstPaise + (lineToRemove.igstPaise ?? 0))}` : undefined}
+        footer={
+          <Button variant="danger" size="lg" className="w-full" disabled={busy || !reason.trim() || (pin("discount.apply") && !approvalPin)} onClick={removeLine}>
+            {t("action.remove")}
+          </Button>
+        }>
+        <div className="space-y-3">
+          <Field label={t("common.reason")}><input value={reason} onChange={(e) => setReason(e.target.value)} autoFocus /></Field>
+          {pin("discount.apply") && <PinField value={approvalPin} onChange={setApprovalPin} />}
         </div>
       </Sheet>
 

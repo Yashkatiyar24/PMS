@@ -15,7 +15,9 @@ backend/storage
 .DS_Store
 *.log
 # local scratch
-assets/
+/assets/
 data/
 projects/
 .jetro/
+# claude skills
+.claude/skills/**/__pycache__

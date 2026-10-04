@@ -39,25 +39,28 @@ export function Button({
   variant?: "primary" | "secondary" | "soft" | "danger" | "ghost"
   size?: "sm" | "md" | "lg"
 }) {
-  // The main action is an ink pill; blue is kept for what is selected, so the two never compete.
+  // The main action carries the brand gradient and speaks in small capitals, as the reference's "COMPLETE ✓"
+  // and "SIGN IN →" do; the rest keep their case and stay quiet so the one that matters is found first.
+  const solid = variant === "primary" || variant === "danger"
   const styles = {
-    primary: "bg-ink text-bg shadow-sm hover:bg-ink/85",
+    primary: "cta text-on-solid shadow-[var(--shadow-cta)] hover:brightness-[1.03]",
     secondary: "bg-surface text-ink border border-line-strong hover:bg-surface-2",
-    soft: "bg-brand-soft text-brand-ink hover:brightness-95",
-    danger: "bg-danger text-on-solid hover:brightness-95",
+    soft: "bg-brand-soft text-brand-ink hover:brightness-[.97]",
+    danger: "bg-danger text-on-solid hover:brightness-[.95]",
     ghost: "bg-transparent text-brand-ink hover:bg-brand-soft",
   }[variant]
   const sizes = {
-    sm: "min-h-[36px] px-3.5 py-1.5 text-sm",
-    md: "min-h-[44px] px-5 py-2.5 text-[15px]",
-    lg: "min-h-[52px] px-6 py-3 text-base",
+    sm: clsx("min-h-[36px] px-3.5 py-1.5", solid ? "text-[12px]" : "text-sm"),
+    md: clsx("min-h-[46px] px-5 py-2.5", solid ? "text-[13px]" : "text-[15px]"),
+    lg: clsx("min-h-[54px] px-6 py-3", solid ? "text-[14px]" : "text-base"),
   }[size]
   return (
     <button
       {...props}
       className={clsx(
-        "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-[background-color,transform,filter] duration-100",
-        "disabled:opacity-45 disabled:pointer-events-none active:scale-[.985]",
+        "press inline-flex items-center justify-center gap-2 rounded-[14px] font-semibold",
+        solid && "uppercase tracking-[0.09em] font-bold",
+        "disabled:opacity-45 disabled:pointer-events-none",
         styles,
         sizes,
         className,
@@ -74,7 +77,7 @@ export function IconButton({ label, className, ...props }: React.ButtonHTMLAttri
       aria-label={label}
       title={label}
       className={clsx(
-        "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-soft transition-colors hover:bg-surface-2 hover:text-ink",
+        "press inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-soft hover:bg-surface-2 hover:text-ink",
         "disabled:opacity-45 disabled:pointer-events-none",
         className,
       )}
@@ -161,7 +164,7 @@ export function Card({
   return (
     <div
       {...props}
-      className={clsx("rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--shadow-card)]", className)}
+      className={clsx("rounded-[var(--radius-card)] bg-surface p-4 shadow-[var(--shadow-card)]", className)}
     >
       {(title || action) && (
         <div className="mb-3 flex items-center justify-between gap-2">
@@ -174,11 +177,14 @@ export function Card({
   )
 }
 
-/** A short label above a group, the way a settings screen reads. */
-export function SectionLabel({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
+/** A short label above a group, the way the reference heads each block: small capitals, a line icon before it. */
+export function SectionLabel({ children, right, icon: Icon }: { children: React.ReactNode; right?: React.ReactNode; icon?: React.ComponentType<{ size?: number; className?: string; "aria-hidden"?: boolean }> }) {
   return (
     <div className="mb-2 mt-1 flex items-center justify-between gap-2 px-1">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">{children}</h2>
+      <h2 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
+        {Icon && <Icon size={14} aria-hidden className="text-brand-ink" />}
+        {children}
+      </h2>
       {right}
     </div>
   )
@@ -221,9 +227,9 @@ export function StatTile({
     </>
   )
   const cls = clsx(
-    "flex h-full w-full flex-col justify-start rounded-[var(--radius-card)] border bg-surface p-3.5 text-left shadow-[var(--shadow-card)] transition-colors",
-    active ? clsx(t.border, "ring-2 ring-inset ring-current", t.text) : "border-line",
-    (href || onClick) && "hover:bg-surface-2",
+    "flex h-full w-full flex-col justify-start rounded-[var(--radius-card)] bg-surface p-3.5 text-left shadow-[var(--shadow-card)]",
+    active && "ring-2 ring-inset ring-brand",
+    (href || onClick) && "press cursor-pointer hover:shadow-[var(--shadow-card-hover)]",
   )
   if (href) return <Link href={href} className={cls}>{body}</Link>
   if (onClick) return <button onClick={onClick} aria-pressed={active} className={cls}>{body}</button>
@@ -277,7 +283,7 @@ export function ListRow({
 /** A card that holds rows, divided by hairlines. */
 export function ListCard({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={clsx("overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-card)] divide-y divide-line", className)}>
+    <div className={clsx("overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)] divide-y divide-line", className)}>
       {children}
     </div>
   )
@@ -319,7 +325,7 @@ export function Disclosure({
   className?: string
 }) {
   return (
-    <details open={defaultOpen} className={clsx("group rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-card)]", className)}>
+    <details open={defaultOpen} className={clsx("group rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)]", className)}>
       <summary className="flex min-h-[52px] items-center gap-3 px-4 py-3">
         <span className="min-w-0 flex-1">
           <span className="block font-semibold">{title}</span>
@@ -378,7 +384,7 @@ export function Segmented<T extends string>({
   fit?: boolean
 }) {
   return (
-    <div role="tablist" className={clsx("scroll-thin flex gap-1 overflow-x-auto rounded-full bg-surface-2 p-1", fit && "md:w-fit", className)}>
+    <div role="tablist" className={clsx("scroll-thin flex gap-1 overflow-x-auto rounded-[14px] bg-surface-2 p-1", fit && "md:w-fit", className)}>
       {items.map((item) => {
         const on = item.value === value
         return (
@@ -389,9 +395,9 @@ export function Segmented<T extends string>({
             aria-selected={on}
             onClick={() => onChange(item.value)}
             className={clsx(
-              "flex min-h-[38px] flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold transition-colors",
+              "press flex min-h-[38px] flex-1 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-[11px] px-3 text-sm font-semibold",
               fit && "md:min-w-28 md:flex-none md:px-4",
-              on ? "bg-raised text-ink shadow-[var(--shadow-card)]" : "text-ink-soft hover:text-ink",
+              on ? "bg-raised text-brand-ink shadow-[var(--shadow-card)]" : "text-ink-soft hover:text-ink",
             )}
           >
             <span className="truncate">{item.label}</span>
@@ -439,7 +445,7 @@ export function Sheet({
           className={clsx(
             "anim-sheet fixed z-50 flex max-h-[92dvh] flex-col bg-surface text-ink shadow-[var(--shadow-pop)] outline-none",
             "inset-x-0 bottom-0 rounded-t-3xl",
-            "sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl",
+            "sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[22px]",
             hero ? "sm:max-w-3xl" : wide ? "sm:max-w-2xl" : "sm:max-w-md",
           )}
         >
@@ -529,7 +535,7 @@ export function Menu({ items, label, trigger, align = "end" }: { items: MenuItem
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>
         {trigger ?? (
-          <IconButton label={label ?? t("common.more")} className="border border-line bg-surface">
+          <IconButton label={label ?? t("common.more")} className="bg-surface shadow-[var(--shadow-card)]">
             <MoreHorizontal size={20} aria-hidden />
           </IconButton>
         )}
@@ -627,7 +633,7 @@ export function ChoiceChips<T extends string>({
             aria-pressed={on}
             onClick={() => onChange(o.value)}
             className={clsx(
-              "min-h-[40px] rounded-full border px-3.5 text-sm font-semibold transition-colors",
+              "press min-h-[40px] cursor-pointer rounded-full border px-3.5 text-sm font-semibold",
               on ? "border-brand bg-brand-soft text-brand-ink" : "border-line-strong bg-surface text-ink-soft hover:bg-surface-2",
               "disabled:opacity-45",
             )}
@@ -643,12 +649,12 @@ export function ChoiceChips<T extends string>({
 /** A number with − and + on either side, for adults, children and nights. */
 export function Stepper({ label, value, min = 0, max = 99, onChange }: { label: string; value: number; min?: number; max?: number; onChange: (v: number) => void }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-xl border border-line-strong bg-surface px-3 py-1.5">
+    <div className="flex items-center justify-between gap-2 rounded-xl bg-surface-2 px-3 py-1.5">
       <span className="text-[13px] font-semibold text-ink-soft">{label}</span>
       <span className="flex items-center gap-1">
-        <button type="button" aria-label={`${label} −`} disabled={value <= min} onClick={() => onChange(value - 1)} className="h-9 w-9 rounded-lg bg-surface-2 text-lg font-bold text-ink disabled:opacity-35">−</button>
+        <button type="button" aria-label={`${label} −`} disabled={value <= min} onClick={() => onChange(value - 1)} className="press h-9 w-9 rounded-lg bg-surface text-lg font-bold text-ink shadow-[var(--shadow-card)] disabled:opacity-35">−</button>
         <span className="w-8 text-center text-lg font-bold tabular-nums">{value}</span>
-        <button type="button" aria-label={`${label} +`} disabled={value >= max} onClick={() => onChange(value + 1)} className="h-9 w-9 rounded-lg bg-brand-soft text-lg font-bold text-brand-ink disabled:opacity-35">+</button>
+        <button type="button" aria-label={`${label} +`} disabled={value >= max} onClick={() => onChange(value + 1)} className="press h-9 w-9 rounded-lg bg-brand-soft text-lg font-bold text-brand-ink disabled:opacity-35">+</button>
       </span>
     </div>
   )
@@ -699,9 +705,9 @@ export function Loading({ rows = 3 }: { rows?: number }) {
   }, [])
   return (
     <div role="status" aria-label={t("common.loading")} className="space-y-3">
-      <div className="h-7 w-40 animate-pulse rounded-lg bg-line" />
+      <div className="skeleton h-5 w-40 rounded-md" />
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="h-20 animate-pulse rounded-[var(--radius-card)] bg-line" style={{ animationDelay: `${i * 80}ms` }} />
+        <div key={i} className="skeleton h-20 rounded-[var(--radius-card)]" style={{ animationDelay: `${i * 90}ms` }} />
       ))}
       {slow && <p className="anim-pop text-center text-sm text-ink-soft">{t("common.stillLoading")}</p>}
     </div>
@@ -711,8 +717,8 @@ export function Loading({ rows = 3 }: { rows?: number }) {
 export function Empty({ children, icon: Icon = Inbox, action }: { children?: React.ReactNode; icon?: React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>; action?: React.ReactNode }) {
   const { t } = useI18n()
   return (
-    <div className="flex flex-col items-center gap-2 rounded-[var(--radius-card)] border border-dashed border-line-strong px-4 py-8 text-center">
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-surface-2 text-ink-faint">
+    <div className="flex flex-col items-center gap-2 rounded-[var(--radius-card)] bg-surface-2 px-4 py-8 text-center">
+      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-surface text-brand-ink shadow-[var(--shadow-card)]">
         <Icon size={22} aria-hidden />
       </span>
       <p className="text-sm text-ink-soft">{children ?? t("today.empty")}</p>

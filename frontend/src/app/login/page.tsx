@@ -4,7 +4,7 @@
  * One way in: the property's code, the person's email and a password (no SMS is needed). A wrong code, email or
  * password all get the same answer, so this page cannot be used to find out who works where.
  */
-import { useEffect, useRef, useState, useSyncExternalStore } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowRight } from "lucide-react"
 import { clsx } from "clsx"
@@ -15,10 +15,9 @@ import { Landing } from "./Landing"
 
 /** The desk signs in on the same phone every morning, so the code is remembered on the device. */
 const CODE_KEY = "pms.propertyCode"
-/** The photograph is light in both themes, so whatever sits on it keeps the light theme's ink and button colours. */
-const ON_PHOTO = {
-  "--color-ink": "#171c26", "--color-ink-soft": "#596273", "--color-bg": "#f7f8fa", "--color-on-solid": "#ffffff",
-  "--sky-top": "#9dc0e6", "--sky": "#d3e3f4", "--cloud": "#ffffff",
+/** The wedge is navy and teal in both themes, so whatever sits on it writes in white. */
+const ON_WEDGE = {
+  "--color-ink": "#ffffff", "--color-ink-soft": "rgba(255,255,255,0.78)", "--color-brand-soft": "rgba(255,255,255,0.16)", "--color-brand-ink": "#ffffff",
 } as React.CSSProperties
 const noSubscribe = () => () => {}
 function readSavedCode() {
@@ -45,28 +44,13 @@ export default function LoginPage() {
   const [typed, setCode] = useState<string | null>(null)
   const code = typed ?? saved
 
-  // The window's scroll position is the external system the header follows, and the photograph rides it: as the
-  // page scrolls down the building climbs faster than the page, and it settles back on the way up. Written
-  // straight to the element once per frame rather than through state, so it never re-renders the page.
-  const photo = useRef<HTMLImageElement>(null)
+  // The window's scroll position is the external system the header follows: it frosts over once the wedge
+  // has scrolled under it.
   useEffect(() => {
-    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    let frame = 0
-    const onScroll = () => {
-      setScrolled(window.scrollY > 8)
-      if (still) return
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => {
-        const img = photo.current
-        if (!img?.parentElement) return
-        // Never lift the photograph's bottom edge above the hero's own: that would open a gap under it.
-        const room = img.offsetTop + img.offsetHeight - img.parentElement.clientHeight
-        img.style.transform = `translate3d(0, ${-Math.min(window.scrollY * 0.35, Math.max(room, 0))}px, 0)`
-      })
-    }
+    const onScroll = () => setScrolled(window.scrollY > 8)
     onScroll()
     window.addEventListener("scroll", onScroll, { passive: true })
-    return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(frame) }
+    return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
   async function run(action: () => Promise<void>) {
@@ -96,8 +80,8 @@ export default function LoginPage() {
 
   return (
     <div className="overflow-x-clip">
-      {/* Sits on the sky at the top of the page and frosts over once the page scrolls under it. */}
-      <header className={clsx("sticky top-0 z-30 h-16 text-ink transition-colors md:h-20", scrolled && "bg-surface/80 shadow-[var(--shadow-card)] backdrop-blur-md")} style={scrolled ? undefined : ON_PHOTO}>
+      {/* Sits on the wedge at the top of the page and frosts over once the page scrolls under it. */}
+      <header className={clsx("sticky top-0 z-30 h-16 text-ink transition-colors md:h-20", scrolled && "bg-surface/80 shadow-[var(--shadow-card)] backdrop-blur-md")} style={scrolled ? undefined : ON_WEDGE}>
         <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-3 px-4 md:px-8">
           <span className="flex min-w-0 items-center">
             <Wordmark label={t("app.name")} className="h-[18px] md:h-5" />
@@ -116,38 +100,30 @@ export default function LoginPage() {
             >
               {language === "hi" ? "EN" : "हिं"}
             </button>
-            <Button size="sm" onClick={() => setOpen(true)} className="min-h-[40px] px-5">{t("login.signIn")}</Button>
+            <Button size="sm" variant={scrolled ? "primary" : "secondary"} onClick={() => setOpen(true)} className={clsx("min-h-[40px] px-5", !scrolled && "border-white/40 bg-white/10 text-white hover:bg-white/20")}>{t("login.signIn")}</Button>
           </span>
         </div>
       </header>
 
-      {/* Pulled up under the header so the photograph starts at the very top. */}
-      <div className="sky relative isolate -mt-16 flex min-h-dvh flex-col overflow-hidden pt-16 text-ink md:-mt-20 md:pt-20" style={ON_PHOTO}>
-        {/* The photograph starts a third of the way down, its sky fading into the CSS sky above, so the headline and
-            the button sit in open sky and the building rises under them. A plain <img>: one static file. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img ref={photo} src="/hero.jpg" alt="" aria-hidden className="pointer-events-none absolute inset-x-0 top-[34%] -z-10 h-full w-full object-cover object-top will-change-transform [mask-image:linear-gradient(to_bottom,transparent,#000_22%)]" />
-        <section className="depth relative mx-auto w-full max-w-5xl px-4 pt-12 text-center md:pt-20" style={{ "--depth": "-8vh" } as React.CSSProperties}>
-          <div className="relative inline-block max-w-full">
-            <h1 className="display rise text-balance text-[44px] sm:text-6xl md:text-7xl">{t("login.headline")}</h1>
-            {/* Two puffs of the same sky drift over the ends of the headline, as on the reference page. */}
-            <span aria-hidden className="pointer-events-none absolute -left-8 top-[30%] h-16 w-32 rounded-full bg-[radial-gradient(closest-side,var(--cloud)_45%,transparent)] opacity-60 md:-left-24 md:top-[8%] md:h-40 md:w-80 md:opacity-95" />
-            <span aria-hidden className="pointer-events-none absolute -right-8 top-[10%] h-16 w-32 rounded-full bg-[radial-gradient(closest-side,var(--cloud)_45%,transparent)] opacity-60 md:-right-28 md:top-[-6%] md:h-44 md:w-96 md:opacity-95" />
-          </div>
+      {/* Pulled up under the header so the wedge starts at the very top: navy at the top-left running into the
+          brand teal, cut on a slant where the white page begins. The headline rises once on load; nothing else
+          on the page moves by itself. */}
+      <div className="wedge relative isolate -mt-16 flex min-h-[88dvh] flex-col overflow-hidden pt-16 text-ink md:-mt-20 md:min-h-dvh md:pt-20" style={ON_WEDGE}>
+        <section className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-4 pb-[18vh] pt-10 text-center md:pt-16">
+          <h1 className="display rise text-balance text-[44px] sm:text-6xl md:text-7xl">{t("login.headline")}</h1>
           <p className="rise mx-auto mt-5 max-w-2xl text-balance text-lg font-medium [animation-delay:120ms] md:text-2xl">
             {t("login.lead")} <span className="text-ink-soft">{t("login.rest")}</span>
           </p>
           <div className="rise mt-8 [animation-delay:200ms]">
-            <Button size="lg" onClick={() => setOpen(true)} className="px-7">
+            <Button size="lg" onClick={() => setOpen(true)} className="px-7 shadow-[0_10px_30px_rgb(0_0_0/0.25)]">
               {t("login.signIn")} <ArrowRight size={18} aria-hidden />
             </Button>
           </div>
         </section>
-
       </div>
 
       {/* The desk is here every morning: the code is remembered on the device, so it is two fields and a tap. */}
-      <Sheet open={open} onOpenChange={setOpen} hero title={t("login.title")} description={t("login.dialogLead")}>
+      <Sheet open={open} onOpenChange={setOpen} hero title={<>{t("login.title")} <span className="font-semibold text-ink-faint">PMS</span></>} description={t("login.dialogLead")}>
         <form id="signin" onSubmit={submit} className="line-form space-y-7 pt-7">
           {error && <Banner tone="danger">{error}</Banner>}
 

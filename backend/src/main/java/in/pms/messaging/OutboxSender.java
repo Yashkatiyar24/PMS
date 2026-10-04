@@ -109,7 +109,11 @@ public class OutboxSender {
             case "sms" -> sms.sendOtp(String.valueOf(p.get("to")), String.valueOf(p.get("text")));
             case "email" -> email.send(String.valueOf(p.get("to")), String.valueOf(p.get("subject")), String.valueOf(p.get("html")), List.of());
             case "push" -> {
-                boolean valid = push.send(String.valueOf(p.get("token")), String.valueOf(p.get("title")), String.valueOf(p.get("body")), Map.of());
+                // The data map rides along so a tap on the phone can open the right screen (FCM data values must be strings).
+                Map<String, String> data = new java.util.HashMap<>();
+                for (String key : List.of("kind", "link", "notificationId"))
+                    if (p.get(key) != null) data.put(key, String.valueOf(p.get(key)));
+                boolean valid = push.send(String.valueOf(p.get("token")), String.valueOf(p.get("title")), String.valueOf(p.get("body")), data);
                 if (!valid) admin.sql("delete from push_tokens where token = ?").param(String.valueOf(p.get("token"))).update();
             }
             default -> throw new IllegalStateException("Unknown channel " + channel);

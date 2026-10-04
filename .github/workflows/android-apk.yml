@@ -1,0 +1,82 @@
+# Builds an installable Android APK of the mobile app (release build, signed with the debug key from the Expo
+# template, so it sideloads but is not for the Play Store). Download it from the run's "padav-apk" artifact.
+#
+# Settings, all optional:
+#   - repository variable PADAV_API_URL: the API origin baked into the app (default: the emulator's host,
+#     http://10.0.2.2:8080). A manual run can override it with the api_url input.
+#   - repository secret GOOGLE_SERVICES_JSON: the Firebase google-services.json for in.padav.app. Without it the
+#     build uses the placeholder and push notifications stay off.
+name: Android APK
+
+on:
+  push:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/android-apk.yml"
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: "API origin baked into the app, e.g. https://api.example.in"
+        required: false
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      EXPO_PUBLIC_API_URL: ${{ inputs.api_url || vars.PADAV_API_URL || 'http://10.0.2.2:8080' }}
+      HUSKY: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: temurin
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: npm ci
+      - name: Checks
+        run: npm run check
+
+      - name: Firebase config
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > google-services.json
+          else
+            echo "::warning::GOOGLE_SERVICES_JSON is not set; building with the placeholder (no push)."
+            cp google-services.json.example google-services.json
+          fi
+
+      - name: Generate the native project
+        run: npx expo prebuild --platform android --no-install --clean
+
+      - name: Build the APK
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64
+
+      - name: Name it
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/app-release.apk "dist/padav-${GITHUB_SHA::7}.apk"
+          echo "API: $EXPO_PUBLIC_API_URL" > dist/BUILD_INFO.txt
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: padav-apk
+          path: mobile/dist/
+          retention-days: 30

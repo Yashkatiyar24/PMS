@@ -1,0 +1,82 @@
+{
+  "name": "Padav",
+  "slug": "padav",
+  "scheme": "padav",
+  "version": "1.0.0",
+  "orientation": "portrait",
+  "userInterfaceStyle": "automatic",
+  "icon": "./assets/images/app-icon-all.png",
+  "updates": {
+    "fallbackToCacheTimeout": 0
+  },
+  "newArchEnabled": true,
+  "jsEngine": "hermes",
+  "assetBundlePatterns": ["**/*"],
+  "android": {
+    "icon": "./assets/images/app-icon-android-legacy.png",
+    "package": "in.padav.app",
+    "googleServicesFile": "./google-services.json",
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/images/app-icon-android-adaptive-foreground.png",
+      "backgroundImage": "./assets/images/app-icon-android-adaptive-background.png"
+    },
+    "allowBackup": false,
+    "permissions": ["android.permission.POST_NOTIFICATIONS", "android.permission.CAMERA"]
+  },
+  "ios": {
+    "icon": "./assets/images/app-icon-ios.png",
+    "supportsTablet": true,
+    "bundleIdentifier": "in.padav.app",
+    "googleServicesFile": "./GoogleService-Info.plist",
+    "entitlements": { "aps-environment": "production" },
+    "infoPlist": {
+      "UIBackgroundModes": ["remote-notification"],
+      "NSCameraUsageDescription": "Padav photographs guest ID documents and expense bills at the desk.",
+      "NSPhotoLibraryUsageDescription": "Padav attaches bills and property photos from your library."
+    }
+  },
+  "web": {
+    "favicon": "./assets/images/app-icon-web-favicon.png",
+    "bundler": "metro"
+  },
+  "plugins": [
+    "expo-localization",
+    "expo-font",
+    [
+      "expo-splash-screen",
+      {
+        "image": "./assets/images/app-icon-android-adaptive-foreground.png",
+        "imageWidth": 300,
+        "resizeMode": "contain",
+        "backgroundColor": "#1fb6cb"
+      }
+    ],
+    [
+      "react-native-edge-to-edge",
+      {
+        "android": {
+          "parentTheme": "Light",
+          "enforceNavigationBarContrast": false
+        }
+      }
+    ],
+    ["expo-build-properties", { "ios": { "useFrameworks": "static" } }],
+    "@react-native-firebase/app",
+    "@react-native-firebase/messaging",
+    [
+      "expo-image-picker",
+      {
+        "cameraPermission": "Padav photographs guest ID documents and expense bills at the desk.",
+        "photosPermission": "Padav attaches bills and property photos from your library."
+      }
+    ]
+  ],
+  "experiments": {
+    "tsconfigPaths": true
+  },
+  "extra": {
+    "ignite": {
+      "version": "11.5.0"
+    }
+  }
+}

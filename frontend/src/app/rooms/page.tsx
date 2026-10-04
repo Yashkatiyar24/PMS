@@ -9,7 +9,7 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, Ban, BedDouble, Check, ClipboardCheck, LayoutGrid, PackageSearch, Sparkles, Unlock, UserRound, Wrench } from "lucide-react"
+import { AlertTriangle, Ban, BedDouble, Check, ClipboardCheck, LayoutGrid, Layers, PackageSearch, Sparkles, Unlock, UserRound, Wrench } from "lucide-react"
 import { clsx } from "clsx"
 import { api, ApiError } from "@/lib/api"
 import { useAutoRefresh, useResource } from "@/lib/use-resource"
@@ -17,7 +17,7 @@ import { formatDate } from "@/lib/format"
 import { OFF_SALE, type Room, type RoomStatus } from "@/lib/types"
 import { useI18n } from "@/i18n"
 import { useSession } from "@/lib/session"
-import { Banner, Button, Chip, ChoiceChips, Disclosure, Empty, Field, Loading, Menu, PageHeader, SectionLabel, Segmented, Sheet, TONE, type MenuItem, type Tone } from "@/components/ui"
+import { Banner, Button, Chip, ChoiceChips, Disclosure, Empty, Field, Loading, Menu, PageHeader, SectionLabel, Segmented, Sheet, type MenuItem, type Tone } from "@/components/ui"
 import { ReportIssue } from "@/components/ReportIssue"
 
 type Filter = "all" | "clean" | "dirty" | "blocked" | "mine"
@@ -25,6 +25,23 @@ const STATUS_TONE: Record<RoomStatus, Tone> = { clean: "ok", inspected: "ok", di
 /** The filter a status belongs to: the three the desk has always used, each now covering its neighbours. */
 const GROUP: Record<RoomStatus, "clean" | "dirty" | "blocked"> = { clean: "clean", inspected: "clean", dirty: "dirty", cleaning: "dirty", blocked: "blocked", maintenance: "blocked" }
 type Person = { id: string; name: string; role: string }
+
+/**
+ * The board's colour for one room, the reference's housekeeping wall: a square chip with the number on it, its
+ * fill telling the housekeeping state — dirty a pale red, being cleaned amber, inspected a teal tint, clean plain
+ * white, off sale grey — and a dot repeating the tone so status never rides on the fill alone. The open room is
+ * solid teal.
+ */
+const CHIP: Record<RoomStatus, { fill: string; dot: string }> = {
+  dirty: { fill: "bg-danger-soft text-danger", dot: "bg-danger" },
+  cleaning: { fill: "bg-warn-soft text-warn", dot: "bg-warn" },
+  inspected: { fill: "bg-brand-soft text-brand-ink", dot: "bg-brand" },
+  clean: { fill: "bg-surface text-ink", dot: "bg-ok" },
+  blocked: { fill: "bg-surface-2 text-ink-soft", dot: "bg-ink-faint" },
+  maintenance: { fill: "bg-surface-2 text-ink-soft", dot: "bg-ink-faint" },
+}
+/** What the legend explains, in the order the eye meets them on the wall. */
+const LEGEND: RoomStatus[] = ["dirty", "cleaning", "inspected", "clean", "blocked"]
 
 export default function RoomsPage() {
   const { t } = useI18n()
@@ -119,62 +136,65 @@ export default function RoomsPage() {
         </Empty>
       )}
 
+      {/* The legend reads first, so the wall below needs no words on it. */}
+      {rooms.length > 0 && (
+        <ul aria-label={t("common.details")} className="flex flex-wrap gap-x-4 gap-y-1.5 px-1 text-xs font-semibold text-ink-soft">
+          {LEGEND.map((status) => (
+            <li key={status} className="flex items-center gap-1.5">
+              <span aria-hidden className={clsx("inline-block h-3.5 w-3.5 rounded-[5px] shadow-[inset_0_0_0_1px_var(--color-line)]", CHIP[status].fill.split(" ")[0])} />
+              {label(status)}
+            </li>
+          ))}
+          <li className="flex items-center gap-1.5">
+            <span aria-hidden className="inline-block h-1 w-3.5 rounded-full bg-ink" />
+            {t("rooms.occupied")}
+          </li>
+        </ul>
+      )}
+
       {groups.map(({ building, floor }) => {
         const key = `${building}#${floor}`
         const onFloor = shown.filter((r) => r.building === building && r.floor === floor)
         if (onFloor.length === 0) return null
         return (
           <section key={key}>
-            <SectionLabel>{building ? `${building} · ${t("rooms.floor", { n: floor })}` : t("rooms.floor", { n: floor })}</SectionLabel>
-            {/* Three across on a phone, where a wall of rooms is what housekeeping wants in one glance. Above
-                that the tiles size themselves: at least 9.5rem each, as many as fit, sharing the row. A fixed
-                eight columns on a laptop made 129px tiles with 11px type and left the screen looking empty. */}
-            <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] sm:gap-3">
+            <SectionLabel icon={Layers}>{building ? `${building} · ${t("rooms.floor", { n: floor })}` : t("rooms.floor", { n: floor })}</SectionLabel>
+            {/* Five across on a phone, as many as fit at 4.5rem above that: a wall of numbers housekeeping reads
+                in one glance, the way the reference board does. Everything else about a room is one tap away. */}
+            <ul className="grid grid-cols-5 gap-2 sm:grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] sm:gap-2.5">
               {onFloor.map((room) => {
-                const tone = STATUS_TONE[room.status]
+                const chip = CHIP[room.status]
                 const bedsTaken = room.beds.filter((b) => b.active && b.occupancy).length
                 const bedsTotal = room.beds.filter((b) => b.active).length
-                // Two different questions share this tile, so they get two different parts of it. The stripe
-                // down the side is housekeeping's — clean, dirty, off sale — because that is what the cleaner
-                // walks the floor looking for. The card's own colour is the bookings' answer: a room with
-                // somebody in it, or somebody arriving today, must not look like an empty one at a glance.
                 // A dormitory carries its guests on its beds, not on the room, so a full one has to be worked
                 // out: ten of ten beds taken is as occupied as a room with somebody's name on it.
-                const full = bedsTotal > 0 && bedsTaken === bedsTotal
-                const state = room.occupancy?.state ?? (full ? "occupied" : null)
-                // Three steps, not three colours: free is plain, reserved is outlined, occupied is filled in.
-                // Two similar tints side by side are two things to tell apart; a filled tile and an outlined
-                // one are not.
-                const taken = state === "occupied" ? "brand" : state === "reserved" ? "info" : null
+                const taken = room.occupancy?.state === "occupied" || (bedsTotal > 0 && bedsTaken > 0)
+                const who = bedsTotal > 0 && !room.occupancy
+                  ? t("rooms.bedsTaken", { n: bedsTaken, total: bedsTotal })
+                  : room.occupancy
+                    ? `${t(`rooms.${room.occupancy.state}` as "rooms.occupied")}${room.occupancy.guestName ? ` · ${room.occupancy.guestName}` : ""}`
+                    : t("rooms.available")
+                const selected = room.id === openId
                 return (
                   <li key={room.id}>
                     <button
                       onClick={() => setOpenId(room.id)}
-                      aria-label={`${room.number} · ${label(room.status)}`}
+                      aria-label={`${room.number} · ${label(room.status)} · ${who}`}
+                      aria-pressed={selected}
+                      title={`${room.roomTypeName} · ${who}`}
                       className={clsx(
-                        "relative flex h-full w-full flex-col items-start gap-1 overflow-hidden rounded-2xl border p-3 text-left shadow-[var(--shadow-card)] transition-colors hover:border-line-strong sm:gap-1.5 sm:p-4",
-                        state === "occupied"
-                          ? "border-transparent bg-brand-soft"
-                          : state === "reserved"
-                            ? "border-info bg-surface"
-                            : "border-line bg-surface hover:bg-surface-2",
+                        "press relative flex aspect-square w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)]",
+                        selected ? "cta text-on-solid" : chip.fill,
                       )}
                     >
-                      <span aria-hidden className={clsx("absolute inset-y-0 left-0 w-1.5", TONE[tone].solid)} />
-                      {room.hkPriority === "high" && <AlertTriangle size={14} aria-label={t("priority.high")} className="absolute right-2 top-2 text-danger" />}
-                      <span className="pl-1.5 text-xl font-bold leading-none tabular-nums sm:text-2xl">{room.number}</span>
-                      <span className="w-full truncate pl-1.5 text-[11px] text-ink-soft sm:text-xs">{room.roomTypeName}</span>
-                      <Chip tone={tone} dot className="ml-1.5 mt-0.5 max-w-[calc(100%-0.375rem)]"><span className="min-w-0 truncate">{label(room.status)}</span></Chip>
-                      {/* Who is in it, said in the colour of the state it is in: an occupied room reads as
-                          occupied from across the room, not by reading the small print under the number. */}
-                      <span className={clsx("w-full truncate pl-1.5 text-[11px] font-semibold sm:text-xs", taken ? TONE[taken].text : "text-ink-soft")}>
-                        {bedsTotal > 0 && !room.occupancy
-                          ? t("rooms.bedsTaken", { n: bedsTaken, total: bedsTotal })
-                          : room.occupancy
-                            ? t(`rooms.${room.occupancy.state}` as "rooms.occupied")
-                            : t("rooms.available")}
-                        {room.occupancy?.guestName ? ` · ${room.occupancy.guestName}` : room.housekeeperName ? ` · ${room.housekeeperName}` : ""}
+                      <span className="text-[19px] font-bold leading-none tabular-nums tracking-tight sm:text-xl">{room.number}</span>
+                      <span className="flex h-2 items-center gap-1" aria-hidden>
+                        <span className={clsx("h-1.5 w-1.5 rounded-full", selected ? "bg-on-solid" : chip.dot)} />
+                        {taken && <span className={clsx("h-1 w-3.5 rounded-full", selected ? "bg-on-solid" : "bg-ink")} />}
                       </span>
+                      {room.hkPriority === "high" && (
+                        <span className={clsx("absolute right-1.5 top-1.5 text-[11px] font-extrabold leading-none", selected ? "text-on-solid" : "text-warn")} aria-label={t("priority.high")}>!</span>
+                      )}
                     </button>
                   </li>
                 )
@@ -192,8 +212,8 @@ export default function RoomsPage() {
       >
         {open && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
-              <span className="text-sm text-ink-soft">{t("common.details")}</span>
+            <div className={clsx("flex items-center justify-between rounded-xl px-3 py-2.5", CHIP[open.status].fill, open.status === "clean" && "shadow-[var(--shadow-card)]")}>
+              <span className="text-sm">{t("common.details")}</span>
               <Chip tone={STATUS_TONE[open.status]} dot>{label(open.status)}</Chip>
             </div>
             {open.blockedReason && <p className="text-sm text-ink-soft">{open.blockedReason}</p>}
@@ -202,7 +222,7 @@ export default function RoomsPage() {
             {/* Who is here now, room by room or bed by bed. */}
             {open.occupancy && <OccupancyRow label={open.number} occupancy={open.occupancy} canOpen={has("reservations.view")} />}
             {open.beds.length > 0 && !open.occupancy && (
-              <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
+              <ul className="divide-y divide-line overflow-hidden rounded-xl shadow-[var(--shadow-card)]">
                 {open.beds.filter((b) => b.active).map((bed) => (
                   <li key={bed.id}>
                     {bed.occupancy ? <OccupancyRow label={bed.label} occupancy={bed.occupancy} canOpen={has("reservations.view")} flat /> : (
@@ -321,6 +341,6 @@ function OccupancyRow({ label, occupancy, canOpen, flat }: { label: string; occu
       <Chip tone={occupancy.state === "occupied" ? "brand" : "violet"}>{t(`rooms.${occupancy.state}` as "rooms.occupied")}</Chip>
     </>
   )
-  const cls = clsx("flex min-h-[44px] items-center gap-2.5 px-3 py-2 text-sm", !flat && "rounded-xl border border-line")
+  const cls = clsx("flex min-h-[44px] items-center gap-2.5 px-3 py-2 text-sm", !flat && "rounded-xl shadow-[var(--shadow-card)]")
   return canOpen ? <Link href={`/stays/${occupancy.bookingId}`} className={clsx(cls, "hover:bg-surface-2")}>{body}</Link> : <div className={cls}>{body}</div>
 }

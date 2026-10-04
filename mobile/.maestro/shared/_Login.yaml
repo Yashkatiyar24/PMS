@@ -1,0 +1,27 @@
+# flow: Shared _Login
+# intent: sign in to the seeded dev property (backend on the dev profile, see README) and land on Today.
+appId: ${MAESTRO_APP_ID}
+env:
+  PROPERTY_CODE: ${PROPERTY_CODE}
+  EMAIL: ${EMAIL}
+  PASSWORD: ${PASSWORD}
+---
+- assertVisible:
+    id: "login-code"
+- tapOn:
+    id: "login-code"
+- eraseText
+- inputText: ${PROPERTY_CODE}
+- tapOn:
+    id: "login-email"
+- inputText: ${EMAIL}
+- tapOn:
+    id: "login-password"
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: "login-submit"
+- extendedWaitUntil:
+    visible:
+      id: "today-checkin"
+    timeout: 20000

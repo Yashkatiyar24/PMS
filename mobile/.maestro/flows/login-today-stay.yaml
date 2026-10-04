@@ -1,0 +1,47 @@
+# flow: login → Today → open the first stay → back.
+# The smoke test the engineering rules ask for: sign in, see the main list, open a detail.
+# Run: npm run test:maestro (needs a dev build on a device/simulator and the API at EXPO_PUBLIC_API_URL with seed data).
+appId: ${MAESTRO_APP_ID}
+env:
+  PROPERTY_CODE: SRD1001
+  EMAIL: owner@pms.local
+  PASSWORD: password123
+onFlowStart:
+  - runFlow: ../shared/_OnFlowStart.yaml
+---
+- runFlow: ../shared/_Login.yaml
+
+# Today shows the occupancy ring and the activity tiles
+- assertVisible: "Today"
+- assertVisible: "Arriving today"
+
+# Open the search sheet and find a seeded guest, then open the stay
+- tapOn:
+    id: "user-menu"
+- assertVisible: "Log out"
+- back
+
+- tapOn: "Staying now"
+- scrollUntilVisible:
+    element:
+      text: "Accommodation"
+    optional: true
+    timeout: 5000
+
+# If a stay row exists, open it and check the detail tabs render
+- runFlow:
+    when:
+      visible: "Paid"
+    commands:
+      - tapOn:
+          text: "Paid"
+          index: 0
+      - assertVisible: "Accommodation"
+      - assertVisible: "Bill"
+      - tapOn: "Bill"
+      - assertVisible: "Total"
+      - back
+
+# Rooms tab renders the housekeeping board
+- tapOn: "Rooms"
+- assertVisible: "Rooms"

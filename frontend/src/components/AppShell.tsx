@@ -143,7 +143,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SearchBox className="max-w-md flex-1" />
             <Menu
               align="end"
-              trigger={<button aria-label={t("action.add")} className="ml-auto grid h-11 w-11 place-items-center rounded-full bg-ink text-bg hover:bg-ink/85"><Plus size={20} aria-hidden /></button>}
+              trigger={<button aria-label={t("action.add")} className="cta press ml-auto grid h-11 w-11 place-items-center rounded-full text-on-solid shadow-[var(--shadow-cta)]"><Plus size={20} aria-hidden /></button>}
               items={[
                 { label: t("action.checkIn"), icon: UserPlus, href: "/check-in" },
                 { label: t("booking.new"), icon: CalendarPlus, href: "/bookings/new" },

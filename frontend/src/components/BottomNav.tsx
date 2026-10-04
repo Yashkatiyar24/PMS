@@ -1,14 +1,15 @@
 "use client"
 
 /**
- * The same five destinations twice: a thumb-height bar on a phone, a rail down the left on a laptop.
- * Each keeps its own colour so the eye finds it without reading. Each shows only when the role can use it:
- * a housekeeper sees rooms, an accountant sees the money.
+ * The same destinations twice: a thumb-height bar on a phone, a rail down the left on a laptop. The bar carries
+ * only what the desk opens all day (today, bookings, rooms) and a More button for the rest; the rail has the
+ * height to show everything. Each shows only when the role can use it: a housekeeper sees rooms, an
+ * accountant sees the money.
  */
-import { Suspense } from "react"
+import { Suspense, useState } from "react"
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
-import { AlertTriangle, BarChart3, BedDouble, Building2, CalendarDays, Home, LayoutGrid, MoonStar, Settings, ShieldCheck, UserRound } from "lucide-react"
+import { AlertTriangle, BarChart3, BedDouble, Bell, Building2, CalendarDays, Home, LayoutGrid, MoonStar, Settings, ShieldCheck, UserRound } from "lucide-react"
 import { clsx } from "clsx"
 import { useI18n } from "@/i18n"
 import { api } from "@/lib/api"
@@ -16,7 +17,7 @@ import { useSession } from "@/lib/session"
 import { useResource } from "@/lib/use-resource"
 import { useOperations } from "@/lib/operations-nav"
 import { BILLING_TONE, isQuiet, needsAttention, type PropertyHealth } from "@/app/admin/shared"
-import { TONE } from "./ui"
+import { ListCard, ListRow, Sheet, TONE } from "./ui"
 
 function useItems() {
   const { t } = useI18n()
@@ -40,39 +41,82 @@ function useItems() {
 const isActive = (href: string, path: string) =>
   href === "/" ? path === "/" || path.startsWith("/check-in") || path.startsWith("/stays") : path.startsWith(href)
 
+/** What stays on the phone bar: the screens the desk opens all day. The rest are rows behind More. */
+const ON_BAR = new Set(["/", "/bookings", "/rooms", "/admin"])
+
 export function BottomNav() {
+  const { t } = useI18n()
+  const { user } = useSession()
   const items = useItems()
+  const operations = useOperations()
   const path = usePathname()
+  // The sheet remembers which screen it was opened on; a row is a link, so once the screen behind it has
+  // changed the sheet is simply no longer open, with no effect to run.
+  const [openOn, setOpenOn] = useState<string | null>(null)
+  const more = openOn === path
+  const setMore = (open: boolean) => setOpenOn(open ? path : null)
+  const bar = items.filter((i) => ON_BAR.has(i.href))
+  const rest = items.filter((i) => !ON_BAR.has(i.href))
+  const extras = [
+    { href: "/notifications", label: t("notif.title"), icon: Bell },
+    ...((user?.memberships.length ?? 0) > 1 ? [{ href: "/portfolio", label: t("portfolio.title"), icon: Building2 }] : []),
+  ]
+  const behindMore = [...rest, ...operations, ...extras]
+  const moreActive = behindMore.some((i) => isActive(i.href, path))
+  const entry = "flex min-h-[58px] w-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors"
+  const pill = "inline-flex h-7 w-12 items-center justify-center rounded-full transition-colors"
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 backdrop-blur no-print md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <nav className="fixed inset-x-0 bottom-0 z-20 bg-surface/95 shadow-[0_-6px_24px_rgb(31_45_61/0.08)] backdrop-blur no-print md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       <ul className="mx-auto flex max-w-2xl">
-        {items.map(({ href, label, icon: Icon, tone }) => {
+        {bar.map(({ href, label, icon: Icon }) => {
           const active = isActive(href, path)
           return (
             <li key={href} className="flex-1">
-              <Link
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={clsx(
-                  "flex min-h-[58px] flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors",
-                  active ? "text-brand-ink" : "text-ink-soft",
-                )}
-              >
-                <span className={clsx("inline-flex h-7 w-12 items-center justify-center rounded-full transition-colors", active && "bg-brand-soft")}>
-                  <Icon size={20} aria-hidden className={tone} />
+              <Link href={href} aria-current={active ? "page" : undefined} className={clsx(entry, active ? "text-brand-ink" : "text-ink-soft")}>
+                <span className={clsx(pill, active && "bg-brand-soft")}>
+                  <Icon size={20} aria-hidden strokeWidth={active ? 2.2 : 1.75} />
                 </span>
                 {label}
               </Link>
             </li>
           )
         })}
+        {behindMore.length > 0 && (
+          <li className="flex-1">
+            <button type="button" onClick={() => setMore(true)} aria-haspopup="dialog" aria-expanded={more} className={clsx(entry, moreActive ? "text-brand-ink" : "text-ink-soft")}>
+              <span className={clsx(pill, moreActive && "bg-brand-soft")}>
+                <LayoutGrid size={20} aria-hidden strokeWidth={moreActive ? 2.2 : 1.75} />
+              </span>
+              {t("common.more")}
+            </button>
+          </li>
+        )}
       </ul>
+      {/* The rest of the app, one row each: screens, then the day's modules, then the account's own pages. */}
+      <Sheet open={more} onOpenChange={setMore} title={t("common.more")}>
+        <div className="space-y-3 pb-2">
+          {[rest, operations, extras].map((group, g) =>
+            group.length > 0 ? (
+              <ListCard key={g}>
+                {group.map(({ href, label, icon: Icon }) => (
+                  <ListRow
+                    key={href}
+                    href={href}
+                    title={label}
+                    leading={<span className={clsx("inline-flex h-9 w-9 items-center justify-center rounded-xl", isActive(href, path) ? "bg-brand-soft text-brand-ink" : "bg-surface-2 text-ink-soft")}><Icon size={18} aria-hidden /></span>}
+                  />
+                ))}
+              </ListCard>
+            ) : null,
+          )}
+        </div>
+      </Sheet>
     </nav>
   )
 }
 
 /** One rail entry; the focus ring sits inside the pill, so a focused active item is not a box around a box. */
-function RailLink({ href, label, icon: Icon, tone, active, count }: { href: string; label: string; icon: React.ComponentType<{ size?: number; className?: string; "aria-hidden"?: boolean }>; tone: string; active: boolean; count?: number }) {
+function RailLink({ href, label, icon: Icon, active, count }: { href: string; label: string; icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number; "aria-hidden"?: boolean }>; tone: string; active: boolean; count?: number }) {
   return (
     <li>
       <Link
@@ -83,7 +127,7 @@ function RailLink({ href, label, icon: Icon, tone, active, count }: { href: stri
           active ? "bg-brand-soft text-brand-ink" : "text-ink-soft hover:bg-surface-2 hover:text-ink",
         )}
       >
-        <Icon size={18} aria-hidden className={tone} />
+        <Icon size={18} aria-hidden strokeWidth={active ? 2.2 : 1.75} />
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {count !== undefined && count > 0 && (
           <span className={clsx("rounded-full px-2 py-0.5 text-[11px] tabular-nums", active ? "bg-raised text-brand-ink" : "bg-surface-2 text-ink-soft")}>{count}</span>
