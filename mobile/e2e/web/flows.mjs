@@ -46,12 +46,24 @@ export async function addCharge(page, description, rupees) {
   await text(page, description).locator("visible=true").first().waitFor({ timeout: 10000 })
 }
 
-/** Open the remove sheet on the only added charge and fill the reason (and a PIN when asked). */
+/**
+ * Open the remove sheet on the named charge and fill the reason (and a PIN when asked). The bill may carry
+ * other removable lines (a room type's refundable deposit, for one), so the button is the one on the row that
+ * names this charge and nothing else removable.
+ */
 export async function removeCharge(page, description, { pin } = {}) {
-  const buttons = page.locator('[data-testid^="remove-line-"]').locator("visible=true")
-  if ((await buttons.count()) !== 1)
-    throw new Error(`expected one removable line, saw ${await buttons.count()}`)
-  await clickTop(buttons)
+  const button = await page.evaluateHandle((desc) => {
+    const removable = '[data-testid^="remove-line-"]'
+    const buttons = [...document.querySelectorAll(removable)].filter((b) => b.getClientRects().length)
+    for (const b of buttons) {
+      let row = b.parentElement
+      while (row && !row.textContent.includes(desc)) row = row.parentElement
+      if (row && row.querySelectorAll(removable).length === 1) return b
+    }
+    return null
+  }, description)
+  if (!button.asElement()) throw new Error(`no removable line for ${description}`)
+  await button.asElement().click()
   await (await topOf(page.getByTestId("remove-line-reason"))).fill("Entered by mistake")
   if (pin) await (await topOf(page.locator('input[type="password"]'))).fill(pin)
   await clickTop(page.getByTestId("remove-line-submit"))
