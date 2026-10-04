@@ -216,7 +216,7 @@ function InventoryCard() {
     [t("setup.archived"), counts.outOfUse, ""],
   ]
   return (
-    <Link href="/settings/rooms" className="rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--shadow-card)] hover:bg-surface-2">
+    <Link href="/settings/rooms" className="press block rounded-[var(--radius-card)] bg-surface p-5 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)]">
       <div className="mb-2 flex items-baseline justify-between gap-2">
         <h2 className="text-sm font-bold tracking-tight">{t("dash.inventory")}</h2>
         <span className="text-xl font-extrabold tabular-nums">{counts.total}</span>
@@ -233,50 +233,83 @@ function InventoryCard() {
   )
 }
 
-/** Tonight at a glance: a ring for how full, and the numbers behind it. */
+/**
+ * Tonight at a glance: one ring, three segments. Booked is the brand teal, available is violet, out of service
+ * is a hatched grey (a state, not a series), each with a 2px gap of surface between them, and the same three
+ * marks sit beside the numbers so a label is never matched to its segment by colour alone.
+ */
 function OccupancyCard({ today }: { today: Today }) {
   const { t } = useI18n()
   const sellable = Math.max(0, today.totalUnits - today.blockedUnits)
   const pct = sellable === 0 ? 0 : Math.round((today.bookedUnits * 1000) / sellable) / 10
   const available = Math.max(0, sellable - today.bookedUnits)
+  const segments = [
+    { key: "booked", label: t("dash.booked"), value: today.bookedUnits, stroke: "var(--color-series-1)", swatch: "bg-[var(--color-series-1)]" },
+    { key: "available", label: t("dash.available"), value: available, stroke: "var(--color-series-2)", swatch: "bg-[var(--color-series-2)]" },
+    { key: "blocked", label: t("dash.outOfService"), value: today.blockedUnits, stroke: "url(#hatch)", swatch: "hatch" },
+  ]
+  const total = segments.reduce((n, s) => n + s.value, 0)
   const r = 44
   const circumference = 2 * Math.PI * r
+  // The gap between segments, in ring units: about 2px at the size the ring is drawn.
+  const gap = total > 1 && segments.filter((s) => s.value > 0).length > 1 ? 2 : 0
+  let offset = 0
+  const arcs = segments.map((s) => {
+    const span = total === 0 ? 0 : (circumference * s.value) / total
+    const arc = { ...s, length: Math.max(0, span - gap), start: offset }
+    offset += span
+    return arc
+  })
+  const summary = segments.map((s) => `${s.label} ${s.value}`).join(", ")
   return (
-    <div className="flex items-center gap-5 rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--shadow-card)] lg:block">
+    <div className="flex items-center gap-5 rounded-[var(--radius-card)] bg-surface p-5 shadow-[var(--shadow-card)] lg:block">
       <div className="relative aspect-square w-32 shrink-0 lg:mx-auto lg:w-full lg:max-w-[9.5rem]">
-        <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden>
-          <circle cx="50" cy="50" r={r} fill="none" strokeWidth="9" className="stroke-line" />
-          <circle cx="50" cy="50" r={r} fill="none" strokeWidth="9" strokeLinecap="round" style={{ stroke: "var(--color-chart)" }}
-            strokeDasharray={`${(circumference * Math.min(100, pct)) / 100} ${circumference}`} />
+        <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" role="img" aria-label={`${t("dash.occupancy")} ${pct}%. ${summary}`}>
+          <defs>
+            <pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="4" height="4" className="fill-surface-2" />
+              <rect width="1.6" height="4" className="fill-ink-faint" />
+            </pattern>
+          </defs>
+          <circle cx="50" cy="50" r={r} fill="none" strokeWidth="9" className="stroke-surface-2" />
+          {arcs.filter((a) => a.length > 0).map((a) => (
+            <circle key={a.key} cx="50" cy="50" r={r} fill="none" strokeWidth="9" style={{ stroke: a.stroke }}
+              strokeDasharray={`${a.length} ${circumference}`} strokeDashoffset={-a.start} className="transition-[stroke-dasharray] duration-500">
+              <title>{`${a.label}: ${a.value}`}</title>
+            </circle>
+          ))}
         </svg>
-        <div className="absolute inset-0 grid place-content-center text-center">
+        <div className="absolute inset-0 grid place-content-center px-6 text-center">
           <span className="text-2xl font-extrabold tabular-nums tracking-tight">{pct}%</span>
-          <span className="text-[11px] font-semibold text-ink-soft">{t("dash.occupancy")}</span>
+          <span className="text-[10px] font-semibold leading-tight text-ink-soft sm:text-[11px]">{t("dash.occupancy")}</span>
         </div>
       </div>
       <div className="min-w-0 flex-1">
-      <dl className="space-y-1.5 text-sm lg:mt-4">
-        {[
-          [t("dash.available"), available],
-          [t("dash.booked"), today.bookedUnits],
-          [t("dash.outOfService"), today.blockedUnits],
-        ].map(([label, value]) => (
-          <div key={String(label)} className="flex items-center justify-between gap-2">
-            <dt className="text-ink-soft">{label}</dt>
-            <dd className="font-bold tabular-nums">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      {today.freeByType.length > 0 && (
-        <ul className="mt-3 space-y-1 border-t border-line pt-3 text-xs text-ink-soft">
-          {today.freeByType.map((row) => (
-            <li key={row.type_name} className="flex justify-between gap-2">
-              <span className="truncate">{row.type_name}</span>
-              <span className="font-semibold tabular-nums text-ink">{t("dash.free", { n: row.free })}</span>
-            </li>
+        <dl className="space-y-1.5 text-sm lg:mt-4">
+          {segments.map((s) => (
+            <div key={s.key} className="flex items-center justify-between gap-2">
+              <dt className="flex min-w-0 items-center gap-2 text-ink-soft">
+                {s.swatch === "hatch" ? (
+                  <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-[3px] bg-surface-2 bg-[repeating-linear-gradient(45deg,var(--color-ink-faint)_0_1.5px,transparent_1.5px_4px)]" />
+                ) : (
+                  <span aria-hidden className={clsx("h-2.5 w-2.5 shrink-0 rounded-[3px]", s.swatch)} />
+                )}
+                <span className="truncate">{s.label}</span>
+              </dt>
+              <dd className="font-bold tabular-nums">{s.value}</dd>
+            </div>
           ))}
-        </ul>
-      )}
+        </dl>
+        {today.freeByType.length > 0 && (
+          <ul className="mt-3 space-y-1 border-t border-line pt-3 text-xs text-ink-soft">
+            {today.freeByType.map((row) => (
+              <li key={row.type_name} className="flex justify-between gap-2">
+                <span className="truncate">{row.type_name}</span>
+                <span className="font-semibold tabular-nums text-ink">{t("dash.free", { n: row.free })}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   )

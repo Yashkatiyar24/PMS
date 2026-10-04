@@ -51,6 +51,10 @@
   --color-raised: #ffffff;
   /* One chart series: validated against the card surface in each theme (dataviz lightness band, 3:1 contrast). */
   --color-chart: #1a9db0;
+  /* Two series side by side (the occupancy ring): teal, then violet. Validated as a pair in each theme for
+     colour-vision separation, the normal-vision floor and 3:1 contrast. */
+  --color-series-1: #1a9db0;
+  --color-series-2: #4a3aa7;
 
   --shadow-card: 0 1px 2px rgb(31 45 61 / 0.04), 0 6px 18px rgb(31 45 61 / 0.07);
   --shadow-card-hover: 0 2px 4px rgb(31 45 61 / 0.05), 0 12px 28px rgb(31 45 61 / 0.1);
@@ -95,6 +99,8 @@
     --color-on-solid: #0f1a20;
     --color-raised: #27404a;
     --color-chart: #5ed1e1;
+    --color-series-1: #1a9db0;
+    --color-series-2: #9085e9;
     --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 20px rgb(0 0 0 / 0.3);
     --shadow-card-hover: 0 2px 4px rgb(0 0 0 / 0.45), 0 14px 30px rgb(0 0 0 / 0.4);
     --shadow-cta: 0 6px 16px rgb(60 199 217 / 0.22);
@@ -133,6 +139,8 @@
   --color-on-solid: #0f1a20;
   --color-raised: #27404a;
   --color-chart: #5ed1e1;
+  --color-series-1: #1a9db0;
+  --color-series-2: #9085e9;
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 20px rgb(0 0 0 / 0.3);
   --shadow-card-hover: 0 2px 4px rgb(0 0 0 / 0.45), 0 14px 30px rgb(0 0 0 / 0.4);
   --shadow-cta: 0 6px 16px rgb(60 199 217 / 0.22);
