@@ -66,5 +66,6 @@
   "mobile.quickActions": "Quick actions",
   "mobile.findGuest": "Find guest",
   "mobile.inHouse": "In house",
-  "ocr.filled": "Read from the photo: last 4 digits {last4} — please check."
+  "ocr.filled": "Read from the photo: last 4 digits {last4} — please check.",
+  "mobile.account": "Account"
 }

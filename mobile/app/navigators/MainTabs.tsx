@@ -80,12 +80,8 @@ const TABS: Record<
   },
   Rooms: { route: "RoomsTab", label: "nav.rooms", icon: "bed", component: RoomsStack },
   Reports: { route: "ReportsTab", label: "nav.reports", icon: "chart", component: ReportsStack },
-  Settings: {
-    route: "SettingsTab",
-    label: "nav.settings",
-    icon: "settings",
-    component: SettingsStack,
-  },
+  // Everything the desk reaches less often than forty times a day: guests, reports, settings, account.
+  Settings: { route: "SettingsTab", label: "common.more", icon: "grid", component: SettingsStack },
   Platform: {
     route: "PlatformTab",
     label: "admin.title",

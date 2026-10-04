@@ -41,9 +41,17 @@ await step("back to Today", async () => {
   await backToRoot(page)
   await page.getByTestId("today-checkin").first().waitFor({ timeout: 8000 })
 })
-for (const t of ["Guests", "Bookings", "Rooms", "Reports", "Settings"])
+for (const t of ["Bookings", "Rooms", "More"])
   await step(`tab ${t}`, async () => {
     await tab(t)
+    await page.waitForTimeout(2000)
+  })
+// Guests and Reports are not on the bar: they are the first rows of More.
+for (const s of ["Guests", "Reports"])
+  await step(`more → ${s}`, async () => {
+    await tab("More")
+    await page.waitForTimeout(600)
+    await clickTop(page.getByText(s, { exact: true }))
     await page.waitForTimeout(2000)
   })
 const settingsScreens = [
@@ -61,7 +69,7 @@ const settingsScreens = [
 ]
 for (const s of settingsScreens)
   await step(`settings → ${s}`, async () => {
-    await tab("Settings")
+    await tab("More")
     await page.waitForTimeout(600)
     await clickTop(page.getByText(new RegExp(`^${s}`)))
     await page.waitForTimeout(2000)
@@ -109,9 +117,12 @@ await step("notifications", async () => {
 await step("owner signs out", () => signOut(page))
 
 // Staff: the same removal needs a manager's PIN.
-await step("staff signs in; no Reports tab", async () => {
+await step("staff signs in; no Reports row on More", async () => {
   await signIn(page, { email: "staff@pms.local" })
+  await tab("More")
+  await page.waitForTimeout(600)
   if (await text("Reports").locator("visible=true").count()) throw new Error("staff sees Reports")
+  await tab("Today")
 })
 await step("staff: walk-in check-in", () => walkIn(page, staffs, `98700${stamp}`))
 await step("staff: add a charge", () => addCharge(page, "Tea", 40))

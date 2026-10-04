@@ -8,6 +8,11 @@ import { Gradient } from "@/components/Gradient"
 import { usePressScale } from "@/hooks/usePressScale"
 import { useAppTheme } from "@/theme/context"
 
+/** The tabs drawn on the bar: the screens the desk opens all day. The others are rows on the More screen. */
+const ON_BAR = new Set(["TodayTab", "BookingsTab", "RoomsTab", "SettingsTab", "PlatformTab"])
+/** A tab that is not on the bar lights up the one it is reached from. */
+const SHOWN_AS: Record<string, string> = { GuestsTab: "SettingsTab", ReportsTab: "SettingsTab" }
+
 /**
  * The bar the desk's thumb lives on.
  *
@@ -22,12 +27,14 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   const { theme } = useAppTheme()
   const fab = usePressScale(0.9)
   const insets = useSafeAreaInsets()
-  const routes = state.routes
+  const routes = state.routes.filter((r) => ON_BAR.has(r.name))
   const middle = Math.ceil(routes.length / 2)
+  const current = state.routes[state.index]?.name ?? ""
+  const lit = SHOWN_AS[current] ?? current
 
-  const tab = (route: (typeof routes)[number], index: number) => {
+  const tab = (route: (typeof routes)[number]) => {
     const { options } = descriptors[route.key]
-    const focused = state.index === index
+    const focused = route.name === lit
     const label = typeof options.title === "string" ? options.title : route.name
     const color = focused ? theme.colors.palette.brandInk : theme.colors.textDim
     return (
@@ -62,9 +69,9 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           { backgroundColor: theme.colors.surface, shadowColor: theme.colors.palette.shadow },
         ]}
       >
-        {routes.slice(0, middle).map((r, i) => tab(r, i))}
+        {routes.slice(0, middle).map(tab)}
         <View style={$gap} />
-        {routes.slice(middle).map((r, i) => tab(r, i + middle))}
+        {routes.slice(middle).map(tab)}
       </View>
       {/* The one action worth a thumb of its own. Centred over the bar, overlapping it, as the desk expects. */}
       <AnimatedPressable

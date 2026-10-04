@@ -51,7 +51,7 @@ const SETUP: { route: Route; label: string }[] = [
   { route: "Channels", label: "channels.title" },
 ]
 
-/** The hub: operations modules, property setup, one row per rules group, account and logout. */
+/** The More hub: the screens off the bar (guests, reports), operations, setup, one row per rules group, account. */
 export const SettingsScreen = observer(function SettingsScreen() {
   const navigation = useAppNavigation()
   const { auth } = useStores()
@@ -68,6 +68,11 @@ export const SettingsScreen = observer(function SettingsScreen() {
   const operations = OPERATIONS.filter((o) => hasAny(o.perms))
   // The rows come from data, so the route name is a union; dispatch takes any registered name.
   const go = (route: Route) => navigation.dispatch(CommonActions.navigate({ name: route }))
+  // Tabs that are not on the bar: the tab navigator above this stack takes the name.
+  const screens = [
+    hasAny(["reservations.view"]) && { tab: "GuestsTab", label: "guests.title" as const },
+    hasAny(["revenue.view"]) && { tab: "ReportsTab", label: "nav.reports" as const },
+  ].filter(Boolean) as { tab: string; label: "guests.title" | "nav.reports" }[]
 
   return (
     <Screen
@@ -77,7 +82,7 @@ export const SettingsScreen = observer(function SettingsScreen() {
     >
       <AppHeader />
       <PageHeader
-        title={translate("settings.title")}
+        title={translate("common.more")}
         subtitle={`${user?.name ?? ""} · ${user?.position ? translateOr(`role.${user.position}`, user.position) : ""}`}
       />
       {!!user?.propertyId && (
@@ -85,6 +90,18 @@ export const SettingsScreen = observer(function SettingsScreen() {
           placeholder={translate("settings.search")}
           onFocus={() => navigation.navigate("SettingsGroup", { group: "search" })}
         />
+      )}
+      {screens.length > 0 && (
+        <ListCard>
+          {screens.map((s, i) => (
+            <ListRow
+              key={s.tab}
+              title={translate(s.label)}
+              onPress={() => navigation.dispatch(CommonActions.navigate({ name: s.tab }))}
+              last={i === screens.length - 1}
+            />
+          ))}
+        </ListCard>
       )}
       {operations.length > 0 && (
         <>
@@ -150,7 +167,7 @@ export const SettingsScreen = observer(function SettingsScreen() {
           </ListCard>
         </>
       )}
-      <SectionLabel text={translate("common.more")} />
+      <SectionLabel text={translate("mobile.account")} />
       <ListCard>
         <ListRow
           title={translate("notif.title")}
