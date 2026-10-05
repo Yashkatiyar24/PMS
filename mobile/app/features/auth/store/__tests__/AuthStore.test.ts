@@ -21,6 +21,7 @@ const user: CurrentUser = {
 function fakeApi(overrides: Partial<Record<string, jest.Mock>> = {}) {
   const auth = {
     me: jest.fn(async () => ({ ok: true, data: user })),
+    health: jest.fn(async () => ({ ok: true, data: { status: "ok" } })),
     login: jest.fn(async () => ({ ok: true, data: { body: { status: "ok" }, token: "tok" } })),
     sendOtp: jest.fn(async () => ({ ok: true, data: { status: "sent" } })),
     verifyOtp: jest.fn(async () => ({ ok: true, data: { body: { status: "ok" }, token: "tok2" } })),
@@ -53,6 +54,32 @@ describe("AuthStore", () => {
     expect(store.auth.isSignedIn).toBe(true)
     expect(store.auth.propertyName).toBe("Shree Dharamshala")
     expect(store.auth.otherMemberships.map((m) => m.propertyId)).toEqual(["p2"])
+  })
+
+  it("says the server is waking only when the warm-up call drags on", async () => {
+    let answer: (() => void) | null = null
+    const api = fakeApi({
+      health: jest.fn(
+        () =>
+          new Promise((resolve) => {
+            answer = () => resolve({ ok: true, data: { status: "ok" } })
+          }),
+      ),
+    })
+    const { store } = make(api)
+    const warming = store.auth.warmUp(20)
+    expect(store.auth.serverWaking).toBe(false)
+    await new Promise((r) => setTimeout(r, 60))
+    expect(store.auth.serverWaking).toBe(true)
+    answer!()
+    await warming
+    expect(store.auth.serverWaking).toBe(false)
+  })
+
+  it("stays quiet when the warm-up call answers quickly", async () => {
+    const { store } = make()
+    await store.auth.warmUp(200)
+    expect(store.auth.serverWaking).toBe(false)
   })
 
   it("logs in with a password, remembers the token and code", async () => {

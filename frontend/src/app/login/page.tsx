@@ -31,6 +31,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
+  const [slow, setSlow] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   // The form lives behind the Sign In button, as on the reference page. A visit bounced here from a signed-in
   // screen (?signin=1) starts with it open, since that person came to sign in, not to read; closing it sticks.
@@ -53,14 +54,26 @@ export default function LoginPage() {
     return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
+  // The API's host stops the container after a quiet spell, and the first request afterwards waits out a
+  // start-up of a minute or two. Asking for /api/health as the page opens starts that clock while the person
+  // is still typing, so by the time they tap Sign in the server is usually up. Whatever this returns is
+  // beside the point: a server that is really down is reported by the sign-in itself, with the real message.
+  useEffect(() => {
+    api("/api/health").catch(() => undefined)
+  }, [])
+
   async function run(action: () => Promise<void>) {
     setBusy(true)
     setError("")
+    // A sign-in that has not answered in a few seconds is almost always the cold start; say so.
+    const timer = setTimeout(() => setSlow(true), 5000)
     try {
       await action()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("error.generic"))
     } finally {
+      clearTimeout(timer)
+      setSlow(false)
       setBusy(false)
     }
   }
@@ -126,6 +139,7 @@ export default function LoginPage() {
       <Sheet open={open} onOpenChange={setOpen} hero title={<>{t("login.title")} <span className="font-semibold text-ink-faint">PMS</span></>} description={t("login.dialogLead")}>
         <form id="signin" onSubmit={submit} className="line-form space-y-7 pt-7">
           {error && <Banner tone="danger">{error}</Banner>}
+          {slow && !error && <Banner tone="info">{t("login.waking")}</Banner>}
 
           {/* Two to a row on a laptop, stacked on a phone; the password always has the row to itself. */}
           <div className="grid gap-6 sm:grid-cols-2 sm:gap-x-10">

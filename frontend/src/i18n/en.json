@@ -933,6 +933,7 @@
   "account.mustChange": "The password you were given was seen by whoever set it. Choose your own to continue.",
   "account.mustChangeTitle": "Set your own password",
   "login.dialogLead": "Your property code and the email you were given.",
+  "login.waking": "Still signing in — the server is waking up after a quiet spell. This can take up to two minutes; please wait.",
   "selfreg.done": "Details received. They are in the form.",
   "guests.all": "All guests",
   "guests.noneStaying": "Nobody is staying right now",

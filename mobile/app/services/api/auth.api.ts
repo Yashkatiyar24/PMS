@@ -28,6 +28,14 @@ export class AuthApi {
     return this.client.login<LoginResponse>("/api/auth/otp/verify", body)
   }
 
+  /**
+   * A cheap call that wakes a sleeping server and its database. The login screen fires it as it opens, so the
+   * cold start runs while the person types rather than after they tap Sign in.
+   */
+  health(): Promise<ApiResult<{ status: string }>> {
+    return this.client.get("/api/health")
+  }
+
   me(): Promise<ApiResult<CurrentUser>> {
     return this.client.get("/api/auth/me")
   }

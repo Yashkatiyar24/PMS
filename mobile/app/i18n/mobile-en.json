@@ -67,5 +67,6 @@
   "mobile.findGuest": "Find guest",
   "mobile.inHouse": "In house",
   "ocr.filled": "Read from the photo: last 4 digits {last4} — please check.",
-  "mobile.account": "Account"
+  "mobile.account": "Account",
+  "mobile.serverWaking": "The server is waking up — the first sign-in after a quiet spell can take up to two minutes. You can keep typing."
 }

@@ -1,15 +1,17 @@
-# Keeps the API awake.
+# Keeps the API awake — as far as GitHub lets it.
 #
 # The API runs on Render's free plan, which stops the container after fifteen idle minutes; the next request
-# then waits through a cold start — measured at fifty-one seconds, against two seconds once it is warm. A desk
-# opening check-in first thing in the morning should not be the one paying that.
+# then waits through a cold start — measured at fifty-one to a hundred seconds, against two seconds once it is
+# warm. A desk opening check-in first thing in the morning should not be the one paying that.
 #
 # Set the repository variable PMS_API_URL (Settings → Secrets and variables → Actions → Variables) to the
 # Render service URL, e.g. https://padav-api.onrender.com. Without it this does nothing.
 #
-# Two caveats worth knowing: GitHub's scheduler is best-effort and can run late under load, and scheduled
-# workflows are switched off automatically after 60 days without a commit. The permanent fix is Render's
-# starter plan, which does not sleep.
+# Know its limits before relying on it. GitHub's scheduler is best-effort: in practice this `*/10` schedule
+# has fired three or four times a day, not 144, so the API still sleeps between runs. A pinger that actually
+# runs every ten minutes needs an external cron — cron-job.org, UptimeRobot or Render's own Cron Job, all
+# free — pointed at `/api/health` (see README, "Deploying the API on Render"). The permanent fix is Render's
+# starter plan, which does not sleep. Scheduled workflows are also switched off after 60 days without a commit.
 name: Keep the API awake
 
 on:
@@ -31,7 +33,8 @@ jobs:
             echo "PMS_API_URL is not set; nothing to ping."
             exit 0
           fi
-          # A cold start takes most of a minute, so allow for it and report what it cost.
-          code=$(curl -s -o /dev/null -w '%{http_code} %{time_total}s' --max-time 120 "${API%/}/api/health")
+          # /api/health runs `select 1`, so it wakes the database too, not just the container. A cold start has
+          # taken most of two minutes when both were asleep, so allow for that and report what it cost.
+          code=$(curl -s -o /dev/null -w '%{http_code} %{time_total}s' --max-time 240 "${API%/}/api/health")
           echo "health: $code"
           case "$code" in 200*) ;; *) echo "::warning::API did not answer 200 ($code)" ;; esac

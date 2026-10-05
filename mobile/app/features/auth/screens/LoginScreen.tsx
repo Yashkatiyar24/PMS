@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { View, type ViewStyle, type TextStyle } from "react-native"
 import { observer } from "mobx-react-lite"
 
@@ -33,6 +33,10 @@ export const LoginScreen = observer(function LoginScreen() {
   const [password, setPassword] = useState("")
 
   const submit = () => void auth.loginWithPassword(code, email, password, deviceName())
+  // Wake the server while the person types, so a cold start is not paid after the tap on Sign in.
+  useEffect(() => {
+    void auth.warmUp()
+  }, [auth])
 
   return (
     <Screen
@@ -78,6 +82,9 @@ export const LoginScreen = observer(function LoginScreen() {
           />
           {!!auth.lastProblem && (
             <Banner tone="danger" text={auth.lastProblem.message || translate("error.generic")} />
+          )}
+          {!!auth.serverWaking && !auth.lastProblem && (
+            <Banner tone="info" text={translate("mobile.serverWaking")} />
           )}
 
           {mode === "password" ? (

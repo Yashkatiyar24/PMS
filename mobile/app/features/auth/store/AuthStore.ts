@@ -16,6 +16,9 @@ export type AuthStatus = "booting" | "signedOut" | "signedIn"
 
 export const CACHE_PREFIX = "cache."
 
+/** How long the warm-up call may take before the login screen says the server is waking. */
+export const SLOW_AFTER_MS = 4000
+
 export const AuthStore = types
   .model("AuthStore", {
     status: types.optional(
@@ -25,6 +28,8 @@ export const AuthStore = types
     user: types.maybeNull(types.frozen<CurrentUser>()),
     busy: false,
     lastProblem: types.maybeNull(ProblemModel),
+    /** True while the server has taken suspiciously long to answer the login screen's warm-up call. */
+    serverWaking: false,
   })
   .views((self) => ({
     get isSignedIn() {
@@ -100,6 +105,30 @@ export const AuthStore = types
       api().client.setToken(token)
       forgetCachedData()
       return yield refreshMe()
+    })
+
+    /**
+     * Wakes a sleeping server as the login screen opens.
+     *
+     * The API's host stops the container after a quiet spell and the first request afterwards waits out a
+     * start-up of a minute or two. Fired on the way in, that wait overlaps the typing of a code, an email and a
+     * password instead of following the tap on Sign in; and once it has gone on for a few seconds the screen
+     * can say so, which is the difference between waiting and giving up. Nothing here fails: an unreachable
+     * server is reported by the real login, with the real message.
+     */
+    const warmUp = flow(function* warmUp(slowAfterMs: number = SLOW_AFTER_MS) {
+      let handle: ReturnType<typeof setTimeout> | undefined
+      const slow = new Promise<"slow">((resolve) => {
+        handle = setTimeout(() => resolve("slow"), slowAfterMs)
+      })
+      const health = api().auth.health()
+      const first: "slow" | "answered" = yield Promise.race([health.then(() => "answered"), slow])
+      if (first === "slow") {
+        self.serverWaking = true
+        yield health
+      }
+      clearTimeout(handle)
+      self.serverWaking = false
     })
 
     const loginWithPassword = flow(function* loginWithPassword(
@@ -196,6 +225,7 @@ export const AuthStore = types
     return {
       boot,
       refreshMe,
+      warmUp,
       loginWithPassword,
       sendOtp,
       verifyOtp,

@@ -105,6 +105,30 @@ matter in production:
 
 Swapping a provider is one variable. Adding one is a class and a line in `IntegrationsConfig`.
 
+### Deploying the API on Render
+
+`render.yaml` is a Blueprint for the API on Render's **free** plan, and the free plan is why the first sign-in
+of the day can feel broken: Render stops the container after fifteen idle minutes, and the next request waits
+through a cold start that has measured between fifty seconds and two minutes (the database host, Neon or
+Supabase, may be asleep too). Once awake it answers in well under a second. Three things, in order of effect:
+
+1. **Move the service to the Starter plan** (Render dashboard → the service → Settings → Instance Type). It does
+   not sleep. This is the fix; everything below only softens the free plan.
+2. **Ping it from outside GitHub.** `.github/workflows/keep-awake.yml` asks GitHub to call `/api/health` every
+   ten minutes, but GitHub's scheduler is best-effort and in practice has fired three or four times a day, which
+   keeps nothing awake. Use a cron that really runs: [cron-job.org](https://cron-job.org) or
+   [UptimeRobot](https://uptimerobot.com) (both free) with `https://<service>.onrender.com/api/health` every
+   five to ten minutes, or a Render Cron Job running `curl -fsS https://<service>.onrender.com/api/health`.
+   `/api/health` runs `select 1`, so it keeps the database awake as well.
+3. **Keep the database awake.** On Neon, raise the compute's auto-suspend delay (Project → Branch → Compute) or
+   turn it off; on Supabase the free project pauses after a week without traffic and the pinger above prevents
+   that.
+
+The apps already soften the rest: both the phone app and the web sign-in page call `/api/health` as they open,
+so the cold start runs while the person is still typing, and both say "the server is waking up" instead of
+spinning in silence when a request takes more than a few seconds. The API's `Dockerfile` also starts the JVM
+with `-XX:TieredStopAtLevel=1`, which roughly halves start-up time on a one-CPU instance.
+
 ### Deploying the desk app on Vercel
 
 Vercel runs the Next.js app only. The Spring Boot API and Postgres need a host that keeps a Java server running
