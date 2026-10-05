@@ -187,7 +187,7 @@ export default function NewBookingPage() {
             <PhoneInput value={phone} onChange={(digits) => { setPhone(digits); setGuestId(null) }} onBlur={lookup} />
           </Field>
           {matches.length > 0 && (
-            <ul className="overflow-hidden rounded-xl border border-line divide-y divide-line">
+            <ul className="overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-card)] divide-y divide-line">
               {matches.map((guest) => (
                 <li key={guest.id}>
                   <button onClick={() => { setGuestId(guest.id); setName(guest.name); setCity(guest.city); setMatches([]) }} className="flex w-full items-center justify-between px-3 py-2.5 text-left hover:bg-surface-2">
@@ -245,7 +245,7 @@ export default function NewBookingPage() {
                           const on = groupKeys.includes(key)
                           return (
                             <button key={key} type="button" aria-pressed={on} onClick={() => toggle(key)}
-                              className={clsx("min-h-[44px] min-w-[64px] rounded-xl border px-3 text-[15px] font-bold tabular-nums transition-colors", on ? "border-brand bg-brand text-on-solid" : "border-line-strong bg-surface hover:bg-surface-2")}>
+                              className={clsx("min-h-[44px] min-w-[64px] press rounded-xl px-3 text-[15px] font-bold tabular-nums", on ? "cta text-on-solid shadow-[var(--shadow-cta)]" : "bg-surface shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)]")}>
                               {unitName(f.roomNumber, f.bedLabel)}
                             </button>
                           )

@@ -564,7 +564,7 @@ export default function RoomSetupPage() {
                   {editingRoom.beds.map((bed) => (
                     <button key={bed.id} type="button" disabled={busy}
                       onClick={() => bedAction(() => api<Room>(`/api/beds/${bed.id}`, { method: "PATCH", body: { active: !bed.active } }))}
-                      className={clsx("min-h-[44px] rounded-lg border border-line px-3 text-xs font-semibold tabular-nums hover:bg-surface-2",
+                      className={clsx("min-h-[44px] press rounded-lg bg-surface-2 px-3 text-xs font-semibold tabular-nums hover:bg-line",
                         bed.active ? "bg-surface" : "bg-surface-2 line-through opacity-60")}
                       title={bed.active ? t("setup.bedOff") : t("setup.bedOn")}>
                       {bed.label}

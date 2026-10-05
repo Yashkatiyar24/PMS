@@ -134,7 +134,7 @@ export default function BookingsPage() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold tracking-tight">{t("nav.bookings")}</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-full border border-line bg-surface p-0.5">
+          <div className="flex items-center gap-1 rounded-[14px] bg-surface-2 p-1">
             <IconButton label={t("cal.earlier")} onClick={() => setStart(addDays(chart.start, -chart.days))} className="rounded-full"><ChevronLeft size={18} aria-hidden /></IconButton>
             <button onClick={() => setStart("")} className="rounded-full px-3 text-sm font-semibold hover:bg-surface-2">{t("nav.today")}</button>
             <IconButton label={t("cal.later")} onClick={() => setStart(addDays(chart.start, chart.days))} className="rounded-full"><ChevronRight size={18} aria-hidden /></IconButton>
@@ -158,7 +158,7 @@ export default function BookingsPage() {
 
       {notice && <Banner tone={notice.tone} onClose={() => setNotice(null)}>{notice.text}</Banner>}
 
-      <div className={clsx("scroll-thin overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-card)]", moving && "pointer-events-none opacity-70")}>
+      <div className={clsx("scroll-thin overflow-x-auto rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)]", moving && "pointer-events-none opacity-70")}>
         <table className="w-full min-w-max border-separate border-spacing-0 text-xs">
           <thead>
             <tr>

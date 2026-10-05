@@ -168,7 +168,7 @@ export default function RestaurantPage() {
             )}
             <div className="flex flex-wrap gap-2">
               {activeMenu.map((m) => (
-                <button key={m.id} type="button" onClick={() => add(m)} className="min-h-[44px] rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold hover:bg-surface-2">
+                <button key={m.id} type="button" onClick={() => add(m)} className="press min-h-[44px] cursor-pointer rounded-xl bg-surface px-3 text-sm font-semibold shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)]">
                   {m.name} <span className="text-ink-soft">{rupees(m.pricePaise)}</span>
                 </button>
               ))}
@@ -182,7 +182,7 @@ export default function RestaurantPage() {
               </Button>
             </div>
             {editing.lines.length > 0 && (
-              <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
+              <ul className="divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-card)]">
                 {editing.lines.map((l, i) => (
                   <li key={i} className="flex items-center gap-2 px-3 py-1.5">
                     <span className="min-w-0 flex-1 truncate font-semibold">{l.name}</span>

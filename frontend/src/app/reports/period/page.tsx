@@ -185,7 +185,7 @@ export default function PeriodReportPage() {
 
 function Table({ head, rows }: { head: string[]; rows: (string | number)[][] }) {
   return (
-    <div className="scroll-thin overflow-x-auto rounded-xl border border-line">
+    <div className="scroll-thin overflow-x-auto rounded-xl bg-surface shadow-[var(--shadow-card)]">
       <table className="w-full min-w-[26rem] text-sm">
         <thead className="bg-surface-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-soft">
           <tr>{head.map((h, i) => <th key={i} className={`px-3 py-2 font-semibold ${i > 0 ? "text-right" : ""}`}>{h}</th>)}</tr>

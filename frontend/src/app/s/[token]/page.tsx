@@ -170,7 +170,7 @@ export default function StayPage({ params }: { params: Promise<{ token: string }
       {stay.propertyPhone && (
         <a
           href={`tel:${stay.propertyPhone}`}
-          className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-3 font-semibold shadow-[var(--shadow-card)]"
+          className="press flex items-center justify-center gap-2 rounded-[14px] bg-surface py-3 font-semibold shadow-[var(--shadow-card)]"
         >
           <Phone size={18} aria-hidden /> {t.call}
         </a>

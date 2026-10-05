@@ -396,7 +396,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
       {error && <Banner tone="danger" onClose={() => setError("")}>{error}</Banner>}
 
       {/* Every fact the desk is asked about, in one strip. */}
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius-card)] border border-line bg-line shadow-[var(--shadow-card)] sm:grid-cols-4 xl:grid-cols-8">
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius-card)] bg-line shadow-[var(--shadow-card)] sm:grid-cols-4 xl:grid-cols-8">
         {facts.map((f) => (
           <div key={f.label} className="min-w-0 bg-surface px-4 py-3">
             <dt className="text-xs font-semibold text-ink-soft">{f.label}</dt>
@@ -406,7 +406,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
         ))}
       </dl>
 
-      <Tabs.Root defaultValue="stay" className="overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-card)]">
+      <Tabs.Root defaultValue="stay" className="overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)]">
         <Tabs.List className="scroll-thin flex gap-1 overflow-x-auto border-b border-line px-2">
           {([
             ["stay", t("res.tab.stay")],
@@ -637,7 +637,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
         {guestLink ? (
           <div className="space-y-3 text-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={guestLink.qrDataUri} alt={t("stay.guestLink")} className="mx-auto w-full max-w-[240px] rounded-2xl border border-line bg-white p-2" />
+            <img src={guestLink.qrDataUri} alt={t("stay.guestLink")} className="mx-auto w-full max-w-[240px] rounded-2xl bg-white p-2 shadow-[var(--shadow-card)]" />
             <p className="break-all text-xs text-ink-soft">{guestLink.url}</p>
             <Button variant="secondary" onClick={() => void copyGuestLink()}>
               {linkCopied ? <><Check size={16} aria-hidden /> {t("selfreg.copied")}</> : t("channels.copy")}
@@ -663,7 +663,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
         footer={<Button size="lg" className="w-full" disabled={busy} onClick={saveParty}>{t("action.save")}</Button>}>
         <div className="space-y-2">
           {party.map((m, i) => (
-            <div key={i} className="grid grid-cols-[1fr_auto] gap-2 rounded-xl border border-line p-2 sm:grid-cols-[1fr_9rem_7rem_auto]">
+            <div key={i} className="grid grid-cols-[1fr_auto] gap-2 rounded-xl bg-surface-2 p-2 sm:grid-cols-[1fr_9rem_7rem_auto]">
               <input value={m.name} placeholder={t("checkin.name")} onChange={(e) => setParty(party.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
               <button type="button" aria-label={t("action.remove")} onClick={() => setParty(party.filter((_, j) => j !== i))}
                 className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-ink-soft hover:bg-surface-2 sm:order-last"><XCircle size={18} aria-hidden /></button>
@@ -695,7 +695,7 @@ export default function StayPage({ params }: { params: Promise<{ id: string }> }
                     const key = `${f.roomId}:${f.bedId ?? ""}`
                     return (
                       <button key={key} type="button" aria-pressed={freeKey === key} onClick={() => setFreeKey(key)}
-                        className={clsx("min-h-[44px] min-w-[64px] rounded-xl border px-3 text-[15px] font-bold tabular-nums transition-colors", freeKey === key ? "border-brand bg-brand text-on-solid" : "border-line-strong bg-surface hover:bg-surface-2")}>
+                        className={clsx("min-h-[44px] min-w-[64px] press rounded-xl px-3 text-[15px] font-bold tabular-nums", freeKey === key ? "cta text-on-solid shadow-[var(--shadow-cta)]" : "bg-surface shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)]")}>
                         {unitName(f.roomNumber, f.bedLabel)}
                       </button>
                     )
@@ -729,7 +729,7 @@ function PinField({ value, onChange }: { value: string; onChange: (v: string) =>
 function Table({ head, rows }: { head: string[]; rows: React.ReactNode[][] }) {
   if (rows.length === 0) return <Empty />
   return (
-    <div className="scroll-thin overflow-x-auto rounded-xl border border-line">
+    <div className="scroll-thin overflow-x-auto rounded-xl bg-surface shadow-[var(--shadow-card)]">
       <table className="w-full min-w-[32rem] text-sm">
         <thead className="bg-surface-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-soft">
           <tr>{head.map((h, i) => <th key={i} className={clsx("px-4 py-2.5 font-semibold", i === head.length - 1 && "text-right")}>{h}</th>)}</tr>

@@ -284,7 +284,7 @@ function PropertyCards({ properties, planName, status }: ListProps) {
           <li key={p.propertyId}>
             <Link
               href={`/admin/${p.propertyId}`}
-              className="flex h-full flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-card)] transition-colors hover:bg-surface-2 focus-visible:-outline-offset-2!"
+              className="flex h-full flex-col press overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] focus-visible:-outline-offset-2!"
             >
               <div className="relative aspect-[16/9] bg-surface-2">
                 {p.photoUrl ? (
@@ -323,7 +323,7 @@ function PropertyRows({ properties, planName, status }: ListProps) {
   const { t } = useI18n()
   const cols = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_4rem_5.5rem_4.5rem_6rem_9rem_8rem] md:items-center md:gap-4"
   return (
-    <div className="overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-card)]">
+    <div className="overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)]">
       <div className={clsx("hidden bg-surface-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-soft", cols)}>
         <span>{t("admin.col.property")}</span>
         <span>{t("admin.col.trust")}</span>

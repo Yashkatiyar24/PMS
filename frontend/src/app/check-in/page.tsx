@@ -352,7 +352,7 @@ export default function CheckInPage() {
           </Field>
 
           {matches.length > 0 && (
-            <ul className="overflow-hidden rounded-xl border border-line divide-y divide-line">
+            <ul className="overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-card)] divide-y divide-line">
               {matches.map((guest) => (
                 <li key={guest.id}>
                   <button onClick={() => applyExistingGuest(guest)} className="flex w-full items-center justify-between px-3 py-2.5 text-left hover:bg-surface-2">
@@ -435,7 +435,7 @@ export default function CheckInPage() {
                       type="button"
                       aria-pressed={on}
                       onClick={() => setUnitKeys((keys) => (keys.includes(u.key) ? keys.filter((k) => k !== u.key) : [...keys, u.key]))}
-                      className={clsx("min-h-[44px] min-w-[64px] rounded-xl border px-3 text-[15px] font-bold tabular-nums transition-colors", on ? "border-brand bg-brand text-on-solid" : "border-line-strong bg-surface hover:bg-surface-2")}
+                      className={clsx("min-h-[44px] min-w-[64px] press rounded-xl px-3 text-[15px] font-bold tabular-nums", on ? "cta text-on-solid shadow-[var(--shadow-cta)]" : "bg-surface shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)]")}
                     >
                       {u.dirty && <span aria-label={t("rooms.status.dirty")} title={t("rooms.status.dirty")} className="mr-1.5 inline-block h-2 w-2 rounded-full bg-warn align-middle" />}
                       {u.label}

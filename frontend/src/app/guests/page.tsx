@@ -47,7 +47,7 @@ function StayingCard({ booking, leavingToday }: { booking: Booking; leavingToday
       {/* To the stay, not the profile: while someone is in the house, that is the record the desk works in. */}
       <Link
         href={`/stays/${booking.id}`}
-        className="flex h-full flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--shadow-card)] transition-colors hover:border-line-strong hover:bg-surface-2 focus-visible:-outline-offset-2!"
+        className="flex h-full flex-col gap-2 press rounded-[var(--radius-card)] bg-surface p-4 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] focus-visible:-outline-offset-2!"
       >
         <div className="flex items-baseline gap-3">
           <div className="min-w-0 flex-1">
@@ -90,7 +90,7 @@ function GuestCard({ guest }: { guest: Guest }) {
     <li>
       <Link
         href={`/guests/${guest.id}`}
-        className="flex h-full items-center gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--shadow-card)] transition-colors hover:bg-surface-2 focus-visible:-outline-offset-2!"
+        className="flex h-full items-center gap-3 press rounded-[var(--radius-card)] bg-surface p-4 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] focus-visible:-outline-offset-2!"
       >
         <Avatar name={guest.name} size={44} />
         <div className="min-w-0 flex-1">

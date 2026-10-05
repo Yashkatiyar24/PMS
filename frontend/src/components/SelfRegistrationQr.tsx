@@ -218,7 +218,7 @@ export function SelfRegistrationQr({
           type="button"
           onClick={copy}
           aria-label={t("selfreg.copyHint")}
-          className="mx-auto block w-full max-w-[260px] rounded-2xl border border-line bg-white p-2 transition-transform active:scale-[.985]"
+          className="press mx-auto block w-full max-w-[260px] rounded-2xl bg-white p-2 shadow-[var(--shadow-card)]"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={link.qrDataUri} alt={t("selfreg.showTitle")} className="w-full" />

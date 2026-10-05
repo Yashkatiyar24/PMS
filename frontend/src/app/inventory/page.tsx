@@ -170,7 +170,7 @@ export default function InventoryPage() {
             </div>
             <SectionLabel>{t("stock.history")}</SectionLabel>
             {history === null ? <Loading rows={1} /> : history.length === 0 ? <Empty>{t("empty.stockHistory")}</Empty> : (
-              <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line text-sm">
+              <ul className="divide-y divide-line overflow-hidden rounded-xl bg-surface text-sm shadow-[var(--shadow-card)]">
                 {history.map((m) => (
                   <li key={m.id} className="flex items-center justify-between gap-2 px-3 py-2">
                     <span className="min-w-0">

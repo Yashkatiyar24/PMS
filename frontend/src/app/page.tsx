@@ -103,7 +103,7 @@ function Dashboard() {
           <InventoryCard />
         </aside>
 
-        <section className="min-w-0 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--shadow-card)] md:p-5">
+        <section className="min-w-0 rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)] p-4 md:p-5">
           <h2 className="mb-3 text-lg font-bold tracking-tight">{t("dash.activity")}</h2>
           <div className="scroll-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 xl:grid xl:grid-cols-7 xl:overflow-visible">
             {tabs.map((tab) => (
@@ -175,7 +175,7 @@ function DateCard({ iso, language }: { iso: string; language: string }) {
   const locale = language === "hi" ? "hi-IN" : "en-IN"
   return (
     // The header already says the date on a phone; the big date card is for a laptop.
-    <div className="hidden flex-col justify-center rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--shadow-card)] lg:flex">
+    <div className="hidden flex-col justify-center rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)] p-5 lg:flex">
       <p className="text-sm font-semibold text-ink-soft">{new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date)}</p>
       <p className="text-6xl font-extrabold leading-none tracking-tight tabular-nums">{date.getDate()}</p>
       <p className="mt-1 text-sm font-semibold text-ink-soft">{new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(date)}</p>
@@ -218,7 +218,7 @@ function InventoryCard() {
   return (
     <Link href="/settings/rooms" className="press block rounded-[var(--radius-card)] bg-surface p-5 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)]">
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h2 className="text-sm font-bold tracking-tight">{t("dash.inventory")}</h2>
+        <h2 className="text-[15px] font-semibold">{t("dash.inventory")}</h2>
         <span className="text-xl font-extrabold tabular-nums">{counts.total}</span>
       </div>
       <dl className="space-y-1.5 text-sm">
@@ -320,7 +320,7 @@ function StayTable({ bookings }: { bookings: Booking[] }) {
   const { t } = useI18n()
   const cols = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.6fr)_7.5rem_6.5rem] md:items-center md:gap-4"
   return (
-    <div className="overflow-hidden rounded-xl border border-line">
+    <div className="overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-card)]">
       <div className={clsx("hidden bg-surface-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-soft", cols)}>
         <span>{t("dash.col.guest")}</span><span>{t("dash.col.room")}</span><span>{t("dash.col.stay")}</span><span>{t("dash.col.status")}</span><span className="text-right">{t("dash.col.balance")}</span>
       </div>
@@ -367,13 +367,13 @@ function ForecastCard({ start }: { start: string }) {
   const weekday = new Intl.DateTimeFormat(language === "hi" ? "hi-IN" : "en-IN", { weekday: "short" })
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--shadow-card)] md:p-5">
+    <section className="rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)] p-4 md:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold tracking-tight">{t("dash.forecast")}</h2>
           <p className="text-xs text-ink-soft">{t("dash.beforeTax")}</p>
         </div>
-        <div className="flex items-center gap-1 rounded-full border border-line p-0.5">
+        <div className="flex items-center gap-1 rounded-[14px] bg-surface-2 p-1">
           <IconButton label={t("cal.earlier")} disabled={offset === 0} onClick={() => setOffset((o) => Math.max(0, o - 14))} className="rounded-full"><ChevronLeft size={18} aria-hidden /></IconButton>
           <span className="px-2 text-sm font-semibold tabular-nums">{formatDate(from)} – {formatDate(addDays(from, 13))}</span>
           <IconButton label={t("cal.later")} onClick={() => setOffset((o) => o + 14)} className="rounded-full"><ChevronRight size={18} aria-hidden /></IconButton>
@@ -388,7 +388,7 @@ function ForecastCard({ start }: { start: string }) {
               [t("dash.roomNights"), String(f.roomNights)],
               [t("dash.revenue"), rupees(f.revenuePaise)],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-line px-3.5 py-3">
+              <div key={label} className="rounded-xl bg-surface-2 px-3.5 py-3">
                 <dd className="text-xl font-extrabold tabular-nums tracking-tight">{value}</dd>
                 <dt className="text-xs font-medium text-ink-soft">{label}</dt>
               </div>

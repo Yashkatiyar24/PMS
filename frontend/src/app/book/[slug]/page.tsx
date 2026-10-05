@@ -168,7 +168,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
             </p>
             {page.photoUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={page.photoUrl} alt={page.name} className="rise mx-auto mt-6 aspect-[16/9] w-full max-w-2xl rounded-3xl object-cover shadow-[var(--shadow-pop)]" />
+              <img src={page.photoUrl} alt={page.name} className="rise mx-auto mt-6 aspect-[16/9] w-full max-w-2xl rounded-[var(--radius-card)] object-cover shadow-[var(--shadow-pop)]" />
             )}
           </section>
         )}
@@ -187,7 +187,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
               <ArrowLeft size={18} aria-hidden /> {t("book.change")}
             </button>
             <StaySummary offer={chosen} arrive={arrive} depart={depart} party={party} />
-            <div className="space-y-4 rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]">
+            <div className="space-y-4 rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)] p-5">
               <h2 className="text-lg font-bold tracking-tight">{t("book.details")}</h2>
               {error && <Banner tone="danger">{error}</Banner>}
               <Field label={t("book.name")}>
@@ -229,7 +229,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
           </form>
         ) : (
           <>
-            <form onSubmit={(e) => { e.preventDefault(); void search() }} className="-mt-6 space-y-4 rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-pop)]">
+            <form onSubmit={(e) => { e.preventDefault(); void search() }} className="-mt-6 space-y-4 rounded-[var(--radius-card)] bg-surface p-5 shadow-[var(--shadow-pop)]">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label={t("book.arrive")}>
                   <input
@@ -268,7 +268,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
                     const fits = party <= offer.maxOccupancy
                     const open = offer.free > 0 && fits
                     return (
-                      <li key={offer.roomTypeId} className="anim-pop flex flex-col gap-4 rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-card)] sm:flex-row sm:items-center">
+                      <li key={offer.roomTypeId} className="anim-pop flex flex-col gap-4 rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)] p-5 sm:flex-row sm:items-center">
                         <div className="min-w-0 flex-1">
                           <h3 className="text-lg font-bold tracking-tight">{offer.name}</h3>
                           <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-soft">
@@ -318,7 +318,7 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
 function StaySummary({ offer, arrive, depart, party }: { offer: Offer; arrive: string; depart: string; party: number }) {
   const { t } = useI18n()
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl p-5" style={{ background: "linear-gradient(135deg, var(--sky-top), var(--sky))" }}>
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] bg-brand-soft p-5">
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t("book.stay")}</p>
         <p className="mt-1 text-lg font-bold tracking-tight">{offer.name}</p>
@@ -351,7 +351,7 @@ function Done({ confirmation: c, stayUrl, onAgain, onPay, payError, busy, error 
           {onPay && <Button size="lg" className="w-full" disabled={busy} onClick={onPay}><CreditCard size={18} aria-hidden /> {t("book.payAgain")}</Button>}
         </div>
       )}
-      <div className="mx-auto max-w-md space-y-3 rounded-3xl border border-line bg-surface p-6 text-left shadow-[var(--shadow-card)]">
+      <div className="mx-auto max-w-md space-y-3 rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)] p-6 text-left">
         <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t("book.reference")}</p>
         <p className="font-mono text-3xl font-bold tracking-[.2em]">{c.reference}</p>
         <div className="border-t border-line pt-3 text-sm">
@@ -365,7 +365,7 @@ function Done({ confirmation: c, stayUrl, onAgain, onPay, payError, busy, error 
       <p className="text-sm text-ink-soft">{t("book.showAtDesk", { phone: c.propertyPhone })}</p>
       {/* The one link worth keeping: it opens this booking again, on this phone, without an account. */}
       {stayUrl && (
-        <a href={stayUrl} className="mx-auto flex max-w-md items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-3 font-semibold shadow-[var(--shadow-card)]">
+        <a href={stayUrl} className="press mx-auto flex max-w-md items-center justify-center gap-2 rounded-[14px] bg-surface py-3 font-semibold shadow-[var(--shadow-card)]">
           <CalendarDays size={18} aria-hidden /> {t("book.viewStay")}
         </a>
       )}

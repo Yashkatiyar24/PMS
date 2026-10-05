@@ -221,7 +221,7 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
         <h1 className="mb-2 text-2xl font-bold">{t.doneTitle}</h1>
         <p className="text-ink-soft">{t.doneBody}</p>
         {/* What the desk now holds, including anything they corrected while the guest watched. */}
-        <dl className="mt-6 w-full space-y-1 rounded-2xl border border-line bg-surface-2 p-4 text-left text-sm">
+        <dl className="mt-6 w-full space-y-1 rounded-[var(--radius-card)] bg-surface-2 p-4 text-left text-sm">
           {([["name", t.name], ["phone", t.phone], ["city", t.city], ["address", t.address]] as [FieldName, string][])
             .filter(([field]) => value(field))
             .map(([field, label]) => (
@@ -361,7 +361,7 @@ export default function GuestRegistrationPage({ params }: { params: Promise<{ to
               <button
                 type="button"
                 aria-label={t.remove}
-                className="rounded-xl border border-line-strong px-3 text-ink-soft"
+                className="press rounded-xl bg-surface px-3 text-ink-soft shadow-[var(--shadow-card)]"
                 onClick={() => write("members", members.filter((_, j) => j !== i))}
               >
                 <X size={18} aria-hidden />

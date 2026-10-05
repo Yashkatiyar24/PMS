@@ -303,7 +303,7 @@ function NavGroup({ title, className, children }: { title: string; className?: s
     <div className={className}>
       <h2 className="mb-1.5 px-3 text-xs font-semibold uppercase tracking-wider text-ink-faint">{title}</h2>
       {/* A card of rows on a phone, a plain list beside the content on a laptop. */}
-      <ul className="space-y-0.5 rounded-2xl border border-line bg-surface p-1.5 md:border-0 md:bg-transparent md:p-0">{children}</ul>
+      <ul className="space-y-0.5 rounded-[var(--radius-card)] bg-surface p-1.5 shadow-[var(--shadow-card)] md:bg-transparent md:p-0 md:shadow-none">{children}</ul>
     </div>
   )
 }
@@ -315,7 +315,7 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
         <h2 className="text-xl font-extrabold tracking-tight">{title}</h2>
         {subtitle && <p className="mt-0.5 text-sm text-ink-soft">{subtitle}</p>}
       </div>
-      <div className="divide-y divide-line rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-card)]">{children}</div>
+      <div className="divide-y divide-line rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)]">{children}</div>
     </section>
   )
 }
