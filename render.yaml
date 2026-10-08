@@ -11,10 +11,10 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     region: singapore
-    # Starter, not free: the free plan stops the container after fifteen idle minutes and the next sign-in waits
-    # through a cold start of a minute or two, which from the desk looks like a broken app. Starter never sleeps.
-    # Keep this in step with the plan chosen in the dashboard, or a Blueprint sync will put the service to sleep again.
-    plan: starter
+    # Free plan: it stops the container after fifteen idle minutes and the next request waits through a cold start
+    # of a minute or two, so something outside GitHub must call /api/health every five minutes (README, "Deploying
+    # the API on Render"). One service kept awake all month fits inside the free 750 instance-hours.
+    plan: free
     numInstances: 1
     healthCheckPath: /actuator/health/readiness
     envVars:

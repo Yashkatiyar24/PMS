@@ -112,16 +112,18 @@ of the day can feel broken: Render stops the container after fifteen idle minute
 through a cold start that has measured between fifty seconds and two minutes (the database host, Neon or
 Supabase, may be asleep too). Once awake it answers in well under a second. Three things, in order of effect:
 
-1. **Run it on the Starter plan** — `render.yaml` now says `plan: starter`, and the dashboard must agree:
-   Render → the `padav-api` service → **Settings → Instance Type → Starter** → Save (the service redeploys once,
-   two or three minutes). It does not sleep. This is the fix; everything below only softens the free plan, and
-   is only needed if the service is ever put back on it.
-2. **Ping it from outside GitHub.** `.github/workflows/keep-awake.yml` asks GitHub to call `/api/health` every
-   ten minutes, but GitHub's scheduler is best-effort and in practice has fired three or four times a day, which
-   keeps nothing awake. Use a cron that really runs: [cron-job.org](https://cron-job.org) or
-   [UptimeRobot](https://uptimerobot.com) (both free) with `https://<service>.onrender.com/api/health` every
-   five to ten minutes, or a Render Cron Job running `curl -fsS https://<service>.onrender.com/api/health`.
-   `/api/health` runs `select 1`, so it keeps the database awake as well.
+1. **Keep it awake with a pinger that really runs every five minutes.** `.github/workflows/keep-awake.yml` asks
+   GitHub to do this, but GitHub's scheduler is best-effort and has fired three or four times a day, which keeps
+   nothing awake. Use a free external cron instead — any one of these:
+   - [cron-job.org](https://cron-job.org): sign up (free), *Create cronjob*, URL
+     `https://<service>.onrender.com/api/health`, schedule *every 5 minutes*, save.
+   - [UptimeRobot](https://uptimerobot.com): free plan, *New monitor* → HTTP(s), the same URL, interval 5 minutes.
+   - A second free Render service of type **Cron Job** running `curl -fsS https://<service>.onrender.com/api/health`
+     on `*/5 * * * *`.
+   `/api/health` runs `select 1`, so it keeps the database awake as well. A service that is awake all month uses
+   about 744 of the free plan's 750 instance-hours, so it fits — but a second free web service would not.
+2. **If you ever can pay, Starter ($7/mo) never sleeps** and makes the pinger unnecessary: the service → Settings →
+   Instance Type → Starter, and change `plan:` above to `starter` so a Blueprint sync agrees.
 3. **Keep the database awake.** On Neon, raise the compute's auto-suspend delay (Project → Branch → Compute) or
    turn it off; on Supabase the free project pauses after a week without traffic and the pinger above prevents
    that.
