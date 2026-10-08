@@ -112,8 +112,10 @@ of the day can feel broken: Render stops the container after fifteen idle minute
 through a cold start that has measured between fifty seconds and two minutes (the database host, Neon or
 Supabase, may be asleep too). Once awake it answers in well under a second. Three things, in order of effect:
 
-1. **Move the service to the Starter plan** (Render dashboard → the service → Settings → Instance Type). It does
-   not sleep. This is the fix; everything below only softens the free plan.
+1. **Run it on the Starter plan** — `render.yaml` now says `plan: starter`, and the dashboard must agree:
+   Render → the `padav-api` service → **Settings → Instance Type → Starter** → Save (the service redeploys once,
+   two or three minutes). It does not sleep. This is the fix; everything below only softens the free plan, and
+   is only needed if the service is ever put back on it.
 2. **Ping it from outside GitHub.** `.github/workflows/keep-awake.yml` asks GitHub to call `/api/health` every
    ten minutes, but GitHub's scheduler is best-effort and in practice has fired three or four times a day, which
    keeps nothing awake. Use a cron that really runs: [cron-job.org](https://cron-job.org) or

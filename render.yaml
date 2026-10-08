@@ -11,9 +11,10 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     region: singapore
-    # ponytail: free plan sleeps after 15 idle minutes and scheduled jobs pause with it; keep it awake with an
-    # external ping to /api/health every 10 minutes, or move to starter.
-    plan: free
+    # Starter, not free: the free plan stops the container after fifteen idle minutes and the next sign-in waits
+    # through a cold start of a minute or two, which from the desk looks like a broken app. Starter never sleeps.
+    # Keep this in step with the plan chosen in the dashboard, or a Blueprint sync will put the service to sleep again.
+    plan: starter
     numInstances: 1
     healthCheckPath: /actuator/health/readiness
     envVars:
